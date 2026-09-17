@@ -128,8 +128,8 @@ is right the large majority of the time now, at most a small drift when off; fil
 by default (F10 → *All unlocked* opens every level, 007 mode and the full
 cheat menu); F10 in-game options overlay (video, input, gameplay, HUD,
 graphics, audio; frame cap, MSAA, filtering, FOV, sensitivity, key rebinding,
-crosshair, vibration); Windows and
-Linux, including Steam Deck.
+crosshair, vibration); Windows, Linux and macOS (Intel and Apple Silicon),
+including Steam Deck.
 
 **Known issues:**
 
@@ -152,8 +152,8 @@ Linux, including Steam Deck.
   original progression you need to preserve.
 - Assorted further cosmetic defects are tracked in
   [`docs/dev/GRAPHICS-BACKLOG.md`](docs/dev/GRAPHICS-BACKLOG.md).
-- No macOS or ARM support. Keyboard/mouse rebinding shipped in v0.4.0;
-  controller-button rebinding is not supported yet.
+- Keyboard/mouse rebinding shipped in v0.4.0; controller-button rebinding is
+  not supported yet. No Windows-on-ARM support.
 
 Root causes and fix status for every item: the [release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases)
 and the finding log in [`docs/dev/findings.md`](docs/dev/findings.md).
@@ -198,7 +198,7 @@ directionally, on the way to v1.0:
   [`docs/dev/findings.md`](docs/dev/findings.md).
 - **PAL and JP ROM support** ([issue #85](https://github.com/jkdansereau/goldeneye-pc-port/issues/85)); NTSC-U is the only supported region today.
 - **Controller (pad) button rebinding UI** (keyboard/mouse rebinding shipped
-  in v0.4.0), and macOS/ARM builds.
+  in v0.4.0).
 - **LAN multiplayer**: reviving GoldenEye's original split-screen/deathmatch
   netplay across multiple PCs on a local network. Genuinely under
   consideration, but early and not started; no ETA.
