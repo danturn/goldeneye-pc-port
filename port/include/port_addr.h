@@ -104,6 +104,16 @@ static inline uint32_t portHostToN64(const void *p)
     return (uint32_t)v;
 }
 
+/* Is a host pointer inside the N64 address window (DRAM / cart / stacks)?
+ * Use this instead of hardcoded numeric bounds: the window is shifted by
+ * PORT_ADDR_BASE on arm64, so an absolute bound that is correct on x86_64
+ * silently rejects every real pointer there. */
+static inline int portAddrIsInWindow(const void *p)
+{
+    uintptr_t v = (uintptr_t)p;
+    return v - (uintptr_t)PORT_ADDR_BASE < (uintptr_t)PORT_ADDR_WINDOW;
+}
+
 /* Cast-site helper for game code (the D3x ABI/layout class): reads a 32-bit
  * address out of a field/expression and yields a typed pointer. Identity on
  * Windows/Linux (PORT_ADDR_BASE == 0). */
