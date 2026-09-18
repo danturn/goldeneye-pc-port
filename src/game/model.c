@@ -1725,24 +1725,24 @@ void process_02_position(ModelRenderData *arg0, Model *model, ModelNode *node)
 
     rot1 = D_80036094;
     
-    sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, model->unk34, &rot1);
+    sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, PORT_N64PTR(u8, model->unk34), &rot1);
 
     if (model->unk2c != 0.0f)
     {
         rot2 = D_800360A0;
-        sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, model->unk38, &rot2);
+        sub_GAME_7F06DEC0(jointnum.v, model->gunhand, skeleton, model->anim, PORT_N64PTR(u8, model->unk38), &rot2);
         sub_GAME_7F06D160(&rot1, &rot2, model->unk2c);
     }
 
     if (model->unk84 != 0.0f)
     {
         rot3 = D_800360AC;
-        sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, model->unk64, &rot3);
+        sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, PORT_N64PTR(u8, model->unk64), &rot3);
 
         if (model->unk5c != 0.0f)
         {
             rot4 = D_800360B8;
-            sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, model->unk68, &rot4);
+            sub_GAME_7F06DEC0(jointnum.v, model->unk25, skeleton, model->anim2, PORT_N64PTR(u8, model->unk68), &rot4);
             sub_GAME_7F06D160(&rot3, &rot4, model->unk5c);
         }
 
@@ -5920,7 +5920,12 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
     s32 ret;
     s32 source;
     s32 frameSize;
+#if defined(PORT)
+    /* D298/M2: keep the buffer address at full pointer width (D59 buffer). */
+    uintptr_t dest;
+#else
     u32 dest;
+#endif
     u32 size;
 
     ret = 0;
@@ -5934,8 +5939,12 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
     else if (D_80036414 != NULL) // should never be NULL after initAnimationsBuffer is called
     {
         // Get dest from this D_80036414 which points to an array. Align to 16 bytes.
+#if defined(PORT)
+        dest = ((uintptr_t)(D_80036414->animBufferPtr2 + 15) >> 4) * 16;
+#else
         dest = ((u32) (D_80036414->animBufferPtr2 + 15) >> 4) * 16;
-        ret = dest;
+#endif
+        ret = (s32)dest;
 
         // Get source of this animation in ROM with the offset of the frame we'll load
         source = anim->address + (frame * frameSize);
@@ -5950,14 +5959,14 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
         size = ((u32) (frameSize + 15) >> 4) * 16;
 
         // This copies one animation frame from ROM to the destination in RAM
-        romCopy((void* ) dest, (void* ) source, size);
+        romCopy((void *)dest, (void *)source, size);
 
         // Increment this which serves nothing
         D_80036414->uselessPointer += 1;
 
         // Set this to point to the end of the copied frame
         // This allows to copy another frame after this one
-        D_80036414->animBufferPtr2 = dest + size;
+        D_80036414->animBufferPtr2 = (void *)(dest + size);
     }
     return ret;
 }

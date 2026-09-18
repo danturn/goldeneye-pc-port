@@ -4971,7 +4971,9 @@ bool if_actor_able_set_on_path(ChrRecord *self, s32 pathid)
 {
     if (pathid && chrIsNotDeadOrShot(self))
     {
-        set_actor_on_path(self, pathid);
+        /* D298/M2: callers pass a window PathRecord* truncated through this
+         * s32 param (chrai.c / aicommands.def); re-base on the read. */
+        set_actor_on_path(self, PORT_N64PTR(struct patrol_path, pathid));
         return TRUE;
     }
 
