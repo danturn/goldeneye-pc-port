@@ -63,6 +63,16 @@ endif()
 # (port/src/romassets_<region>.s, see scripts/gen_romassets.py).
 project(ge007 C CXX ASM)
 
+# Host base of the N64 address window (see port/include/port_addr.h). Must be
+# set BEFORE add_definitions below. 0 on Windows/Linux; 16 TiB on arm64 macOS
+# (overridable with -DPORT_ADDR_BASE=... for tooling, e.g. an ASan build whose
+# shadow region overlaps 16 TiB).
+if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+  set(PORT_ADDR_BASE 0x100000000000 CACHE STRING "Host base of the N64 address window (arm64 macOS)")
+else()
+  set(PORT_ADDR_BASE 0x0 CACHE STRING "Host base of the N64 address window")
+endif()
+
 include(TargetArch)
 include(FindPkgConfig)
 
@@ -246,6 +256,7 @@ add_definitions(
   -D_LANGUAGE_C=1
   -DAVOID_UB=1
   -DPAL=${VERSION_IS_PAL}
+  -DPORT_ADDR_BASE=${PORT_ADDR_BASE}
   ${REGION_DEFS}
 )
 if(TARGET_IS_64BIT)
@@ -369,7 +380,6 @@ elseif(APPLE)
     # / 0x80000000) are impossible. The whole N64 address space is instead
     # shifted to PORT_ADDR_BASE and reserved PROT_NONE by portAddrInit()
     # (port/include/port_addr.h, docs/dev/MACOS-ARM64-PLAN.md).
-    set(PORT_ADDR_BASE 0x100000000000)
   else()
     # Intel: Mach-O normally reserves [0, 4 GiB) as __PAGEZERO. The port needs
     # fixed mappings at 0x10000000 (ROM), 0x70000000 (s32-safe DRAM), and
@@ -377,7 +387,6 @@ elseif(APPLE)
     # while leaving ample space before the first required mapping.
     set(CMAKE_EXE_LINKER_FLAGS
       "${CMAKE_EXE_LINKER_FLAGS} -Wl,-pagezero_size,0x10000")
-    set(PORT_ADDR_BASE 0x0)
   endif()
 endif()
 

@@ -36,15 +36,22 @@
 #include <stdint.h>
 #include "platform.h"
 
+#ifndef PORT_ADDR_BASE
 #if defined(PLATFORM_MACOS) && defined(PLATFORM_ARM)
 /* 16 TiB: reserved cleanly on Apple Silicon, far above libmalloc's regions and
  * the mmap hint area, and well below fast3d_ptr_ok()'s 128 TiB bound. The
- * committed port/src/*.darwin.s files are generated with the SAME base
- * (scripts/gen_romassets.py --darwin --base 0x100000000000); portAddrInit()
- * checks the two agree at startup. */
+ * generated Mach-O symbol files are produced with the SAME base (CMake's
+ * PORT_ADDR_BASE cache var, fed to scripts/gen_macho_syms.py --base);
+ * portAddrInit() checks the two agree at startup via cfb_16.
+ *
+ * Overridable from CMake (-DPORT_ADDR_BASE=...) for tooling that needs the
+ * window somewhere else -- e.g. an AddressSanitizer build, whose shadow
+ * region overlaps 16 TiB (it covers 0x027e00024000..0x10700001ffff, so a
+ * sanitizer build uses a LowMem base like 0x4000000000). */
 #define PORT_ADDR_BASE 0x100000000000ULL
 #else
 #define PORT_ADDR_BASE 0x0ULL
+#endif
 #endif
 
 /* Size of the N64 address space. */
