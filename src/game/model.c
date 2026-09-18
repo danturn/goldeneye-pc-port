@@ -5974,7 +5974,7 @@ void modelResetAnimationsScratchBuffer(void)
 
 #define PROMOTE(var) \
     if (var) \
-        var = (void *)((u32)var + diff)
+        var = (void *)portN64ToHost((u32)var + diff)
 
 #ifdef PORT
 /* PC port (D43/D45): Vertex.LinkedTo is a raw vma (u32), not a pointer —
@@ -6026,7 +6026,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                 {
                     ModelRoData_DisplayListRecord* rodata = &node->Data->DisplayList;
                     PROMOTE(rodata->Vertices);
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6044,7 +6044,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                         PROMOTE(rodata->CollisionVertices[i].LinkedTo);
 #endif
                     }
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6068,7 +6068,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                         PROMOTE(rodata->Children[i].unk04);
                     }
 
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6087,14 +6087,14 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                         PROMOTE(rodata->Children[i].unk04);
                     }
 
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
             case MODELNODE_OPCODE_OP06:
                 {
                     ModelRoData_Op06Record* rodata = &node->Data->Op06;
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6132,7 +6132,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                 {
                     ModelRoData_Op11Record* rodata = &node->Data->Op11;
                     PROMOTE(rodata->unk0c[15]);
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6140,7 +6140,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                 {
                     ModelRoData_GunfireRecord* rodata = &node->Data->Gunfire;
                     PROMOTE(rodata->Image);
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6149,7 +6149,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                     ModelRoData_ShadowRecord* rodata = &node->Data->Shadow;
                     PROMOTE(rodata->image);
                     PROMOTE(rodata->Header);
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
@@ -6157,7 +6157,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                 {
                     ModelRoData_DisplayListPrimaryRecord* rodata = &node->Data->DisplayListPrimary;
                     PROMOTE(rodata->Vertices);
-                    rodata->BaseAddr = (void *)fileramaddr;
+                    rodata->BaseAddr = PORT_N64PTR(void, fileramaddr);
                     break;
                 }
 
