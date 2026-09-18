@@ -7,6 +7,14 @@
 #include <fr.h>
 #include <memp.h>
 #include "bg.h"
+#if defined(PORT)
+#include "port_addr.h"
+/* D298/M2: ptr_bg_data (and friends) hold N64/window offsets as s32; re-base
+ * where they become pointers. Identity at PORT_ADDR_BASE == 0. */
+#define BG_PTR(x) ((void *)portN64ToHost((u32)(x)))
+#else
+#define BG_PTR(x) ((void *)(x))
+#endif
 #include "bondview.h"
 #include "chr.h"
 #include "debug_camera.h"
@@ -855,17 +863,17 @@ void load_bg_file(LEVEL_INDEX levelid)
     lightFixtureInitTables();
  
     ptr_bg_data = (s32)header;
-    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) ptr_bg_data, 0, 0x40);
+    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *)BG_PTR(ptr_bg_data), 0, 0x40);
 
     if (((levelid && ptr_bg_data) && levelentry_index));
 
     ptr_bgdata_offsets = ptr_bg_data;
-    ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *)ptr_bg_data)[1]);
+    ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *)BG_PTR(ptr_bg_data))[1]);
  
     size = (((((u32) ptr_bgdata_room_fileposition_list[1].pPointTableBin) & 0x00ffffff) - 1) | 0xf) + 1;
  
     ptr_bg_data = (s32) mempAllocBytesInBank(size, 4);
-    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *) ptr_bg_data, 0, size);
+    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *)BG_PTR(ptr_bg_data), 0, size);
  
     gptr_stan = (s32) _fileNameLoadToBank(levelinfotable[levelentry_index].bg_stan_filename, 2, 0, 4);
  
@@ -882,7 +890,7 @@ void load_bg_file(LEVEL_INDEX levelid)
     sub_GAME_7F08976C(mCurrentLevelVisibilityScale);
     matrix_4x4_7F058C4C(mCurrentLevelVisibilityScale);
  
-    data = (s32 *)ptr_bg_data;
+    data = (s32 *)BG_PTR(ptr_bg_data);
     dword_CODE_bss_8007BF98 = *data;
     dword_CODE_bss_8007FF88 = 1;
  

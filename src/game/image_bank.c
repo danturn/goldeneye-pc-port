@@ -184,7 +184,7 @@ extern Gfx* globalDL_0x900;
 extern Gfx* globalDL_0x9a8;
 extern Gfx* globalDL_0xa50;
 
-#if defined(__x86_64__)
+#if defined(PLATFORM_64BIT)
 /* D39 (docs/dev/findings.md): on N64 all 49 symbols above link inside the
  * Globalimagetable segment at physical 0x02xxxxxx (ge007.ld), so
  * `globalbank_rdram_offset + (u32)&sym` rebases each onto pGlobalimagetable.
@@ -346,6 +346,6 @@ void texReset(void)
     /* D68: explosion.c executes the compiled globalDL_0xNNN shadows via
      * g_ExplosionDisplayLists[]; copy the IMAGESEG words that texLoad()
      * patched in the ROM copy over into those arrays. */
-    gimgSyncCompiledGlobalDLs((u8 *)pGlobalimagetable);
+    gimgSyncCompiledGlobalDLs((u8 *)GBANK_PTR(pGlobalimagetable));
 #endif
 }
