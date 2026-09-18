@@ -414,7 +414,7 @@ s32 texAlignIndices(u8 *src, s32 width, s32 height, s32 format, u8 *dst)
             src++;
         }
 
-        outptr = (u8 *)(((u32)outptr + 7) & ~7);
+        outptr = (u8 *)(((uintptr_t)outptr + 7) & ~(uintptr_t)7);
     }
 
     return outptr - dst;

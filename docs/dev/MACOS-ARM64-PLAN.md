@@ -583,6 +583,29 @@ Record as a `Dxx`.
 | M3 | partly inherited | #88 supplies the AppKit main-thread guard; the two Core-profile GL fixes and the level sweep remain |
 | M4 | not started | packaging / CI / docs |
 
+### Prerequisites to run (easy to miss)
+
+Two things must be in `data/` before the binary will render anything, both
+documented in `docs/building.md`:
+
+1. **The ROM** as `data/ge007.ntsc-final.z64` (SHA-1 `abe01e4a…`, matching the
+   repo's `ge007.u.sha1`).
+2. **The PC asset sidecars** — `data/pcmodels-ntsc-final/` and
+   `data/pccg-ntsc-final/`. These are ROM-derived and **gitignored**, so a
+   fresh clone has empty directories and the game will look like it has an
+   address bug when it is really serving raw big-endian ROM bytes (that is
+   finding **D69** reproducing). Generate them once:
+
+   ```sh
+   python3 tools_pc/d43_emit.py ntsc-final          # 512 model sidecars
+   python3 tools_pc/d69_emit.py ntsc-final          # 25 bg + 27 stan
+   python3 tools_pc/d88_emit.py ntsc-final --regen  # + 21 stage-setup
+   ```
+
+   This cost a detour during M2: the `bg.c` big-endian-header crash looked like
+   an un-rebased pointer but was the missing sidecars. PR #88's author ran the
+   same three passes before their 1,500-frame `-level_09` run.
+
 ### Where the boot is (2026-09-18, branch `macos-arm64-gcc`)
 
 `./build-pc/ge007.aarch64 -level_09`, ROM `data/ge007.ntsc-final.z64`
