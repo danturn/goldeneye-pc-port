@@ -282,7 +282,9 @@ add_compile_options(
 # runs the same way; the genuinely understood cases are still fixed properly
 # under #ifdef PORT (D189). A hardened Linux build would need the whole class
 # swept first — tracked in docs/dev/findings.md.
-add_compile_options(-fno-stack-protector)
+if(NOT GE_STACK_PROTECTOR_ALL)
+  add_compile_options(-fno-stack-protector)
+endif()
 # Keep frame pointers: dbghelp's StackWalk64 (crash handler + thread dumps)
 # cannot read DWARF unwind info on MinGW, so the EBP chain is the only way to
 # get a real backtrace of a hung/crashed game thread.
