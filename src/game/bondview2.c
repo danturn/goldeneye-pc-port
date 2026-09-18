@@ -92,8 +92,15 @@
 
 
 #if defined(VERSION_US)
+    /* D298/M2: the font-table globals are s32 holding truncated pointers
+     * (D88 class); re-base on use. Identity at PORT_ADDR_BASE == 0. */
+#if defined(PORT)
+    #define BONDVIEW_2ND_FONTTABLE(_param) PORT_N64PTR(void, copy_2ndfonttable)
+    #define BONDVIEW_1ST_FONTTABLE(_param) PORT_N64PTR(void, copy_1stfonttable)
+#else
     #define BONDVIEW_2ND_FONTTABLE(_param) copy_2ndfonttable
     #define BONDVIEW_1ST_FONTTABLE(_param) copy_1stfonttable
+#endif
 #elif defined(VERSION_JP) || defined(VERSION_EU)
     #define BONDVIEW_2ND_FONTTABLE(_param) dword_CODE_bss_jp80079CEC[_param]
     #define BONDVIEW_1ST_FONTTABLE(_param) dword_CODE_bss_jp80079Cd8[_param]
@@ -600,7 +607,7 @@ void solo_char_load(void)
                 pitemheader = NULL;
             }
 
-            something_with_generating_object(self, prop, item, 0, (WeaponObjRecord *)helddst, (ItemModelFileRecord *)pitemheader);
+            something_with_generating_object(self, prop, item, 0, PORT_N64PTR(WeaponObjRecord, helddst), (ItemModelFileRecord *)pitemheader);
         }
 
         chrlvMergeKneelToStand(self, 0.0f);
@@ -1239,13 +1246,13 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
 #if defined(VERSION_US)
                 setFontTables(ptrFontZurichBoldChars, ptrFontZurichBold);
 #ifdef PORT
-                hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang1c.lang_ptr);
+                hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang1c.lang_ptr));
 #else
                 hudmsgBottomShow(ptr_random06cam_entry->lang1c.lang_ptr);
 #endif
 #else
 #ifdef PORT
-                hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang1c.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
+                hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang1c.lang_ptr), ptrFontZurichBoldChars, ptrFontZurichBold);
 #else
                 hudmsgBottomShow(ptr_random06cam_entry->lang1c.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
 #endif
@@ -1258,13 +1265,13 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
                 {
 #if defined(VERSION_US)
 #ifdef PORT
-                    hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang20.lang_ptr);
+                    hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang20.lang_ptr));
 #else
                     hudmsgBottomShow(ptr_random06cam_entry->lang20.lang_ptr);
 #endif
 #else
 #ifdef PORT
-                    hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang20.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
+                    hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang20.lang_ptr), ptrFontZurichBoldChars, ptrFontZurichBold);
 #else
                     hudmsgBottomShow(ptr_random06cam_entry->lang20.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
 #endif
@@ -10034,7 +10041,13 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
             }
 
             view_vert = view_top - view_top_offset;
+#ifdef PORT
+            /* D298/M2: the (s32) casts are an N64 match hack; on the port they
+             * truncate stack pointers. Pass them at full width. */
+            arg0 = draw_blackbox_to_screen(arg0, &view_left, &view_vert, &view_horiz, &view_top);
+#else
             arg0 = draw_blackbox_to_screen(arg0, (s32) &view_left, (s32) &view_vert, (s32) &view_horiz, (s32) &view_top);
+#endif
             arg0 = combiner_bayer_lod_perspective(textRenderOutlined(arg0, &view_left, &view_vert, stringbuffer_lowerleft[status_bar_text_buffer_index], BONDVIEW_2ND_FONTTABLE(status_bar_text_buffer_index), BONDVIEW_1ST_FONTTABLE(status_bar_text_buffer_index), -1, 0x646464FFU, (s16) (s32) viGetX(), (s16) viGetY(), 0, 0));
         }
     }
