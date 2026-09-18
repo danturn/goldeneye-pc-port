@@ -6,20 +6,20 @@
  * (V1, where these live) and 0x80000000 (V2, the KSEG0 mirror). These are
  * committed host addresses, so they are live pointers on the PC.
  *
- * Mach-O/Darwin variant: `.data`, `_`-prefixed symbols, +0x0 base.
- * Regenerate: python3 scripts/gen_romassets.py <region> --dram-out port/src/dram_syms.s --darwin --base 0x0
+ * Mach-O/Darwin variant: `.data`, `_`-prefixed symbols, +0x100000000000 base.
+ * Regenerate: python3 scripts/gen_romassets.py <region> --dram-out port/src/dram_syms.s --darwin --base 0x100000000000
  */
 .data
 
 /* replaces src/cfb.c (excluded from the build): the two 320x240x16-bit
  * framebuffers, 0x4B000 bytes total. */
 .globl _cfb_16
-.set _cfb_16, 0x70000000
+.set _cfb_16, 0x100070000000
 
 /* end-of-.bss marker; boss.c:217 starts the mempools at
  * PHYS_TO_K0(osVirtualToPhysical(&_bssSegmentEnd)). */
 .globl __bssSegmentEnd
-.set __bssSegmentEnd, 0x70050000
+.set __bssSegmentEnd, 0x100070050000
 
 /* D59: animation-frame scratch buffer (src/game/initanitable.c). The game
  * addresses it through s32 fields (Model.unk34/38/64/68) and
@@ -28,5 +28,5 @@
  * 0x40xxxxxx. Parked at the top of DRAM V1 (above the mempool sentinel
  * at +0x2F4400). */
 .globl _animations_frame_buffer
-.set _animations_frame_buffer, 0x707FFD30
+.set _animations_frame_buffer, 0x1000707FFD30
 

@@ -7,3392 +7,3392 @@
  * on hardware once romdata.c has mapped the .z64 at 0x10000000.
  *
  * Mach-O/Darwin variant: `.data` section, `_`-prefixed symbols, and
- * every value biased by --base (0x0) so the N64 address space
+ * every value biased by --base (0x100000000000) so the N64 address space
  * lives at PORT_ADDR_BASE in the host address space (see
  * port/include/port_addr.h and docs/dev/MACOS-ARM64-PLAN.md).
- * Regenerate: python3 scripts/gen_romassets.py u --darwin --base 0x0
+ * Regenerate: python3 scripts/gen_romassets.py u --darwin --base 0x100000000000
  */
 .data
 
 /* --- assets/obseg (file_resource_table.inc.c order) ------------- */
 .globl _bg_sev_all_p_seg
-.set _bg_sev_all_p_seg, 0x10438660
+.set _bg_sev_all_p_seg, 0x100010438660
 .globl _end_bg_sev_all_p_seg
-.set _end_bg_sev_all_p_seg, 0x10449450
+.set _end_bg_sev_all_p_seg, 0x100010449450
 .globl _bg_silo_all_p_seg
-.set _bg_silo_all_p_seg, 0x10449450
+.set _bg_silo_all_p_seg, 0x100010449450
 .globl _end_bg_silo_all_p_seg
-.set _end_bg_silo_all_p_seg, 0x1049A390
+.set _end_bg_silo_all_p_seg, 0x10001049A390
 .globl _bg_stat_all_p_seg
-.set _bg_stat_all_p_seg, 0x1049A390
+.set _bg_stat_all_p_seg, 0x10001049A390
 .globl _end_bg_stat_all_p_seg
-.set _end_bg_stat_all_p_seg, 0x104BC460
+.set _end_bg_stat_all_p_seg, 0x1000104BC460
 .globl _bg_arec_all_p_seg
-.set _bg_arec_all_p_seg, 0x104BC460
+.set _bg_arec_all_p_seg, 0x1000104BC460
 .globl _end_bg_arec_all_p_seg
-.set _end_bg_arec_all_p_seg, 0x104EA7E0
+.set _end_bg_arec_all_p_seg, 0x1000104EA7E0
 .globl _bg_arch_all_p_seg
-.set _bg_arch_all_p_seg, 0x104EA7E0
+.set _bg_arch_all_p_seg, 0x1000104EA7E0
 .globl _end_bg_arch_all_p_seg
-.set _end_bg_arch_all_p_seg, 0x105102D0
+.set _end_bg_arch_all_p_seg, 0x1000105102D0
 .globl _bg_tra_all_p_seg
-.set _bg_tra_all_p_seg, 0x105102D0
+.set _bg_tra_all_p_seg, 0x1000105102D0
 .globl _end_bg_tra_all_p_seg
-.set _end_bg_tra_all_p_seg, 0x10530840
+.set _end_bg_tra_all_p_seg, 0x100010530840
 .globl _bg_dest_all_p_seg
-.set _bg_dest_all_p_seg, 0x10530840
+.set _bg_dest_all_p_seg, 0x100010530840
 .globl _end_bg_dest_all_p_seg
-.set _end_bg_dest_all_p_seg, 0x1055E200
+.set _end_bg_dest_all_p_seg, 0x10001055E200
 .globl _bg_sevb_all_p_seg
-.set _bg_sevb_all_p_seg, 0x1055E200
+.set _bg_sevb_all_p_seg, 0x10001055E200
 .globl _end_bg_sevb_all_p_seg
-.set _end_bg_sevb_all_p_seg, 0x10578FA0
+.set _end_bg_sevb_all_p_seg, 0x100010578FA0
 .globl _bg_azt_all_p_seg
-.set _bg_azt_all_p_seg, 0x10578FA0
+.set _bg_azt_all_p_seg, 0x100010578FA0
 .globl _end_bg_azt_all_p_seg
-.set _end_bg_azt_all_p_seg, 0x1059A9F0
+.set _end_bg_azt_all_p_seg, 0x10001059A9F0
 .globl _bg_pete_all_p_seg
-.set _bg_pete_all_p_seg, 0x1059A9F0
+.set _bg_pete_all_p_seg, 0x10001059A9F0
 .globl _end_bg_pete_all_p_seg
-.set _end_bg_pete_all_p_seg, 0x105B4620
+.set _end_bg_pete_all_p_seg, 0x1000105B4620
 .globl _bg_depo_all_p_seg
-.set _bg_depo_all_p_seg, 0x105B4620
+.set _bg_depo_all_p_seg, 0x1000105B4620
 .globl _end_bg_depo_all_p_seg
-.set _end_bg_depo_all_p_seg, 0x105E0F90
+.set _end_bg_depo_all_p_seg, 0x1000105E0F90
 .globl _bg_ref_all_p_seg
-.set _bg_ref_all_p_seg, 0x105E0F90
+.set _bg_ref_all_p_seg, 0x1000105E0F90
 .globl _end_bg_ref_all_p_seg
-.set _end_bg_ref_all_p_seg, 0x105EA5A0
+.set _end_bg_ref_all_p_seg, 0x1000105EA5A0
 .globl _bg_cryp_all_p_seg
-.set _bg_cryp_all_p_seg, 0x105EA5A0
+.set _bg_cryp_all_p_seg, 0x1000105EA5A0
 .globl _end_bg_cryp_all_p_seg
-.set _end_bg_cryp_all_p_seg, 0x105FFC50
+.set _end_bg_cryp_all_p_seg, 0x1000105FFC50
 .globl _bg_dam_all_p_seg
-.set _bg_dam_all_p_seg, 0x105FFC50
+.set _bg_dam_all_p_seg, 0x1000105FFC50
 .globl _end_bg_dam_all_p_seg
-.set _end_bg_dam_all_p_seg, 0x1062FDF0
+.set _end_bg_dam_all_p_seg, 0x10001062FDF0
 .globl _bg_ark_all_p_seg
-.set _bg_ark_all_p_seg, 0x1062FDF0
+.set _bg_ark_all_p_seg, 0x10001062FDF0
 .globl _end_bg_ark_all_p_seg
-.set _end_bg_ark_all_p_seg, 0x10660D70
+.set _end_bg_ark_all_p_seg, 0x100010660D70
 .globl _bg_run_all_p_seg
-.set _bg_run_all_p_seg, 0x10660D70
+.set _bg_run_all_p_seg, 0x100010660D70
 .globl _end_bg_run_all_p_seg
-.set _end_bg_run_all_p_seg, 0x1066B140
+.set _end_bg_run_all_p_seg, 0x10001066B140
 .globl _bg_sevx_all_p_seg
-.set _bg_sevx_all_p_seg, 0x1066B140
+.set _bg_sevx_all_p_seg, 0x10001066B140
 .globl _end_bg_sevx_all_p_seg
-.set _end_bg_sevx_all_p_seg, 0x10687710
+.set _end_bg_sevx_all_p_seg, 0x100010687710
 .globl _bg_jun_all_p_seg
-.set _bg_jun_all_p_seg, 0x10687710
+.set _bg_jun_all_p_seg, 0x100010687710
 .globl _end_bg_jun_all_p_seg
-.set _end_bg_jun_all_p_seg, 0x1069C860
+.set _end_bg_jun_all_p_seg, 0x10001069C860
 .globl _bg_dish_all_p_seg
-.set _bg_dish_all_p_seg, 0x1069C860
+.set _bg_dish_all_p_seg, 0x10001069C860
 .globl _end_bg_dish_all_p_seg
-.set _end_bg_dish_all_p_seg, 0x106A10D0
+.set _end_bg_dish_all_p_seg, 0x1000106A10D0
 .globl _bg_cave_all_p_seg
-.set _bg_cave_all_p_seg, 0x106A10D0
+.set _bg_cave_all_p_seg, 0x1000106A10D0
 .globl _end_bg_cave_all_p_seg
-.set _end_bg_cave_all_p_seg, 0x106C55C0
+.set _end_bg_cave_all_p_seg, 0x1000106C55C0
 .globl _bg_cat_all_p_seg
-.set _bg_cat_all_p_seg, 0x106C55C0
+.set _bg_cat_all_p_seg, 0x1000106C55C0
 .globl _end_bg_cat_all_p_seg
-.set _end_bg_cat_all_p_seg, 0x106CAAF0
+.set _end_bg_cat_all_p_seg, 0x1000106CAAF0
 .globl _bg_crad_all_p_seg
-.set _bg_crad_all_p_seg, 0x106CAAF0
+.set _bg_crad_all_p_seg, 0x1000106CAAF0
 .globl _end_bg_crad_all_p_seg
-.set _end_bg_crad_all_p_seg, 0x106DAE40
+.set _end_bg_crad_all_p_seg, 0x1000106DAE40
 .globl _bg_sho_all_p_seg
-.set _bg_sho_all_p_seg, 0x106DAE40
+.set _bg_sho_all_p_seg, 0x1000106DAE40
 .globl _end_bg_sho_all_p_seg
-.set _end_bg_sho_all_p_seg, 0x106DAE40
+.set _end_bg_sho_all_p_seg, 0x1000106DAE40
 .globl _bg_imp_all_p_seg
-.set _bg_imp_all_p_seg, 0x106DAE40
+.set _bg_imp_all_p_seg, 0x1000106DAE40
 .globl _end_bg_imp_all_p_seg
-.set _end_bg_imp_all_p_seg, 0x106DAE40
+.set _end_bg_imp_all_p_seg, 0x1000106DAE40
 .globl _bg_rit_all_p_seg
-.set _bg_rit_all_p_seg, 0x106E4DA0
+.set _bg_rit_all_p_seg, 0x1000106E4DA0
 .globl _end_bg_rit_all_p_seg
-.set _end_bg_rit_all_p_seg, 0x106E4DA0
+.set _end_bg_rit_all_p_seg, 0x1000106E4DA0
 .globl _bg_oat_all_p_seg
-.set _bg_oat_all_p_seg, 0x106E4DA0
+.set _bg_oat_all_p_seg, 0x1000106E4DA0
 .globl _end_bg_oat_all_p_seg
-.set _end_bg_oat_all_p_seg, 0x106EBBF0
+.set _end_bg_oat_all_p_seg, 0x1000106EBBF0
 .globl _bg_ear_all_p_seg
-.set _bg_ear_all_p_seg, 0x106EBBF0
+.set _bg_ear_all_p_seg, 0x1000106EBBF0
 .globl _end_bg_ear_all_p_seg
-.set _end_bg_ear_all_p_seg, 0x106EBBF0
+.set _end_bg_ear_all_p_seg, 0x1000106EBBF0
 .globl _bg_lee_all_p_seg
-.set _bg_lee_all_p_seg, 0x106EBBF0
+.set _bg_lee_all_p_seg, 0x1000106EBBF0
 .globl _end_bg_lee_all_p_seg
-.set _end_bg_lee_all_p_seg, 0x106EBBF0
+.set _end_bg_lee_all_p_seg, 0x1000106EBBF0
 .globl _bg_lip_all_p_seg
-.set _bg_lip_all_p_seg, 0x106EBBF0
+.set _bg_lip_all_p_seg, 0x1000106EBBF0
 .globl _end_bg_lip_all_p_seg
-.set _end_bg_lip_all_p_seg, 0x106EBBF0
+.set _end_bg_lip_all_p_seg, 0x1000106EBBF0
 .globl _bg_len_all_p_seg
-.set _bg_len_all_p_seg, 0x106EBBF0
+.set _bg_len_all_p_seg, 0x1000106EBBF0
 .globl _end_bg_len_all_p_seg
-.set _end_bg_len_all_p_seg, 0x106ECB90
+.set _end_bg_len_all_p_seg, 0x1000106ECB90
 .globl _bg_wax_all_p_seg
-.set _bg_wax_all_p_seg, 0x106ECB90
+.set _bg_wax_all_p_seg, 0x1000106ECB90
 .globl _end_bg_wax_all_p_seg
-.set _end_bg_wax_all_p_seg, 0x106ECB90
+.set _end_bg_wax_all_p_seg, 0x1000106ECB90
 .globl _bg_pam_all_p_seg
-.set _bg_pam_all_p_seg, 0x106ECB90
+.set _bg_pam_all_p_seg, 0x1000106ECB90
 .globl _end_bg_pam_all_p_seg
-.set _end_bg_pam_all_p_seg, 0x106ECB90
+.set _end_bg_pam_all_p_seg, 0x1000106ECB90
 .globl _CarmourguardZ
-.set _CarmourguardZ, 0x106ECB90
+.set _CarmourguardZ, 0x1000106ECB90
 .globl _end_CarmourguardZ
-.set _end_CarmourguardZ, 0x106EF010
+.set _end_CarmourguardZ, 0x1000106EF010
 .globl _CbaronsamediZ
-.set _CbaronsamediZ, 0x106EF010
+.set _CbaronsamediZ, 0x1000106EF010
 .globl _end_CbaronsamediZ
-.set _end_CbaronsamediZ, 0x106F2700
+.set _end_CbaronsamediZ, 0x1000106F2700
 .globl _CbluecamguardZ
-.set _CbluecamguardZ, 0x106F2700
+.set _CbluecamguardZ, 0x1000106F2700
 .globl _end_CbluecamguardZ
-.set _end_CbluecamguardZ, 0x106F4DF0
+.set _end_CbluecamguardZ, 0x1000106F4DF0
 .globl _CbluemanZ
-.set _CbluemanZ, 0x106F4DF0
+.set _CbluemanZ, 0x1000106F4DF0
 .globl _end_CbluemanZ
-.set _end_CbluemanZ, 0x106F6C00
+.set _end_CbluemanZ, 0x1000106F6C00
 .globl _CbluewomanZ
-.set _CbluewomanZ, 0x106F6C00
+.set _CbluewomanZ, 0x1000106F6C00
 .globl _end_CbluewomanZ
-.set _end_CbluewomanZ, 0x106F8AC0
+.set _end_CbluewomanZ, 0x1000106F8AC0
 .globl _CboilerbondZ
-.set _CboilerbondZ, 0x106F8AC0
+.set _CboilerbondZ, 0x1000106F8AC0
 .globl _end_CboilerbondZ
-.set _end_CboilerbondZ, 0x106FB6D0
+.set _end_CboilerbondZ, 0x1000106FB6D0
 .globl _CboilertrevZ
-.set _CboilertrevZ, 0x106FB6D0
+.set _CboilertrevZ, 0x1000106FB6D0
 .globl _end_CboilertrevZ
-.set _end_CboilertrevZ, 0x106FED50
+.set _end_CboilertrevZ, 0x1000106FED50
 .globl _CborisZ
-.set _CborisZ, 0x106FED50
+.set _CborisZ, 0x1000106FED50
 .globl _end_CborisZ
-.set _end_CborisZ, 0x10701E70
+.set _end_CborisZ, 0x100010701E70
 .globl _CcamguardZ
-.set _CcamguardZ, 0x10701E70
+.set _CcamguardZ, 0x100010701E70
 .globl _end_CcamguardZ
-.set _end_CcamguardZ, 0x10704550
+.set _end_CcamguardZ, 0x100010704550
 .globl _CcardimanZ
-.set _CcardimanZ, 0x10704550
+.set _CcardimanZ, 0x100010704550
 .globl _end_CcardimanZ
-.set _end_CcardimanZ, 0x10706350
+.set _end_CcardimanZ, 0x100010706350
 .globl _CcheckmanZ
-.set _CcheckmanZ, 0x10706350
+.set _CcheckmanZ, 0x100010706350
 .globl _end_CcheckmanZ
-.set _end_CcheckmanZ, 0x107081D0
+.set _end_CcheckmanZ, 0x1000107081D0
 .globl _CcommguardZ
-.set _CcommguardZ, 0x107081D0
+.set _CcommguardZ, 0x1000107081D0
 .globl _end_CcommguardZ
-.set _end_CcommguardZ, 0x1070A7D0
+.set _end_CcommguardZ, 0x10001070A7D0
 .globl _CdjbondZ
-.set _CdjbondZ, 0x1070A7D0
+.set _CdjbondZ, 0x10001070A7D0
 .globl _end_CdjbondZ
-.set _end_CdjbondZ, 0x1070D660
+.set _end_CdjbondZ, 0x10001070D660
 .globl _CfattechwomanZ
-.set _CfattechwomanZ, 0x1070D660
+.set _CfattechwomanZ, 0x10001070D660
 .globl _end_CfattechwomanZ
-.set _end_CfattechwomanZ, 0x1070F580
+.set _end_CfattechwomanZ, 0x10001070F580
 .globl _Cgreatguard2Z
-.set _Cgreatguard2Z, 0x1070F580
+.set _Cgreatguard2Z, 0x10001070F580
 .globl _end_Cgreatguard2Z
-.set _end_Cgreatguard2Z, 0x10711CA0
+.set _end_Cgreatguard2Z, 0x100010711CA0
 .globl _CgreatguardZ
-.set _CgreatguardZ, 0x10711CA0
+.set _CgreatguardZ, 0x100010711CA0
 .globl _end_CgreatguardZ
-.set _end_CgreatguardZ, 0x10714320
+.set _end_CgreatguardZ, 0x100010714320
 .globl _CgreyguardZ
-.set _CgreyguardZ, 0x10714320
+.set _CgreyguardZ, 0x100010714320
 .globl _end_CgreyguardZ
-.set _end_CgreyguardZ, 0x107169F0
+.set _end_CgreyguardZ, 0x1000107169F0
 .globl _CgreymanZ
-.set _CgreymanZ, 0x107169F0
+.set _CgreymanZ, 0x1000107169F0
 .globl _end_CgreymanZ
-.set _end_CgreymanZ, 0x107187B0
+.set _end_CgreymanZ, 0x1000107187B0
 .globl _CheadalanZ
-.set _CheadalanZ, 0x107187B0
+.set _CheadalanZ, 0x1000107187B0
 .globl _end_CheadalanZ
-.set _end_CheadalanZ, 0x10718D80
+.set _end_CheadalanZ, 0x100010718D80
 .globl _CheadbZ
-.set _CheadbZ, 0x10718D80
+.set _CheadbZ, 0x100010718D80
 .globl _end_CheadbZ
-.set _end_CheadbZ, 0x107192F0
+.set _end_CheadbZ, 0x1000107192F0
 .globl _CheadbalaclavaZ
-.set _CheadbalaclavaZ, 0x107192F0
+.set _CheadbalaclavaZ, 0x1000107192F0
 .globl _end_CheadbalaclavaZ
-.set _end_CheadbalaclavaZ, 0x107196C0
+.set _end_CheadbalaclavaZ, 0x1000107196C0
 .globl _CheadbikeZ
-.set _CheadbikeZ, 0x107196C0
+.set _CheadbikeZ, 0x1000107196C0
 .globl _end_CheadbikeZ
-.set _end_CheadbikeZ, 0x10719D60
+.set _end_CheadbikeZ, 0x100010719D60
 .globl _CheadbrosnanZ
-.set _CheadbrosnanZ, 0x10719D60
+.set _CheadbrosnanZ, 0x100010719D60
 .globl _end_CheadbrosnanZ
-.set _end_CheadbrosnanZ, 0x1071AAB0
+.set _end_CheadbrosnanZ, 0x10001071AAB0
 .globl _CheadbrosnanboilerZ
-.set _CheadbrosnanboilerZ, 0x1071AAB0
+.set _CheadbrosnanboilerZ, 0x10001071AAB0
 .globl _end_CheadbrosnanboilerZ
-.set _end_CheadbrosnanboilerZ, 0x1071B650
+.set _end_CheadbrosnanboilerZ, 0x10001071B650
 .globl _CheadbrosnansnowZ
-.set _CheadbrosnansnowZ, 0x1071B650
+.set _CheadbrosnansnowZ, 0x10001071B650
 .globl _end_CheadbrosnansnowZ
-.set _end_CheadbrosnansnowZ, 0x1071C4D0
+.set _end_CheadbrosnansnowZ, 0x10001071C4D0
 .globl _CheadbrosnansuitZ
-.set _CheadbrosnansuitZ, 0x1071C4D0
+.set _CheadbrosnansuitZ, 0x10001071C4D0
 .globl _end_CheadbrosnansuitZ
-.set _end_CheadbrosnansuitZ, 0x1071D250
+.set _end_CheadbrosnansuitZ, 0x10001071D250
 .globl _CheadbrosnantimberZ
-.set _CheadbrosnantimberZ, 0x1071D250
+.set _CheadbrosnantimberZ, 0x10001071D250
 .globl _end_CheadbrosnantimberZ
-.set _end_CheadbrosnantimberZ, 0x1071DE10
+.set _end_CheadbrosnantimberZ, 0x10001071DE10
 .globl _CheadchrisZ
-.set _CheadchrisZ, 0x1071DE10
+.set _CheadchrisZ, 0x10001071DE10
 .globl _end_CheadchrisZ
-.set _end_CheadchrisZ, 0x1071E350
+.set _end_CheadchrisZ, 0x10001071E350
 .globl _CheaddaveZ
-.set _CheaddaveZ, 0x1071E350
+.set _CheaddaveZ, 0x10001071E350
 .globl _end_CheaddaveZ
-.set _end_CheaddaveZ, 0x1071E8D0
+.set _end_CheaddaveZ, 0x10001071E8D0
 .globl _CheaddesZ
-.set _CheaddesZ, 0x1071E8D0
+.set _CheaddesZ, 0x10001071E8D0
 .globl _end_CheaddesZ
-.set _end_CheaddesZ, 0x1071EE00
+.set _end_CheaddesZ, 0x10001071EE00
 .globl _CheadduncanZ
-.set _CheadduncanZ, 0x1071EE00
+.set _CheadduncanZ, 0x10001071EE00
 .globl _end_CheadduncanZ
-.set _end_CheadduncanZ, 0x1071F320
+.set _end_CheadduncanZ, 0x10001071F320
 .globl _CheaddwayneZ
-.set _CheaddwayneZ, 0x1071F320
+.set _CheaddwayneZ, 0x10001071F320
 .globl _end_CheaddwayneZ
-.set _end_CheaddwayneZ, 0x1071F8A0
+.set _end_CheaddwayneZ, 0x10001071F8A0
 .globl _CheadgrahamZ
-.set _CheadgrahamZ, 0x1071F8A0
+.set _CheadgrahamZ, 0x10001071F8A0
 .globl _end_CheadgrahamZ
-.set _end_CheadgrahamZ, 0x1071FE10
+.set _end_CheadgrahamZ, 0x10001071FE10
 .globl _CheadgrantZ
-.set _CheadgrantZ, 0x1071FE10
+.set _CheadgrantZ, 0x10001071FE10
 .globl _end_CheadgrantZ
-.set _end_CheadgrantZ, 0x10720340
+.set _end_CheadgrantZ, 0x100010720340
 .globl _CheadjimZ
-.set _CheadjimZ, 0x10720340
+.set _CheadjimZ, 0x100010720340
 .globl _end_CheadjimZ
-.set _end_CheadjimZ, 0x10720870
+.set _end_CheadjimZ, 0x100010720870
 .globl _Cheadjoe2Z
-.set _Cheadjoe2Z, 0x10720870
+.set _Cheadjoe2Z, 0x100010720870
 .globl _end_Cheadjoe2Z
-.set _end_Cheadjoe2Z, 0x10720C90
+.set _end_Cheadjoe2Z, 0x100010720C90
 .globl _CheadjoeZ
-.set _CheadjoeZ, 0x10720C90
+.set _CheadjoeZ, 0x100010720C90
 .globl _end_CheadjoeZ
-.set _end_CheadjoeZ, 0x10721200
+.set _end_CheadjoeZ, 0x100010721200
 .globl _CheadjoelZ
-.set _CheadjoelZ, 0x10721200
+.set _CheadjoelZ, 0x100010721200
 .globl _end_CheadjoelZ
-.set _end_CheadjoelZ, 0x10721710
+.set _end_CheadjoelZ, 0x100010721710
 .globl _CheadkarlZ
-.set _CheadkarlZ, 0x10721710
+.set _CheadkarlZ, 0x100010721710
 .globl _end_CheadkarlZ
-.set _end_CheadkarlZ, 0x10721C70
+.set _end_CheadkarlZ, 0x100010721C70
 .globl _CheadkenZ
-.set _CheadkenZ, 0x10721C70
+.set _CheadkenZ, 0x100010721C70
 .globl _end_CheadkenZ
-.set _end_CheadkenZ, 0x107221C0
+.set _end_CheadkenZ, 0x1000107221C0
 .globl _CheadleeZ
-.set _CheadleeZ, 0x107221C0
+.set _CheadleeZ, 0x1000107221C0
 .globl _end_CheadleeZ
-.set _end_CheadleeZ, 0x10722740
+.set _end_CheadleeZ, 0x100010722740
 .globl _CheadmandyZ
-.set _CheadmandyZ, 0x10722740
+.set _CheadmandyZ, 0x100010722740
 .globl _end_CheadmandyZ
-.set _end_CheadmandyZ, 0x10722B30
+.set _end_CheadmandyZ, 0x100010722B30
 .globl _CheadmarionZ
-.set _CheadmarionZ, 0x10722B30
+.set _CheadmarionZ, 0x100010722B30
 .globl _end_CheadmarionZ
-.set _end_CheadmarionZ, 0x10722F40
+.set _end_CheadmarionZ, 0x100010722F40
 .globl _CheadmarkZ
-.set _CheadmarkZ, 0x10722F40
+.set _CheadmarkZ, 0x100010722F40
 .globl _end_CheadmarkZ
-.set _end_CheadmarkZ, 0x10723470
+.set _end_CheadmarkZ, 0x100010723470
 .globl _CheadmartinZ
-.set _CheadmartinZ, 0x10723470
+.set _CheadmartinZ, 0x100010723470
 .globl _end_CheadmartinZ
-.set _end_CheadmartinZ, 0x107239D0
+.set _end_CheadmartinZ, 0x1000107239D0
 .globl _CheadmishkinZ
-.set _CheadmishkinZ, 0x107239D0
+.set _CheadmishkinZ, 0x1000107239D0
 .globl _end_CheadmishkinZ
-.set _end_CheadmishkinZ, 0x10723F30
+.set _end_CheadmishkinZ, 0x100010723F30
 .globl _CheadneilZ
-.set _CheadneilZ, 0x10723F30
+.set _CheadneilZ, 0x100010723F30
 .globl _end_CheadneilZ
-.set _end_CheadneilZ, 0x10724450
+.set _end_CheadneilZ, 0x100010724450
 .globl _CheadpeteZ
-.set _CheadpeteZ, 0x10724450
+.set _CheadpeteZ, 0x100010724450
 .globl _end_CheadpeteZ
-.set _end_CheadpeteZ, 0x107249E0
+.set _end_CheadpeteZ, 0x1000107249E0
 .globl _CheadrobinZ
-.set _CheadrobinZ, 0x107249E0
+.set _CheadrobinZ, 0x1000107249E0
 .globl _end_CheadrobinZ
-.set _end_CheadrobinZ, 0x10724EF0
+.set _end_CheadrobinZ, 0x100010724EF0
 .globl _CheadsallyZ
-.set _CheadsallyZ, 0x10724EF0
+.set _CheadsallyZ, 0x100010724EF0
 .globl _end_CheadsallyZ
-.set _end_CheadsallyZ, 0x107252F0
+.set _end_CheadsallyZ, 0x1000107252F0
 .globl _CheadscottZ
-.set _CheadscottZ, 0x107252F0
+.set _CheadscottZ, 0x1000107252F0
 .globl _end_CheadscottZ
-.set _end_CheadscottZ, 0x10725870
+.set _end_CheadscottZ, 0x100010725870
 .globl _CheadshaunZ
-.set _CheadshaunZ, 0x10725870
+.set _CheadshaunZ, 0x100010725870
 .globl _end_CheadshaunZ
-.set _end_CheadshaunZ, 0x10725E50
+.set _end_CheadshaunZ, 0x100010725E50
 .globl _CheadsteveeZ
-.set _CheadsteveeZ, 0x10725E50
+.set _CheadsteveeZ, 0x100010725E50
 .globl _end_CheadsteveeZ
-.set _end_CheadsteveeZ, 0x107263A0
+.set _end_CheadsteveeZ, 0x1000107263A0
 .globl _CheadstevehZ
-.set _CheadstevehZ, 0x107263A0
+.set _CheadstevehZ, 0x1000107263A0
 .globl _end_CheadstevehZ
-.set _end_CheadstevehZ, 0x107268F0
+.set _end_CheadstevehZ, 0x1000107268F0
 .globl _CheadvivienZ
-.set _CheadvivienZ, 0x107268F0
+.set _CheadvivienZ, 0x1000107268F0
 .globl _end_CheadvivienZ
-.set _end_CheadvivienZ, 0x10726D80
+.set _end_CheadvivienZ, 0x100010726D80
 .globl _CjawsZ
-.set _CjawsZ, 0x10726D80
+.set _CjawsZ, 0x100010726D80
 .globl _end_CjawsZ
-.set _end_CjawsZ, 0x107299C0
+.set _end_CjawsZ, 0x1000107299C0
 .globl _CjeanwomanZ
-.set _CjeanwomanZ, 0x107299C0
+.set _CjeanwomanZ, 0x1000107299C0
 .globl _end_CjeanwomanZ
-.set _end_CjeanwomanZ, 0x1072B9D0
+.set _end_CjeanwomanZ, 0x10001072B9D0
 .globl _CmaydayZ
-.set _CmaydayZ, 0x1072B9D0
+.set _CmaydayZ, 0x10001072B9D0
 .globl _end_CmaydayZ
-.set _end_CmaydayZ, 0x1072E570
+.set _end_CmaydayZ, 0x10001072E570
 .globl _CmoonfemaleZ
-.set _CmoonfemaleZ, 0x1072E570
+.set _CmoonfemaleZ, 0x10001072E570
 .globl _end_CmoonfemaleZ
-.set _end_CmoonfemaleZ, 0x107306C0
+.set _end_CmoonfemaleZ, 0x1000107306C0
 .globl _CmoonguardZ
-.set _CmoonguardZ, 0x107306C0
+.set _CmoonguardZ, 0x1000107306C0
 .globl _end_CmoonguardZ
-.set _end_CmoonguardZ, 0x10732CB0
+.set _end_CmoonguardZ, 0x100010732CB0
 .globl _CnatalyaZ
-.set _CnatalyaZ, 0x10732CB0
+.set _CnatalyaZ, 0x100010732CB0
 .globl _end_CnatalyaZ
-.set _end_CnatalyaZ, 0x10736570
+.set _end_CnatalyaZ, 0x100010736570
 .globl _CnavyguardZ
-.set _CnavyguardZ, 0x10736570
+.set _CnavyguardZ, 0x100010736570
 .globl _end_CnavyguardZ
-.set _end_CnavyguardZ, 0x10738C50
+.set _end_CnavyguardZ, 0x100010738C50
 .globl _CoddjobZ
-.set _CoddjobZ, 0x10738C50
+.set _CoddjobZ, 0x100010738C50
 .globl _end_CoddjobZ
-.set _end_CoddjobZ, 0x1073BD80
+.set _end_CoddjobZ, 0x10001073BD80
 .globl _ColiveguardZ
-.set _ColiveguardZ, 0x1073BD80
+.set _ColiveguardZ, 0x10001073BD80
 .globl _end_ColiveguardZ
-.set _end_ColiveguardZ, 0x1073E3D0
+.set _end_ColiveguardZ, 0x10001073E3D0
 .globl _CorumovZ
-.set _CorumovZ, 0x1073E3D0
+.set _CorumovZ, 0x10001073E3D0
 .globl _end_CorumovZ
-.set _end_CorumovZ, 0x10741800
+.set _end_CorumovZ, 0x100010741800
 .globl _CpilotZ
-.set _CpilotZ, 0x10741800
+.set _CpilotZ, 0x100010741800
 .globl _end_CpilotZ
-.set _end_CpilotZ, 0x10744880
+.set _end_CpilotZ, 0x100010744880
 .globl _CredmanZ
-.set _CredmanZ, 0x10744880
+.set _CredmanZ, 0x100010744880
 .globl _end_CredmanZ
-.set _end_CredmanZ, 0x10746FB0
+.set _end_CredmanZ, 0x100010746FB0
 .globl _CrusguardZ
-.set _CrusguardZ, 0x10746FB0
+.set _CrusguardZ, 0x100010746FB0
 .globl _end_CrusguardZ
-.set _end_CrusguardZ, 0x10748BE0
+.set _end_CrusguardZ, 0x100010748BE0
 .globl _CsnowbondZ
-.set _CsnowbondZ, 0x10748BE0
+.set _CsnowbondZ, 0x100010748BE0
 .globl _end_CsnowbondZ
-.set _end_CsnowbondZ, 0x1074BF10
+.set _end_CsnowbondZ, 0x10001074BF10
 .globl _CsnowguardZ
-.set _CsnowguardZ, 0x1074BF10
+.set _CsnowguardZ, 0x10001074BF10
 .globl _end_CsnowguardZ
-.set _end_CsnowguardZ, 0x1074EB90
+.set _end_CsnowguardZ, 0x10001074EB90
 .globl _CspicebondZ
-.set _CspicebondZ, 0x1074EB90
+.set _CspicebondZ, 0x10001074EB90
 .globl _end_CspicebondZ
-.set _end_CspicebondZ, 0x107524B0
+.set _end_CspicebondZ, 0x1000107524B0
 .globl _Csuit_lf_handZ
-.set _Csuit_lf_handZ, 0x107524B0
+.set _Csuit_lf_handZ, 0x1000107524B0
 .globl _end_Csuit_lf_handZ
-.set _end_Csuit_lf_handZ, 0x107556D0
+.set _end_Csuit_lf_handZ, 0x1000107556D0
 .globl _CsuitbondZ
-.set _CsuitbondZ, 0x107556D0
+.set _CsuitbondZ, 0x1000107556D0
 .globl _end_CsuitbondZ
-.set _end_CsuitbondZ, 0x10758460
+.set _end_CsuitbondZ, 0x100010758460
 .globl _CtechmanZ
-.set _CtechmanZ, 0x10758460
+.set _CtechmanZ, 0x100010758460
 .globl _end_CtechmanZ
-.set _end_CtechmanZ, 0x1075AB10
+.set _end_CtechmanZ, 0x10001075AB10
 .globl _CtechwomanZ
-.set _CtechwomanZ, 0x1075AB10
+.set _CtechwomanZ, 0x10001075AB10
 .globl _end_CtechwomanZ
-.set _end_CtechwomanZ, 0x1075CB00
+.set _end_CtechwomanZ, 0x10001075CB00
 .globl _CtimberbondZ
-.set _CtimberbondZ, 0x1075CB00
+.set _CtimberbondZ, 0x10001075CB00
 .globl _end_CtimberbondZ
-.set _end_CtimberbondZ, 0x1075F830
+.set _end_CtimberbondZ, 0x10001075F830
 .globl _CtrevelyanZ
-.set _CtrevelyanZ, 0x1075F830
+.set _CtrevelyanZ, 0x10001075F830
 .globl _end_CtrevelyanZ
-.set _end_CtrevelyanZ, 0x10763000
+.set _end_CtrevelyanZ, 0x100010763000
 .globl _CtrevguardZ
-.set _CtrevguardZ, 0x10763000
+.set _CtrevguardZ, 0x100010763000
 .globl _end_CtrevguardZ
-.set _end_CtrevguardZ, 0x10765610
+.set _end_CtrevguardZ, 0x100010765610
 .globl _CvalentinZ
-.set _CvalentinZ, 0x10765610
+.set _CvalentinZ, 0x100010765610
 .globl _end_CvalentinZ
-.set _end_CvalentinZ, 0x10768580
+.set _end_CvalentinZ, 0x100010768580
 .globl _CxeniaZ
-.set _CxeniaZ, 0x10768580
+.set _CxeniaZ, 0x100010768580
 .globl _end_CxeniaZ
-.set _end_CxeniaZ, 0x1076BF70
+.set _end_CxeniaZ, 0x10001076BF70
 .globl _Gak47Z
-.set _Gak47Z, 0x1076BF70
+.set _Gak47Z, 0x10001076BF70
 .globl _end_Gak47Z
-.set _end_Gak47Z, 0x1076C980
+.set _end_Gak47Z, 0x10001076C980
 .globl _GaudiotapeZ
-.set _GaudiotapeZ, 0x1076C980
+.set _GaudiotapeZ, 0x10001076C980
 .globl _end_GaudiotapeZ
-.set _end_GaudiotapeZ, 0x1076CD10
+.set _end_GaudiotapeZ, 0x10001076CD10
 .globl _GautoshotZ
-.set _GautoshotZ, 0x1076CD10
+.set _GautoshotZ, 0x10001076CD10
 .globl _end_GautoshotZ
-.set _end_GautoshotZ, 0x1076E520
+.set _end_GautoshotZ, 0x10001076E520
 .globl _GblackboxZ
-.set _GblackboxZ, 0x1076E520
+.set _GblackboxZ, 0x10001076E520
 .globl _end_GblackboxZ
-.set _end_GblackboxZ, 0x1076EB20
+.set _end_GblackboxZ, 0x10001076EB20
 .globl _GblueprintsZ
-.set _GblueprintsZ, 0x1076EB20
+.set _GblueprintsZ, 0x10001076EB20
 .globl _end_GblueprintsZ
-.set _end_GblueprintsZ, 0x1076EC20
+.set _end_GblueprintsZ, 0x10001076EC20
 .globl _GbombcaseZ
-.set _GbombcaseZ, 0x1076EC20
+.set _GbombcaseZ, 0x10001076EC20
 .globl _end_GbombcaseZ
-.set _end_GbombcaseZ, 0x1076F3B0
+.set _end_GbombcaseZ, 0x10001076F3B0
 .globl _GbombdefuserZ
-.set _GbombdefuserZ, 0x1076F3B0
+.set _GbombdefuserZ, 0x10001076F3B0
 .globl _end_GbombdefuserZ
-.set _end_GbombdefuserZ, 0x1076F9A0
+.set _end_GbombdefuserZ, 0x10001076F9A0
 .globl _GbriefcaseZ
-.set _GbriefcaseZ, 0x1076F9A0
+.set _GbriefcaseZ, 0x10001076F9A0
 .globl _end_GbriefcaseZ
-.set _end_GbriefcaseZ, 0x10770130
+.set _end_GbriefcaseZ, 0x100010770130
 .globl _GbugZ
-.set _GbugZ, 0x10770130
+.set _GbugZ, 0x100010770130
 .globl _end_GbugZ
-.set _end_GbugZ, 0x10770AA0
+.set _end_GbugZ, 0x100010770AA0
 .globl _GbugdetectorZ
-.set _GbugdetectorZ, 0x10770AA0
+.set _GbugdetectorZ, 0x100010770AA0
 .globl _end_GbugdetectorZ
-.set _end_GbugdetectorZ, 0x10770DF0
+.set _end_GbugdetectorZ, 0x100010770DF0
 .globl _GbungeeZ
-.set _GbungeeZ, 0x10770DF0
+.set _GbungeeZ, 0x100010770DF0
 .globl _end_GbungeeZ
-.set _end_GbungeeZ, 0x10771140
+.set _end_GbungeeZ, 0x100010771140
 .globl _GcameraZ
-.set _GcameraZ, 0x10771140
+.set _GcameraZ, 0x100010771140
 .globl _end_GcameraZ
-.set _end_GcameraZ, 0x107715C0
+.set _end_GcameraZ, 0x1000107715C0
 .globl _GcartblueZ
-.set _GcartblueZ, 0x107715C0
+.set _GcartblueZ, 0x1000107715C0
 .globl _end_GcartblueZ
-.set _end_GcartblueZ, 0x10771820
+.set _end_GcartblueZ, 0x100010771820
 .globl _GcartridgeZ
-.set _GcartridgeZ, 0x10771820
+.set _GcartridgeZ, 0x100010771820
 .globl _end_GcartridgeZ
-.set _end_GcartridgeZ, 0x10771950
+.set _end_GcartridgeZ, 0x100010771950
 .globl _GcartrifleZ
-.set _GcartrifleZ, 0x10771950
+.set _GcartrifleZ, 0x100010771950
 .globl _end_GcartrifleZ
-.set _end_GcartrifleZ, 0x10771B60
+.set _end_GcartrifleZ, 0x100010771B60
 .globl _GcartshellZ
-.set _GcartshellZ, 0x10771B60
+.set _GcartshellZ, 0x100010771B60
 .globl _end_GcartshellZ
-.set _end_GcartshellZ, 0x10771D60
+.set _end_GcartshellZ, 0x100010771D60
 .globl _GcircuitboardZ
-.set _GcircuitboardZ, 0x10771D60
+.set _GcircuitboardZ, 0x100010771D60
 .globl _end_GcircuitboardZ
-.set _end_GcircuitboardZ, 0x10771EA0
+.set _end_GcircuitboardZ, 0x100010771EA0
 .globl _GclipboardZ
-.set _GclipboardZ, 0x10771EA0
+.set _GclipboardZ, 0x100010771EA0
 .globl _end_GclipboardZ
-.set _end_GclipboardZ, 0x10772090
+.set _end_GclipboardZ, 0x100010772090
 .globl _GcreditcardZ
-.set _GcreditcardZ, 0x10772090
+.set _GcreditcardZ, 0x100010772090
 .globl _end_GcreditcardZ
-.set _end_GcreditcardZ, 0x107723E0
+.set _end_GcreditcardZ, 0x1000107723E0
 .globl _GdarkglassesZ
-.set _GdarkglassesZ, 0x107723E0
+.set _GdarkglassesZ, 0x1000107723E0
 .globl _end_GdarkglassesZ
-.set _end_GdarkglassesZ, 0x10772730
+.set _end_GdarkglassesZ, 0x100010772730
 .globl _GdatathiefZ
-.set _GdatathiefZ, 0x10772730
+.set _GdatathiefZ, 0x100010772730
 .globl _end_GdatathiefZ
-.set _end_GdatathiefZ, 0x10772870
+.set _end_GdatathiefZ, 0x100010772870
 .globl _GdattapeZ
-.set _GdattapeZ, 0x10772870
+.set _GdattapeZ, 0x100010772870
 .globl _end_GdattapeZ
-.set _end_GdattapeZ, 0x107729E0
+.set _end_GdattapeZ, 0x1000107729E0
 .globl _GdoordecoderZ
-.set _GdoordecoderZ, 0x107729E0
+.set _GdoordecoderZ, 0x1000107729E0
 .globl _end_GdoordecoderZ
-.set _end_GdoordecoderZ, 0x10772F60
+.set _end_GdoordecoderZ, 0x100010772F60
 .globl _GdoorexploderZ
-.set _GdoorexploderZ, 0x10772F60
+.set _GdoorexploderZ, 0x100010772F60
 .globl _end_GdoorexploderZ
-.set _end_GdoorexploderZ, 0x107732B0
+.set _end_GdoorexploderZ, 0x1000107732B0
 .globl _GdossierredZ
-.set _GdossierredZ, 0x107732B0
+.set _GdossierredZ, 0x1000107732B0
 .globl _end_GdossierredZ
-.set _end_GdossierredZ, 0x10773610
+.set _end_GdossierredZ, 0x100010773610
 .globl _GdynamiteZ
-.set _GdynamiteZ, 0x10773610
+.set _GdynamiteZ, 0x100010773610
 .globl _end_GdynamiteZ
-.set _end_GdynamiteZ, 0x10773960
+.set _end_GdynamiteZ, 0x100010773960
 .globl _GexplosivefloppyZ
-.set _GexplosivefloppyZ, 0x10773960
+.set _GexplosivefloppyZ, 0x100010773960
 .globl _end_GexplosivefloppyZ
-.set _end_GexplosivefloppyZ, 0x10773BB0
+.set _end_GexplosivefloppyZ, 0x100010773BB0
 .globl _GexplosivepenZ
-.set _GexplosivepenZ, 0x10773BB0
+.set _GexplosivepenZ, 0x100010773BB0
 .globl _end_GexplosivepenZ
-.set _end_GexplosivepenZ, 0x10773F00
+.set _end_GexplosivepenZ, 0x100010773F00
 .globl _GextinguisherZ
-.set _GextinguisherZ, 0x10773F00
+.set _GextinguisherZ, 0x100010773F00
 .globl _end_GextinguisherZ
-.set _end_GextinguisherZ, 0x107746F0
+.set _end_GextinguisherZ, 0x1000107746F0
 .globl _GfingergunZ
-.set _GfingergunZ, 0x107746F0
+.set _GfingergunZ, 0x1000107746F0
 .globl _end_GfingergunZ
-.set _end_GfingergunZ, 0x10774A40
+.set _end_GfingergunZ, 0x100010774A40
 .globl _GfistZ
-.set _GfistZ, 0x10774A40
+.set _GfistZ, 0x100010774A40
 .globl _end_GfistZ
-.set _end_GfistZ, 0x10776140
+.set _end_GfistZ, 0x100010776140
 .globl _GflarepistolZ
-.set _GflarepistolZ, 0x10776140
+.set _GflarepistolZ, 0x100010776140
 .globl _end_GflarepistolZ
-.set _end_GflarepistolZ, 0x10776490
+.set _end_GflarepistolZ, 0x100010776490
 .globl _Gfnp90Z
-.set _Gfnp90Z, 0x10776490
+.set _Gfnp90Z, 0x100010776490
 .globl _end_Gfnp90Z
-.set _end_Gfnp90Z, 0x10777130
+.set _end_Gfnp90Z, 0x100010777130
 .globl _GgaskeyringZ
-.set _GgaskeyringZ, 0x10777130
+.set _GgaskeyringZ, 0x100010777130
 .globl _end_GgaskeyringZ
-.set _end_GgaskeyringZ, 0x10777B60
+.set _end_GgaskeyringZ, 0x100010777B60
 .globl _GgoldbarZ
-.set _GgoldbarZ, 0x10777B60
+.set _GgoldbarZ, 0x100010777B60
 .globl _end_GgoldbarZ
-.set _end_GgoldbarZ, 0x10777EB0
+.set _end_GgoldbarZ, 0x100010777EB0
 .globl _GgoldeneyekeyZ
-.set _GgoldeneyekeyZ, 0x10777EB0
+.set _GgoldeneyekeyZ, 0x100010777EB0
 .globl _end_GgoldeneyekeyZ
-.set _end_GgoldeneyekeyZ, 0x10778860
+.set _end_GgoldeneyekeyZ, 0x100010778860
 .globl _GgoldengunZ
-.set _GgoldengunZ, 0x10778860
+.set _GgoldengunZ, 0x100010778860
 .globl _end_GgoldengunZ
-.set _end_GgoldengunZ, 0x1077A040
+.set _end_GgoldengunZ, 0x10001077A040
 .globl _GgoldwppkZ
-.set _GgoldwppkZ, 0x1077A040
+.set _GgoldwppkZ, 0x10001077A040
 .globl _end_GgoldwppkZ
-.set _end_GgoldwppkZ, 0x1077B9A0
+.set _end_GgoldwppkZ, 0x10001077B9A0
 .globl _GgrenadeZ
-.set _GgrenadeZ, 0x1077B9A0
+.set _GgrenadeZ, 0x10001077B9A0
 .globl _end_GgrenadeZ
-.set _end_GgrenadeZ, 0x1077C3D0
+.set _end_GgrenadeZ, 0x10001077C3D0
 .globl _GgrenadelaunchZ
-.set _GgrenadelaunchZ, 0x1077C3D0
+.set _GgrenadelaunchZ, 0x10001077C3D0
 .globl _end_GgrenadelaunchZ
-.set _end_GgrenadelaunchZ, 0x1077D450
+.set _end_GgrenadelaunchZ, 0x10001077D450
 .globl _GheroinZ
-.set _GheroinZ, 0x1077D450
+.set _GheroinZ, 0x10001077D450
 .globl _end_GheroinZ
-.set _end_GheroinZ, 0x1077D7A0
+.set _end_GheroinZ, 0x10001077D7A0
 .globl _GjoypadZ
-.set _GjoypadZ, 0x1077D7A0
+.set _GjoypadZ, 0x10001077D7A0
 .globl _end_GjoypadZ
-.set _end_GjoypadZ, 0x1077F650
+.set _end_GjoypadZ, 0x10001077F650
 .globl _GkeyanalysercaseZ
-.set _GkeyanalysercaseZ, 0x1077F650
+.set _GkeyanalysercaseZ, 0x10001077F650
 .globl _end_GkeyanalysercaseZ
-.set _end_GkeyanalysercaseZ, 0x1077FDE0
+.set _end_GkeyanalysercaseZ, 0x10001077FDE0
 .globl _GkeyboltZ
-.set _GkeyboltZ, 0x1077FDE0
+.set _GkeyboltZ, 0x10001077FDE0
 .globl _end_GkeyboltZ
-.set _end_GkeyboltZ, 0x107807D0
+.set _end_GkeyboltZ, 0x1000107807D0
 .globl _GkeycardZ
-.set _GkeycardZ, 0x107807D0
+.set _GkeycardZ, 0x1000107807D0
 .globl _end_GkeycardZ
-.set _end_GkeycardZ, 0x10780900
+.set _end_GkeycardZ, 0x100010780900
 .globl _GkeyyaleZ
-.set _GkeyyaleZ, 0x10780900
+.set _GkeyyaleZ, 0x100010780900
 .globl _end_GkeyyaleZ
-.set _end_GkeyyaleZ, 0x10781650
+.set _end_GkeyyaleZ, 0x100010781650
 .globl _GknifeZ
-.set _GknifeZ, 0x10781650
+.set _GknifeZ, 0x100010781650
 .globl _end_GknifeZ
-.set _end_GknifeZ, 0x10783120
+.set _end_GknifeZ, 0x100010783120
 .globl _GlaserZ
-.set _GlaserZ, 0x10783120
+.set _GlaserZ, 0x100010783120
 .globl _end_GlaserZ
-.set _end_GlaserZ, 0x10783F10
+.set _end_GlaserZ, 0x100010783F10
 .globl _GlectreZ
-.set _GlectreZ, 0x10783F10
+.set _GlectreZ, 0x100010783F10
 .globl _end_GlectreZ
-.set _end_GlectreZ, 0x10784260
+.set _end_GlectreZ, 0x100010784260
 .globl _GlockexploderZ
-.set _GlockexploderZ, 0x10784260
+.set _GlockexploderZ, 0x100010784260
 .globl _end_GlockexploderZ
-.set _end_GlockexploderZ, 0x107845B0
+.set _end_GlockexploderZ, 0x1000107845B0
 .globl _Gm16Z
-.set _Gm16Z, 0x107845B0
+.set _Gm16Z, 0x1000107845B0
 .globl _end_Gm16Z
-.set _end_Gm16Z, 0x10784FD0
+.set _end_Gm16Z, 0x100010784FD0
 .globl _GmapZ
-.set _GmapZ, 0x10784FD0
+.set _GmapZ, 0x100010784FD0
 .globl _end_GmapZ
-.set _end_GmapZ, 0x107850C0
+.set _end_GmapZ, 0x1000107850C0
 .globl _GmicrocameraZ
-.set _GmicrocameraZ, 0x107850C0
+.set _GmicrocameraZ, 0x1000107850C0
 .globl _end_GmicrocameraZ
-.set _end_GmicrocameraZ, 0x10785700
+.set _end_GmicrocameraZ, 0x100010785700
 .globl _GmicrocodeZ
-.set _GmicrocodeZ, 0x10785700
+.set _GmicrocodeZ, 0x100010785700
 .globl _end_GmicrocodeZ
-.set _end_GmicrocodeZ, 0x10785A50
+.set _end_GmicrocodeZ, 0x100010785A50
 .globl _GmicrofilmZ
-.set _GmicrofilmZ, 0x10785A50
+.set _GmicrofilmZ, 0x100010785A50
 .globl _end_GmicrofilmZ
-.set _end_GmicrofilmZ, 0x10785DA0
+.set _end_GmicrofilmZ, 0x100010785DA0
 .globl _GmoneyZ
-.set _GmoneyZ, 0x10785DA0
+.set _GmoneyZ, 0x100010785DA0
 .globl _end_GmoneyZ
-.set _end_GmoneyZ, 0x107860F0
+.set _end_GmoneyZ, 0x1000107860F0
 .globl _Gmp5kZ
-.set _Gmp5kZ, 0x107860F0
+.set _Gmp5kZ, 0x1000107860F0
 .globl _end_Gmp5kZ
-.set _end_Gmp5kZ, 0x10786CD0
+.set _end_Gmp5kZ, 0x100010786CD0
 .globl _Gmp5ksilZ
-.set _Gmp5ksilZ, 0x10786CD0
+.set _Gmp5ksilZ, 0x100010786CD0
 .globl _end_Gmp5ksilZ
-.set _end_Gmp5ksilZ, 0x107879D0
+.set _end_Gmp5ksilZ, 0x1000107879D0
 .globl _GpitongunZ
-.set _GpitongunZ, 0x107879D0
+.set _GpitongunZ, 0x1000107879D0
 .globl _end_GpitongunZ
-.set _end_GpitongunZ, 0x10787D20
+.set _end_GpitongunZ, 0x100010787D20
 .globl _GplansZ
-.set _GplansZ, 0x10787D20
+.set _GplansZ, 0x100010787D20
 .globl _end_GplansZ
-.set _end_GplansZ, 0x10787EF0
+.set _end_GplansZ, 0x100010787EF0
 .globl _GplastiqueZ
-.set _GplastiqueZ, 0x10787EF0
+.set _GplastiqueZ, 0x100010787EF0
 .globl _end_GplastiqueZ
-.set _end_GplastiqueZ, 0x10788240
+.set _end_GplastiqueZ, 0x100010788240
 .globl _GpolarizedglassesZ
-.set _GpolarizedglassesZ, 0x10788240
+.set _GpolarizedglassesZ, 0x100010788240
 .globl _end_GpolarizedglassesZ
-.set _end_GpolarizedglassesZ, 0x107887A0
+.set _end_GpolarizedglassesZ, 0x1000107887A0
 .globl _GproximitymineZ
-.set _GproximitymineZ, 0x107887A0
+.set _GproximitymineZ, 0x1000107887A0
 .globl _end_GproximitymineZ
-.set _end_GproximitymineZ, 0x10788F90
+.set _end_GproximitymineZ, 0x100010788F90
 .globl _GremotemineZ
-.set _GremotemineZ, 0x10788F90
+.set _GremotemineZ, 0x100010788F90
 .globl _end_GremotemineZ
-.set _end_GremotemineZ, 0x10789950
+.set _end_GremotemineZ, 0x100010789950
 .globl _GrocketlaunchZ
-.set _GrocketlaunchZ, 0x10789950
+.set _GrocketlaunchZ, 0x100010789950
 .globl _end_GrocketlaunchZ
-.set _end_GrocketlaunchZ, 0x1078AB70
+.set _end_GrocketlaunchZ, 0x10001078AB70
 .globl _GrugerZ
-.set _GrugerZ, 0x1078AB70
+.set _GrugerZ, 0x10001078AB70
 .globl _end_GrugerZ
-.set _end_GrugerZ, 0x1078C900
+.set _end_GrugerZ, 0x10001078C900
 .globl _GsafecrackercaseZ
-.set _GsafecrackercaseZ, 0x1078C900
+.set _GsafecrackercaseZ, 0x10001078C900
 .globl _end_GsafecrackercaseZ
-.set _end_GsafecrackercaseZ, 0x1078D090
+.set _end_GsafecrackercaseZ, 0x10001078D090
 .globl _GshotgunZ
-.set _GshotgunZ, 0x1078D090
+.set _GshotgunZ, 0x10001078D090
 .globl _end_GshotgunZ
-.set _end_GshotgunZ, 0x1078DF70
+.set _end_GshotgunZ, 0x10001078DF70
 .globl _GsilverwppkZ
-.set _GsilverwppkZ, 0x1078DF70
+.set _GsilverwppkZ, 0x10001078DF70
 .globl _end_GsilverwppkZ
-.set _end_GsilverwppkZ, 0x1078F8D0
+.set _end_GsilverwppkZ, 0x10001078F8D0
 .globl _GskorpionZ
-.set _GskorpionZ, 0x1078F8D0
+.set _GskorpionZ, 0x10001078F8D0
 .globl _end_GskorpionZ
-.set _end_GskorpionZ, 0x10790AD0
+.set _end_GskorpionZ, 0x100010790AD0
 .globl _GsniperrifleZ
-.set _GsniperrifleZ, 0x10790AD0
+.set _GsniperrifleZ, 0x100010790AD0
 .globl _end_GsniperrifleZ
-.set _end_GsniperrifleZ, 0x10791B40
+.set _end_GsniperrifleZ, 0x100010791B40
 .globl _GspectreZ
-.set _GspectreZ, 0x10791B40
+.set _GspectreZ, 0x100010791B40
 .globl _end_GspectreZ
-.set _end_GspectreZ, 0x107927C0
+.set _end_GspectreZ, 0x1000107927C0
 .globl _GspooltapeZ
-.set _GspooltapeZ, 0x107927C0
+.set _GspooltapeZ, 0x1000107927C0
 .globl _end_GspooltapeZ
-.set _end_GspooltapeZ, 0x10792B10
+.set _end_GspooltapeZ, 0x100010792B10
 .globl _GspyfileZ
-.set _GspyfileZ, 0x10792B10
+.set _GspyfileZ, 0x100010792B10
 .globl _end_GspyfileZ
-.set _end_GspyfileZ, 0x10792E60
+.set _end_GspyfileZ, 0x100010792E60
 .globl _GstafflistZ
-.set _GstafflistZ, 0x10792E60
+.set _GstafflistZ, 0x100010792E60
 .globl _end_GstafflistZ
-.set _end_GstafflistZ, 0x10793000
+.set _end_GstafflistZ, 0x100010793000
 .globl _GtaserZ
-.set _GtaserZ, 0x10793000
+.set _GtaserZ, 0x100010793000
 .globl _end_GtaserZ
-.set _end_GtaserZ, 0x10794E60
+.set _end_GtaserZ, 0x100010794E60
 .globl _GthrowknifeZ
-.set _GthrowknifeZ, 0x10794E60
+.set _GthrowknifeZ, 0x100010794E60
 .globl _end_GthrowknifeZ
-.set _end_GthrowknifeZ, 0x10796950
+.set _end_GthrowknifeZ, 0x100010796950
 .globl _GtimedmineZ
-.set _GtimedmineZ, 0x10796950
+.set _GtimedmineZ, 0x100010796950
 .globl _end_GtimedmineZ
-.set _end_GtimedmineZ, 0x10797410
+.set _end_GtimedmineZ, 0x100010797410
 .globl _GtriggerZ
-.set _GtriggerZ, 0x10797410
+.set _GtriggerZ, 0x100010797410
 .globl _end_GtriggerZ
-.set _end_GtriggerZ, 0x1079A810
+.set _end_GtriggerZ, 0x10001079A810
 .globl _Gtt33Z
-.set _Gtt33Z, 0x1079A810
+.set _Gtt33Z, 0x10001079A810
 .globl _end_Gtt33Z
-.set _end_Gtt33Z, 0x1079C330
+.set _end_Gtt33Z, 0x10001079C330
 .globl _GuziZ
-.set _GuziZ, 0x1079C330
+.set _GuziZ, 0x10001079C330
 .globl _end_GuziZ
-.set _end_GuziZ, 0x1079CC40
+.set _end_GuziZ, 0x10001079CC40
 .globl _GvideotapeZ
-.set _GvideotapeZ, 0x1079CC40
+.set _GvideotapeZ, 0x10001079CC40
 .globl _end_GvideotapeZ
-.set _end_GvideotapeZ, 0x1079CE50
+.set _end_GvideotapeZ, 0x10001079CE50
 .globl _GwatchcommunicatorZ
-.set _GwatchcommunicatorZ, 0x1079CE50
+.set _GwatchcommunicatorZ, 0x10001079CE50
 .globl _end_GwatchcommunicatorZ
-.set _end_GwatchcommunicatorZ, 0x1079E2B0
+.set _end_GwatchcommunicatorZ, 0x10001079E2B0
 .globl _GwatchgeigercounterZ
-.set _GwatchgeigercounterZ, 0x1079E2B0
+.set _GwatchgeigercounterZ, 0x10001079E2B0
 .globl _end_GwatchgeigercounterZ
-.set _end_GwatchgeigercounterZ, 0x1079F710
+.set _end_GwatchgeigercounterZ, 0x10001079F710
 .globl _GwatchidentifierZ
-.set _GwatchidentifierZ, 0x1079F710
+.set _GwatchidentifierZ, 0x10001079F710
 .globl _end_GwatchidentifierZ
-.set _end_GwatchidentifierZ, 0x107A0B70
+.set _end_GwatchidentifierZ, 0x1000107A0B70
 .globl _GwatchlaserZ
-.set _GwatchlaserZ, 0x107A0B70
+.set _GwatchlaserZ, 0x1000107A0B70
 .globl _end_GwatchlaserZ
-.set _end_GwatchlaserZ, 0x107A3F70
+.set _end_GwatchlaserZ, 0x1000107A3F70
 .globl _GwatchmagnetattractZ
-.set _GwatchmagnetattractZ, 0x107A3F70
+.set _GwatchmagnetattractZ, 0x1000107A3F70
 .globl _end_GwatchmagnetattractZ
-.set _end_GwatchmagnetattractZ, 0x107A53C0
+.set _end_GwatchmagnetattractZ, 0x1000107A53C0
 .globl _GwatchmagnetrepelZ
-.set _GwatchmagnetrepelZ, 0x107A53C0
+.set _GwatchmagnetrepelZ, 0x1000107A53C0
 .globl _end_GwatchmagnetrepelZ
-.set _end_GwatchmagnetrepelZ, 0x107A6820
+.set _end_GwatchmagnetrepelZ, 0x1000107A6820
 .globl _GweaponcaseZ
-.set _GweaponcaseZ, 0x107A6820
+.set _GweaponcaseZ, 0x1000107A6820
 .globl _end_GweaponcaseZ
-.set _end_GweaponcaseZ, 0x107A6FB0
+.set _end_GweaponcaseZ, 0x1000107A6FB0
 .globl _GwppkZ
-.set _GwppkZ, 0x107A6FB0
+.set _GwppkZ, 0x1000107A6FB0
 .globl _end_GwppkZ
-.set _end_GwppkZ, 0x107A8C40
+.set _end_GwppkZ, 0x1000107A8C40
 .globl _GwppksilZ
-.set _GwppksilZ, 0x107A8C40
+.set _GwppksilZ, 0x1000107A8C40
 .globl _end_GwppksilZ
-.set _end_GwppksilZ, 0x107AA980
+.set _end_GwppksilZ, 0x1000107AA980
 .globl _GwristdartZ
-.set _GwristdartZ, 0x107AA980
+.set _GwristdartZ, 0x1000107AA980
 .globl _end_GwristdartZ
-.set _end_GwristdartZ, 0x107AACD0
+.set _end_GwristdartZ, 0x1000107AACD0
 .globl _PICBMZ
-.set _PICBMZ, 0x107AACD0
+.set _PICBMZ, 0x1000107AACD0
 .globl _end_PICBMZ
-.set _end_PICBMZ, 0x107AD250
+.set _end_PICBMZ, 0x1000107AD250
 .globl _PICBM_noseZ
-.set _PICBM_noseZ, 0x107AD250
+.set _PICBM_noseZ, 0x1000107AD250
 .globl _end_PICBM_noseZ
-.set _end_PICBM_noseZ, 0x107ADA00
+.set _end_PICBM_noseZ, 0x1000107ADA00
 .globl _Pak47magZ
-.set _Pak47magZ, 0x107ADA00
+.set _Pak47magZ, 0x1000107ADA00
 .globl _end_Pak47magZ
-.set _end_Pak47magZ, 0x107ADBE0
+.set _end_Pak47magZ, 0x1000107ADBE0
 .globl _Palarm1Z
-.set _Palarm1Z, 0x107ADBE0
+.set _Palarm1Z, 0x1000107ADBE0
 .globl _end_Palarm1Z
-.set _end_Palarm1Z, 0x107ADD40
+.set _end_Palarm1Z, 0x1000107ADD40
 .globl _Palarm2Z
-.set _Palarm2Z, 0x107ADD40
+.set _Palarm2Z, 0x1000107ADD40
 .globl _end_Palarm2Z
-.set _end_Palarm2Z, 0x107ADEE0
+.set _end_Palarm2Z, 0x1000107ADEE0
 .globl _Pammo_crate1Z
-.set _Pammo_crate1Z, 0x107ADEE0
+.set _Pammo_crate1Z, 0x1000107ADEE0
 .globl _end_Pammo_crate1Z
-.set _end_Pammo_crate1Z, 0x107AE120
+.set _end_Pammo_crate1Z, 0x1000107AE120
 .globl _Pammo_crate2Z
-.set _Pammo_crate2Z, 0x107AE120
+.set _Pammo_crate2Z, 0x1000107AE120
 .globl _end_Pammo_crate2Z
-.set _end_Pammo_crate2Z, 0x107AE360
+.set _end_Pammo_crate2Z, 0x1000107AE360
 .globl _Pammo_crate3Z
-.set _Pammo_crate3Z, 0x107AE360
+.set _Pammo_crate3Z, 0x1000107AE360
 .globl _end_Pammo_crate3Z
-.set _end_Pammo_crate3Z, 0x107AE5B0
+.set _end_Pammo_crate3Z, 0x1000107AE5B0
 .globl _Pammo_crate4Z
-.set _Pammo_crate4Z, 0x107AE5B0
+.set _Pammo_crate4Z, 0x1000107AE5B0
 .globl _end_Pammo_crate4Z
-.set _end_Pammo_crate4Z, 0x107AE820
+.set _end_Pammo_crate4Z, 0x1000107AE820
 .globl _Pammo_crate5Z
-.set _Pammo_crate5Z, 0x107AE820
+.set _Pammo_crate5Z, 0x1000107AE820
 .globl _end_Pammo_crate5Z
-.set _end_Pammo_crate5Z, 0x107AEAE0
+.set _end_Pammo_crate5Z, 0x1000107AEAE0
 .globl _PapcZ
-.set _PapcZ, 0x107AEAE0
+.set _PapcZ, 0x1000107AEAE0
 .globl _end_PapcZ
-.set _end_PapcZ, 0x107B0740
+.set _end_PapcZ, 0x1000107B0740
 .globl _Parchsecdoor1Z
-.set _Parchsecdoor1Z, 0x107B0740
+.set _Parchsecdoor1Z, 0x1000107B0740
 .globl _end_Parchsecdoor1Z
-.set _end_Parchsecdoor1Z, 0x107B0920
+.set _end_Parchsecdoor1Z, 0x1000107B0920
 .globl _Parchsecdoor2Z
-.set _Parchsecdoor2Z, 0x107B0920
+.set _Parchsecdoor2Z, 0x1000107B0920
 .globl _end_Parchsecdoor2Z
-.set _end_Parchsecdoor2Z, 0x107B0AF0
+.set _end_Parchsecdoor2Z, 0x1000107B0AF0
 .globl _ParticZ
-.set _ParticZ, 0x107B0AF0
+.set _ParticZ, 0x1000107B0AF0
 .globl _end_ParticZ
-.set _end_ParticZ, 0x107B18F0
+.set _end_ParticZ, 0x1000107B18F0
 .globl _PartictrailerZ
-.set _PartictrailerZ, 0x107B18F0
+.set _PartictrailerZ, 0x1000107B18F0
 .globl _end_PartictrailerZ
-.set _end_PartictrailerZ, 0x107B2200
+.set _end_PartictrailerZ, 0x1000107B2200
 .globl _PbarricadeZ
-.set _PbarricadeZ, 0x107B2200
+.set _PbarricadeZ, 0x1000107B2200
 .globl _end_PbarricadeZ
-.set _end_PbarricadeZ, 0x107B2440
+.set _end_PbarricadeZ, 0x1000107B2440
 .globl _Pbin1Z
-.set _Pbin1Z, 0x107B2440
+.set _Pbin1Z, 0x1000107B2440
 .globl _end_Pbin1Z
-.set _end_Pbin1Z, 0x107B2790
+.set _end_Pbin1Z, 0x1000107B2790
 .globl _Pblotter1Z
-.set _Pblotter1Z, 0x107B2790
+.set _Pblotter1Z, 0x1000107B2790
 .globl _end_Pblotter1Z
-.set _end_Pblotter1Z, 0x107B2870
+.set _end_Pblotter1Z, 0x1000107B2870
 .globl _PbodyarmourZ
-.set _PbodyarmourZ, 0x107B2870
+.set _PbodyarmourZ, 0x1000107B2870
 .globl _end_PbodyarmourZ
-.set _end_PbodyarmourZ, 0x107B2D10
+.set _end_PbodyarmourZ, 0x1000107B2D10
 .globl _PbodyarmourvestZ
-.set _PbodyarmourvestZ, 0x107B2D10
+.set _PbodyarmourvestZ, 0x1000107B2D10
 .globl _end_PbodyarmourvestZ
-.set _end_PbodyarmourvestZ, 0x107B3130
+.set _end_PbodyarmourvestZ, 0x1000107B3130
 .globl _PbollardZ
-.set _PbollardZ, 0x107B3130
+.set _PbollardZ, 0x1000107B3130
 .globl _end_PbollardZ
-.set _end_PbollardZ, 0x107B3330
+.set _end_PbollardZ, 0x1000107B3330
 .globl _PbombZ
-.set _PbombZ, 0x107B3330
+.set _PbombZ, 0x1000107B3330
 .globl _end_PbombZ
-.set _end_PbombZ, 0x107B34A0
+.set _end_PbombZ, 0x1000107B34A0
 .globl _Pbook1Z
-.set _Pbook1Z, 0x107B34A0
+.set _Pbook1Z, 0x1000107B34A0
 .globl _end_Pbook1Z
-.set _end_Pbook1Z, 0x107B3630
+.set _end_Pbook1Z, 0x1000107B3630
 .globl _Pbookshelf1Z
-.set _Pbookshelf1Z, 0x107B3630
+.set _Pbookshelf1Z, 0x1000107B3630
 .globl _end_Pbookshelf1Z
-.set _end_Pbookshelf1Z, 0x107B3D20
+.set _end_Pbookshelf1Z, 0x1000107B3D20
 .globl _Pborg_crateZ
-.set _Pborg_crateZ, 0x107B3D20
+.set _Pborg_crateZ, 0x1000107B3D20
 .globl _end_Pborg_crateZ
-.set _end_Pborg_crateZ, 0x107B3E90
+.set _end_Pborg_crateZ, 0x1000107B3E90
 .globl _PboxcartridgesZ
-.set _PboxcartridgesZ, 0x107B3E90
+.set _PboxcartridgesZ, 0x1000107B3E90
 .globl _end_PboxcartridgesZ
-.set _end_PboxcartridgesZ, 0x107B4090
+.set _end_PboxcartridgesZ, 0x1000107B4090
 .globl _Pboxes2x4Z
-.set _Pboxes2x4Z, 0x107B4090
+.set _Pboxes2x4Z, 0x1000107B4090
 .globl _end_Pboxes2x4Z
-.set _end_Pboxes2x4Z, 0x107B44C0
+.set _end_Pboxes2x4Z, 0x1000107B44C0
 .globl _Pboxes3x4Z
-.set _Pboxes3x4Z, 0x107B44C0
+.set _Pboxes3x4Z, 0x1000107B44C0
 .globl _end_Pboxes3x4Z
-.set _end_Pboxes3x4Z, 0x107B4900
+.set _end_Pboxes3x4Z, 0x1000107B4900
 .globl _Pboxes4x4Z
-.set _Pboxes4x4Z, 0x107B4900
+.set _Pboxes4x4Z, 0x1000107B4900
 .globl _end_Pboxes4x4Z
-.set _end_Pboxes4x4Z, 0x107B4F60
+.set _end_Pboxes4x4Z, 0x1000107B4F60
 .globl _PbrakeunitZ
-.set _PbrakeunitZ, 0x107B4F60
+.set _PbrakeunitZ, 0x1000107B4F60
 .globl _end_PbrakeunitZ
-.set _end_PbrakeunitZ, 0x107B52D0
+.set _end_PbrakeunitZ, 0x1000107B52D0
 .globl _Pbridge_console1aZ
-.set _Pbridge_console1aZ, 0x107B52D0
+.set _Pbridge_console1aZ, 0x1000107B52D0
 .globl _end_Pbridge_console1aZ
-.set _end_Pbridge_console1aZ, 0x107B5850
+.set _end_Pbridge_console1aZ, 0x1000107B5850
 .globl _Pbridge_console1bZ
-.set _Pbridge_console1bZ, 0x107B5850
+.set _Pbridge_console1bZ, 0x1000107B5850
 .globl _end_Pbridge_console1bZ
-.set _end_Pbridge_console1bZ, 0x107B5DB0
+.set _end_Pbridge_console1bZ, 0x1000107B5DB0
 .globl _Pbridge_console2aZ
-.set _Pbridge_console2aZ, 0x107B5DB0
+.set _Pbridge_console2aZ, 0x1000107B5DB0
 .globl _end_Pbridge_console2aZ
-.set _end_Pbridge_console2aZ, 0x107B6330
+.set _end_Pbridge_console2aZ, 0x1000107B6330
 .globl _Pbridge_console2bZ
-.set _Pbridge_console2bZ, 0x107B6330
+.set _Pbridge_console2bZ, 0x1000107B6330
 .globl _end_Pbridge_console2bZ
-.set _end_Pbridge_console2bZ, 0x107B6820
+.set _end_Pbridge_console2bZ, 0x1000107B6820
 .globl _Pbridge_console3aZ
-.set _Pbridge_console3aZ, 0x107B6820
+.set _Pbridge_console3aZ, 0x1000107B6820
 .globl _end_Pbridge_console3aZ
-.set _end_Pbridge_console3aZ, 0x107B6D70
+.set _end_Pbridge_console3aZ, 0x1000107B6D70
 .globl _Pbridge_console3bZ
-.set _Pbridge_console3bZ, 0x107B6D70
+.set _Pbridge_console3bZ, 0x1000107B6D70
 .globl _end_Pbridge_console3bZ
-.set _end_Pbridge_console3bZ, 0x107B7300
+.set _end_Pbridge_console3bZ, 0x1000107B7300
 .globl _PcarbmwZ
-.set _PcarbmwZ, 0x107B7300
+.set _PcarbmwZ, 0x1000107B7300
 .globl _end_PcarbmwZ
-.set _end_PcarbmwZ, 0x107B7FE0
+.set _end_PcarbmwZ, 0x1000107B7FE0
 .globl _Pcard_box1Z
-.set _Pcard_box1Z, 0x107B7FE0
+.set _Pcard_box1Z, 0x1000107B7FE0
 .globl _end_Pcard_box1Z
-.set _end_Pcard_box1Z, 0x107B81E0
+.set _end_Pcard_box1Z, 0x1000107B81E0
 .globl _Pcard_box2Z
-.set _Pcard_box2Z, 0x107B81E0
+.set _Pcard_box2Z, 0x1000107B81E0
 .globl _end_Pcard_box2Z
-.set _end_Pcard_box2Z, 0x107B8420
+.set _end_Pcard_box2Z, 0x1000107B8420
 .globl _Pcard_box3Z
-.set _Pcard_box3Z, 0x107B8420
+.set _Pcard_box3Z, 0x1000107B8420
 .globl _end_Pcard_box3Z
-.set _end_Pcard_box3Z, 0x107B8610
+.set _end_Pcard_box3Z, 0x1000107B8610
 .globl _Pcard_box4_lgZ
-.set _Pcard_box4_lgZ, 0x107B8610
+.set _Pcard_box4_lgZ, 0x1000107B8610
 .globl _end_Pcard_box4_lgZ
-.set _end_Pcard_box4_lgZ, 0x107B87C0
+.set _end_Pcard_box4_lgZ, 0x1000107B87C0
 .globl _Pcard_box5_lgZ
-.set _Pcard_box5_lgZ, 0x107B87C0
+.set _Pcard_box5_lgZ, 0x1000107B87C0
 .globl _end_Pcard_box5_lgZ
-.set _end_Pcard_box5_lgZ, 0x107B89C0
+.set _end_Pcard_box5_lgZ, 0x1000107B89C0
 .globl _Pcard_box6_lgZ
-.set _Pcard_box6_lgZ, 0x107B89C0
+.set _Pcard_box6_lgZ, 0x1000107B89C0
 .globl _end_Pcard_box6_lgZ
-.set _end_Pcard_box6_lgZ, 0x107B8BB0
+.set _end_Pcard_box6_lgZ, 0x1000107B8BB0
 .globl _PcarescortZ
-.set _PcarescortZ, 0x107B8BB0
+.set _PcarescortZ, 0x1000107B8BB0
 .globl _end_PcarescortZ
-.set _end_PcarescortZ, 0x107B97B0
+.set _end_PcarescortZ, 0x1000107B97B0
 .globl _PcargolfZ
-.set _PcargolfZ, 0x107B97B0
+.set _PcargolfZ, 0x1000107B97B0
 .globl _end_PcargolfZ
-.set _end_PcargolfZ, 0x107BA3E0
+.set _end_PcargolfZ, 0x1000107BA3E0
 .globl _PcarweirdZ
-.set _PcarweirdZ, 0x107BA3E0
+.set _PcarweirdZ, 0x1000107BA3E0
 .globl _end_PcarweirdZ
-.set _end_PcarweirdZ, 0x107BB520
+.set _end_PcarweirdZ, 0x1000107BB520
 .globl _PcarzilZ
-.set _PcarzilZ, 0x107BB520
+.set _PcarzilZ, 0x1000107BB520
 .globl _end_PcarzilZ
-.set _end_PcarzilZ, 0x107BCB20
+.set _end_PcarzilZ, 0x1000107BCB20
 .globl _PcctvZ
-.set _PcctvZ, 0x107BCB20
+.set _PcctvZ, 0x1000107BCB20
 .globl _end_PcctvZ
-.set _end_PcctvZ, 0x107BCEA0
+.set _end_PcctvZ, 0x1000107BCEA0
 .globl _PchraudiotapeZ
-.set _PchraudiotapeZ, 0x107BCEA0
+.set _PchraudiotapeZ, 0x1000107BCEA0
 .globl _end_PchraudiotapeZ
-.set _end_PchraudiotapeZ, 0x107BD400
+.set _end_PchraudiotapeZ, 0x1000107BD400
 .globl _PchrautoshotZ
-.set _PchrautoshotZ, 0x107BD400
+.set _PchrautoshotZ, 0x1000107BD400
 .globl _end_PchrautoshotZ
-.set _end_PchrautoshotZ, 0x107BD760
+.set _end_PchrautoshotZ, 0x1000107BD760
 .globl _PchrblackboxZ
-.set _PchrblackboxZ, 0x107BD760
+.set _PchrblackboxZ, 0x1000107BD760
 .globl _end_PchrblackboxZ
-.set _end_PchrblackboxZ, 0x107BDFE0
+.set _end_PchrblackboxZ, 0x1000107BDFE0
 .globl _PchrblueprintsZ
-.set _PchrblueprintsZ, 0x107BDFE0
+.set _PchrblueprintsZ, 0x1000107BDFE0
 .globl _end_PchrblueprintsZ
-.set _end_PchrblueprintsZ, 0x107BE130
+.set _end_PchrblueprintsZ, 0x1000107BE130
 .globl _PchrbombcaseZ
-.set _PchrbombcaseZ, 0x107BE130
+.set _PchrbombcaseZ, 0x1000107BE130
 .globl _end_PchrbombcaseZ
-.set _end_PchrbombcaseZ, 0x107BE320
+.set _end_PchrbombcaseZ, 0x1000107BE320
 .globl _PchrbombdefuserZ
-.set _PchrbombdefuserZ, 0x107BE320
+.set _PchrbombdefuserZ, 0x1000107BE320
 .globl _end_PchrbombdefuserZ
-.set _end_PchrbombdefuserZ, 0x107BEC00
+.set _end_PchrbombdefuserZ, 0x1000107BEC00
 .globl _PchrbriefcaseZ
-.set _PchrbriefcaseZ, 0x107BEC00
+.set _PchrbriefcaseZ, 0x1000107BEC00
 .globl _end_PchrbriefcaseZ
-.set _end_PchrbriefcaseZ, 0x107BED90
+.set _end_PchrbriefcaseZ, 0x1000107BED90
 .globl _PchrbugZ
-.set _PchrbugZ, 0x107BED90
+.set _PchrbugZ, 0x1000107BED90
 .globl _end_PchrbugZ
-.set _end_PchrbugZ, 0x107BFB40
+.set _end_PchrbugZ, 0x1000107BFB40
 .globl _PchrbugdetectorZ
-.set _PchrbugdetectorZ, 0x107BFB40
+.set _PchrbugdetectorZ, 0x1000107BFB40
 .globl _end_PchrbugdetectorZ
-.set _end_PchrbugdetectorZ, 0x107BFCB0
+.set _end_PchrbugdetectorZ, 0x1000107BFCB0
 .globl _PchrbungeeZ
-.set _PchrbungeeZ, 0x107BFCB0
+.set _PchrbungeeZ, 0x1000107BFCB0
 .globl _end_PchrbungeeZ
-.set _end_PchrbungeeZ, 0x107BFE20
+.set _end_PchrbungeeZ, 0x1000107BFE20
 .globl _PchrcameraZ
-.set _PchrcameraZ, 0x107BFE20
+.set _PchrcameraZ, 0x1000107BFE20
 .globl _end_PchrcameraZ
-.set _end_PchrcameraZ, 0x107C04B0
+.set _end_PchrcameraZ, 0x1000107C04B0
 .globl _PchrcircuitboardZ
-.set _PchrcircuitboardZ, 0x107C04B0
+.set _PchrcircuitboardZ, 0x1000107C04B0
 .globl _end_PchrcircuitboardZ
-.set _end_PchrcircuitboardZ, 0x107C0650
+.set _end_PchrcircuitboardZ, 0x1000107C0650
 .globl _PchrclipboardZ
-.set _PchrclipboardZ, 0x107C0650
+.set _PchrclipboardZ, 0x1000107C0650
 .globl _end_PchrclipboardZ
-.set _end_PchrclipboardZ, 0x107C08D0
+.set _end_PchrclipboardZ, 0x1000107C08D0
 .globl _PchrcreditcardZ
-.set _PchrcreditcardZ, 0x107C08D0
+.set _PchrcreditcardZ, 0x1000107C08D0
 .globl _end_PchrcreditcardZ
-.set _end_PchrcreditcardZ, 0x107C0A40
+.set _end_PchrcreditcardZ, 0x1000107C0A40
 .globl _PchrdarkglassesZ
-.set _PchrdarkglassesZ, 0x107C0A40
+.set _PchrdarkglassesZ, 0x1000107C0A40
 .globl _end_PchrdarkglassesZ
-.set _end_PchrdarkglassesZ, 0x107C0BB0
+.set _end_PchrdarkglassesZ, 0x1000107C0BB0
 .globl _PchrdatathiefZ
-.set _PchrdatathiefZ, 0x107C0BB0
+.set _PchrdatathiefZ, 0x1000107C0BB0
 .globl _end_PchrdatathiefZ
-.set _end_PchrdatathiefZ, 0x107C0D50
+.set _end_PchrdatathiefZ, 0x1000107C0D50
 .globl _PchrdattapeZ
-.set _PchrdattapeZ, 0x107C0D50
+.set _PchrdattapeZ, 0x1000107C0D50
 .globl _end_PchrdattapeZ
-.set _end_PchrdattapeZ, 0x107C0F40
+.set _end_PchrdattapeZ, 0x1000107C0F40
 .globl _PchrdoordecoderZ
-.set _PchrdoordecoderZ, 0x107C0F40
+.set _PchrdoordecoderZ, 0x1000107C0F40
 .globl _end_PchrdoordecoderZ
-.set _end_PchrdoordecoderZ, 0x107C17A0
+.set _end_PchrdoordecoderZ, 0x1000107C17A0
 .globl _PchrdoorexploderZ
-.set _PchrdoorexploderZ, 0x107C17A0
+.set _PchrdoorexploderZ, 0x1000107C17A0
 .globl _end_PchrdoorexploderZ
-.set _end_PchrdoorexploderZ, 0x107C1910
+.set _end_PchrdoorexploderZ, 0x1000107C1910
 .globl _PchrdossierredZ
-.set _PchrdossierredZ, 0x107C1910
+.set _PchrdossierredZ, 0x1000107C1910
 .globl _end_PchrdossierredZ
-.set _end_PchrdossierredZ, 0x107C1DE0
+.set _end_PchrdossierredZ, 0x1000107C1DE0
 .globl _PchrdynamiteZ
-.set _PchrdynamiteZ, 0x107C1DE0
+.set _PchrdynamiteZ, 0x1000107C1DE0
 .globl _end_PchrdynamiteZ
-.set _end_PchrdynamiteZ, 0x107C1F50
+.set _end_PchrdynamiteZ, 0x1000107C1F50
 .globl _PchrexplosivepenZ
-.set _PchrexplosivepenZ, 0x107C1F50
+.set _PchrexplosivepenZ, 0x1000107C1F50
 .globl _end_PchrexplosivepenZ
-.set _end_PchrexplosivepenZ, 0x107C20C0
+.set _end_PchrexplosivepenZ, 0x1000107C20C0
 .globl _PchrextinguisherZ
-.set _PchrextinguisherZ, 0x107C20C0
+.set _PchrextinguisherZ, 0x1000107C20C0
 .globl _end_PchrextinguisherZ
-.set _end_PchrextinguisherZ, 0x107C25C0
+.set _end_PchrextinguisherZ, 0x1000107C25C0
 .globl _PchrfingergunZ
-.set _PchrfingergunZ, 0x107C25C0
+.set _PchrfingergunZ, 0x1000107C25C0
 .globl _end_PchrfingergunZ
-.set _end_PchrfingergunZ, 0x107C2730
+.set _end_PchrfingergunZ, 0x1000107C2730
 .globl _PchrflarepistolZ
-.set _PchrflarepistolZ, 0x107C2730
+.set _PchrflarepistolZ, 0x1000107C2730
 .globl _end_PchrflarepistolZ
-.set _end_PchrflarepistolZ, 0x107C28A0
+.set _end_PchrflarepistolZ, 0x1000107C28A0
 .globl _Pchrfnp90Z
-.set _Pchrfnp90Z, 0x107C28A0
+.set _Pchrfnp90Z, 0x1000107C28A0
 .globl _end_Pchrfnp90Z
-.set _end_Pchrfnp90Z, 0x107C2D00
+.set _end_Pchrfnp90Z, 0x1000107C2D00
 .globl _PchrgaskeyringZ
-.set _PchrgaskeyringZ, 0x107C2D00
+.set _PchrgaskeyringZ, 0x1000107C2D00
 .globl _end_PchrgaskeyringZ
-.set _end_PchrgaskeyringZ, 0x107C3C10
+.set _end_PchrgaskeyringZ, 0x1000107C3C10
 .globl _PchrgoldbarZ
-.set _PchrgoldbarZ, 0x107C3C10
+.set _PchrgoldbarZ, 0x1000107C3C10
 .globl _end_PchrgoldbarZ
-.set _end_PchrgoldbarZ, 0x107C3D80
+.set _end_PchrgoldbarZ, 0x1000107C3D80
 .globl _PchrgoldenZ
-.set _PchrgoldenZ, 0x107C3D80
+.set _PchrgoldenZ, 0x1000107C3D80
 .globl _end_PchrgoldenZ
-.set _end_PchrgoldenZ, 0x107C3FF0
+.set _end_PchrgoldenZ, 0x1000107C3FF0
 .globl _PchrgoldeneyekeyZ
-.set _PchrgoldeneyekeyZ, 0x107C3FF0
+.set _PchrgoldeneyekeyZ, 0x1000107C3FF0
 .globl _end_PchrgoldeneyekeyZ
-.set _end_PchrgoldeneyekeyZ, 0x107C4E90
+.set _end_PchrgoldeneyekeyZ, 0x1000107C4E90
 .globl _PchrgoldwppkZ
-.set _PchrgoldwppkZ, 0x107C4E90
+.set _PchrgoldwppkZ, 0x1000107C4E90
 .globl _end_PchrgoldwppkZ
-.set _end_PchrgoldwppkZ, 0x107C5000
+.set _end_PchrgoldwppkZ, 0x1000107C5000
 .globl _PchrgrenadeZ
-.set _PchrgrenadeZ, 0x107C5000
+.set _PchrgrenadeZ, 0x1000107C5000
 .globl _end_PchrgrenadeZ
-.set _end_PchrgrenadeZ, 0x107C5370
+.set _end_PchrgrenadeZ, 0x1000107C5370
 .globl _PchrgrenadelaunchZ
-.set _PchrgrenadelaunchZ, 0x107C5370
+.set _PchrgrenadelaunchZ, 0x1000107C5370
 .globl _end_PchrgrenadelaunchZ
-.set _end_PchrgrenadelaunchZ, 0x107C5700
+.set _end_PchrgrenadelaunchZ, 0x1000107C5700
 .globl _PchrgrenaderoundZ
-.set _PchrgrenaderoundZ, 0x107C5700
+.set _PchrgrenaderoundZ, 0x1000107C5700
 .globl _end_PchrgrenaderoundZ
-.set _end_PchrgrenaderoundZ, 0x107C5970
+.set _end_PchrgrenaderoundZ, 0x1000107C5970
 .globl _PchrheroinZ
-.set _PchrheroinZ, 0x107C5970
+.set _PchrheroinZ, 0x1000107C5970
 .globl _end_PchrheroinZ
-.set _end_PchrheroinZ, 0x107C5AE0
+.set _end_PchrheroinZ, 0x1000107C5AE0
 .globl _PchrkalashZ
-.set _PchrkalashZ, 0x107C5AE0
+.set _PchrkalashZ, 0x1000107C5AE0
 .globl _end_PchrkalashZ
-.set _end_PchrkalashZ, 0x107C5ED0
+.set _end_PchrkalashZ, 0x1000107C5ED0
 .globl _PchrkeyanalysercaseZ
-.set _PchrkeyanalysercaseZ, 0x107C5ED0
+.set _PchrkeyanalysercaseZ, 0x1000107C5ED0
 .globl _end_PchrkeyanalysercaseZ
-.set _end_PchrkeyanalysercaseZ, 0x107C60C0
+.set _end_PchrkeyanalysercaseZ, 0x1000107C60C0
 .globl _PchrkeyboltZ
-.set _PchrkeyboltZ, 0x107C60C0
+.set _PchrkeyboltZ, 0x1000107C60C0
 .globl _end_PchrkeyboltZ
-.set _end_PchrkeyboltZ, 0x107C6F60
+.set _end_PchrkeyboltZ, 0x1000107C6F60
 .globl _PchrkeyyaleZ
-.set _PchrkeyyaleZ, 0x107C6F60
+.set _PchrkeyyaleZ, 0x1000107C6F60
 .globl _end_PchrkeyyaleZ
-.set _end_PchrkeyyaleZ, 0x107C83C0
+.set _end_PchrkeyyaleZ, 0x1000107C83C0
 .globl _PchrknifeZ
-.set _PchrknifeZ, 0x107C83C0
+.set _PchrknifeZ, 0x1000107C83C0
 .globl _end_PchrknifeZ
-.set _end_PchrknifeZ, 0x107C85C0
+.set _end_PchrknifeZ, 0x1000107C85C0
 .globl _PchrlaserZ
-.set _PchrlaserZ, 0x107C85C0
+.set _PchrlaserZ, 0x1000107C85C0
 .globl _end_PchrlaserZ
-.set _end_PchrlaserZ, 0x107C8980
+.set _end_PchrlaserZ, 0x1000107C8980
 .globl _PchrlectreZ
-.set _PchrlectreZ, 0x107C8980
+.set _PchrlectreZ, 0x1000107C8980
 .globl _end_PchrlectreZ
-.set _end_PchrlectreZ, 0x107C8AF0
+.set _end_PchrlectreZ, 0x1000107C8AF0
 .globl _PchrlockexploderZ
-.set _PchrlockexploderZ, 0x107C8AF0
+.set _PchrlockexploderZ, 0x1000107C8AF0
 .globl _end_PchrlockexploderZ
-.set _end_PchrlockexploderZ, 0x107C8C60
+.set _end_PchrlockexploderZ, 0x1000107C8C60
 .globl _Pchrm16Z
-.set _Pchrm16Z, 0x107C8C60
+.set _Pchrm16Z, 0x1000107C8C60
 .globl _end_Pchrm16Z
-.set _end_Pchrm16Z, 0x107C9030
+.set _end_Pchrm16Z, 0x1000107C9030
 .globl _PchrmapZ
-.set _PchrmapZ, 0x107C9030
+.set _PchrmapZ, 0x1000107C9030
 .globl _end_PchrmapZ
-.set _end_PchrmapZ, 0x107C9180
+.set _end_PchrmapZ, 0x1000107C9180
 .globl _PchrmicrocameraZ
-.set _PchrmicrocameraZ, 0x107C9180
+.set _PchrmicrocameraZ, 0x1000107C9180
 .globl _end_PchrmicrocameraZ
-.set _end_PchrmicrocameraZ, 0x107C9A70
+.set _end_PchrmicrocameraZ, 0x1000107C9A70
 .globl _PchrmicrocodeZ
-.set _PchrmicrocodeZ, 0x107C9A70
+.set _PchrmicrocodeZ, 0x1000107C9A70
 .globl _end_PchrmicrocodeZ
-.set _end_PchrmicrocodeZ, 0x107C9BE0
+.set _end_PchrmicrocodeZ, 0x1000107C9BE0
 .globl _PchrmicrofilmZ
-.set _PchrmicrofilmZ, 0x107C9BE0
+.set _PchrmicrofilmZ, 0x1000107C9BE0
 .globl _end_PchrmicrofilmZ
-.set _end_PchrmicrofilmZ, 0x107C9D50
+.set _end_PchrmicrofilmZ, 0x1000107C9D50
 .globl _PchrmoneyZ
-.set _PchrmoneyZ, 0x107C9D50
+.set _PchrmoneyZ, 0x1000107C9D50
 .globl _end_PchrmoneyZ
-.set _end_PchrmoneyZ, 0x107C9EC0
+.set _end_PchrmoneyZ, 0x1000107C9EC0
 .globl _Pchrmp5kZ
-.set _Pchrmp5kZ, 0x107C9EC0
+.set _Pchrmp5kZ, 0x1000107C9EC0
 .globl _end_Pchrmp5kZ
-.set _end_Pchrmp5kZ, 0x107CA240
+.set _end_Pchrmp5kZ, 0x1000107CA240
 .globl _Pchrmp5ksilZ
-.set _Pchrmp5ksilZ, 0x107CA240
+.set _Pchrmp5ksilZ, 0x1000107CA240
 .globl _end_Pchrmp5ksilZ
-.set _end_Pchrmp5ksilZ, 0x107CA650
+.set _end_Pchrmp5ksilZ, 0x1000107CA650
 .globl _PchrpitongunZ
-.set _PchrpitongunZ, 0x107CA650
+.set _PchrpitongunZ, 0x1000107CA650
 .globl _end_PchrpitongunZ
-.set _end_PchrpitongunZ, 0x107CA7C0
+.set _end_PchrpitongunZ, 0x1000107CA7C0
 .globl _PchrplansZ
-.set _PchrplansZ, 0x107CA7C0
+.set _PchrplansZ, 0x1000107CA7C0
 .globl _end_PchrplansZ
-.set _end_PchrplansZ, 0x107CAA50
+.set _end_PchrplansZ, 0x1000107CAA50
 .globl _PchrplastiqueZ
-.set _PchrplastiqueZ, 0x107CAA50
+.set _PchrplastiqueZ, 0x1000107CAA50
 .globl _end_PchrplastiqueZ
-.set _end_PchrplastiqueZ, 0x107CAEB0
+.set _end_PchrplastiqueZ, 0x1000107CAEB0
 .globl _PchrpolarizedglassesZ
-.set _PchrpolarizedglassesZ, 0x107CAEB0
+.set _PchrpolarizedglassesZ, 0x1000107CAEB0
 .globl _end_PchrpolarizedglassesZ
-.set _end_PchrpolarizedglassesZ, 0x107CB770
+.set _end_PchrpolarizedglassesZ, 0x1000107CB770
 .globl _PchrproximitymineZ
-.set _PchrproximitymineZ, 0x107CB770
+.set _PchrproximitymineZ, 0x1000107CB770
 .globl _end_PchrproximitymineZ
-.set _end_PchrproximitymineZ, 0x107CBBD0
+.set _end_PchrproximitymineZ, 0x1000107CBBD0
 .globl _PchrremotemineZ
-.set _PchrremotemineZ, 0x107CBBD0
+.set _PchrremotemineZ, 0x1000107CBBD0
 .globl _end_PchrremotemineZ
-.set _end_PchrremotemineZ, 0x107CC030
+.set _end_PchrremotemineZ, 0x1000107CC030
 .globl _PchrrocketZ
-.set _PchrrocketZ, 0x107CC030
+.set _PchrrocketZ, 0x1000107CC030
 .globl _end_PchrrocketZ
-.set _end_PchrrocketZ, 0x107CC5E0
+.set _end_PchrrocketZ, 0x1000107CC5E0
 .globl _PchrrocketlaunchZ
-.set _PchrrocketlaunchZ, 0x107CC5E0
+.set _PchrrocketlaunchZ, 0x1000107CC5E0
 .globl _end_PchrrocketlaunchZ
-.set _end_PchrrocketlaunchZ, 0x107CC9C0
+.set _end_PchrrocketlaunchZ, 0x1000107CC9C0
 .globl _PchrrugerZ
-.set _PchrrugerZ, 0x107CC9C0
+.set _PchrrugerZ, 0x1000107CC9C0
 .globl _end_PchrrugerZ
-.set _end_PchrrugerZ, 0x107CCDA0
+.set _end_PchrrugerZ, 0x1000107CCDA0
 .globl _PchrsafecrackercaseZ
-.set _PchrsafecrackercaseZ, 0x107CCDA0
+.set _PchrsafecrackercaseZ, 0x1000107CCDA0
 .globl _end_PchrsafecrackercaseZ
-.set _end_PchrsafecrackercaseZ, 0x107CCF90
+.set _end_PchrsafecrackercaseZ, 0x1000107CCF90
 .globl _PchrshotgunZ
-.set _PchrshotgunZ, 0x107CCF90
+.set _PchrshotgunZ, 0x1000107CCF90
 .globl _end_PchrshotgunZ
-.set _end_PchrshotgunZ, 0x107CD2E0
+.set _end_PchrshotgunZ, 0x1000107CD2E0
 .globl _PchrsilverwppkZ
-.set _PchrsilverwppkZ, 0x107CD2E0
+.set _PchrsilverwppkZ, 0x1000107CD2E0
 .globl _end_PchrsilverwppkZ
-.set _end_PchrsilverwppkZ, 0x107CD450
+.set _end_PchrsilverwppkZ, 0x1000107CD450
 .globl _PchrskorpionZ
-.set _PchrskorpionZ, 0x107CD450
+.set _PchrskorpionZ, 0x1000107CD450
 .globl _end_PchrskorpionZ
-.set _end_PchrskorpionZ, 0x107CD7D0
+.set _end_PchrskorpionZ, 0x1000107CD7D0
 .globl _PchrsniperrifleZ
-.set _PchrsniperrifleZ, 0x107CD7D0
+.set _PchrsniperrifleZ, 0x1000107CD7D0
 .globl _end_PchrsniperrifleZ
-.set _end_PchrsniperrifleZ, 0x107CDB60
+.set _end_PchrsniperrifleZ, 0x1000107CDB60
 .globl _PchrspectreZ
-.set _PchrspectreZ, 0x107CDB60
+.set _PchrspectreZ, 0x1000107CDB60
 .globl _end_PchrspectreZ
-.set _end_PchrspectreZ, 0x107CDED0
+.set _end_PchrspectreZ, 0x1000107CDED0
 .globl _PchrspooltapeZ
-.set _PchrspooltapeZ, 0x107CDED0
+.set _PchrspooltapeZ, 0x1000107CDED0
 .globl _end_PchrspooltapeZ
-.set _end_PchrspooltapeZ, 0x107CE040
+.set _end_PchrspooltapeZ, 0x1000107CE040
 .globl _PchrspyfileZ
-.set _PchrspyfileZ, 0x107CE040
+.set _PchrspyfileZ, 0x1000107CE040
 .globl _end_PchrspyfileZ
-.set _end_PchrspyfileZ, 0x107CE1B0
+.set _end_PchrspyfileZ, 0x1000107CE1B0
 .globl _PchrstafflistZ
-.set _PchrstafflistZ, 0x107CE1B0
+.set _PchrstafflistZ, 0x1000107CE1B0
 .globl _end_PchrstafflistZ
-.set _end_PchrstafflistZ, 0x107CE3D0
+.set _end_PchrstafflistZ, 0x1000107CE3D0
 .globl _PchrtesttubeZ
-.set _PchrtesttubeZ, 0x107CE3D0
+.set _PchrtesttubeZ, 0x1000107CE3D0
 .globl _end_PchrtesttubeZ
-.set _end_PchrtesttubeZ, 0x107CE590
+.set _end_PchrtesttubeZ, 0x1000107CE590
 .globl _PchrthrowknifeZ
-.set _PchrthrowknifeZ, 0x107CE590
+.set _PchrthrowknifeZ, 0x1000107CE590
 .globl _end_PchrthrowknifeZ
-.set _end_PchrthrowknifeZ, 0x107CE7B0
+.set _end_PchrthrowknifeZ, 0x1000107CE7B0
 .globl _PchrtimedmineZ
-.set _PchrtimedmineZ, 0x107CE7B0
+.set _PchrtimedmineZ, 0x1000107CE7B0
 .globl _end_PchrtimedmineZ
-.set _end_PchrtimedmineZ, 0x107CECE0
+.set _end_PchrtimedmineZ, 0x1000107CECE0
 .globl _Pchrtt33Z
-.set _Pchrtt33Z, 0x107CECE0
+.set _Pchrtt33Z, 0x1000107CECE0
 .globl _end_Pchrtt33Z
-.set _end_Pchrtt33Z, 0x107CEF70
+.set _end_Pchrtt33Z, 0x1000107CEF70
 .globl _PchruziZ
-.set _PchruziZ, 0x107CEF70
+.set _PchruziZ, 0x1000107CEF70
 .globl _end_PchruziZ
-.set _end_PchruziZ, 0x107CF240
+.set _end_PchruziZ, 0x1000107CF240
 .globl _PchrvideotapeZ
-.set _PchrvideotapeZ, 0x107CF240
+.set _PchrvideotapeZ, 0x1000107CF240
 .globl _end_PchrvideotapeZ
-.set _end_PchrvideotapeZ, 0x107CF510
+.set _end_PchrvideotapeZ, 0x1000107CF510
 .globl _PchrweaponcaseZ
-.set _PchrweaponcaseZ, 0x107CF510
+.set _PchrweaponcaseZ, 0x1000107CF510
 .globl _end_PchrweaponcaseZ
-.set _end_PchrweaponcaseZ, 0x107CF710
+.set _end_PchrweaponcaseZ, 0x1000107CF710
 .globl _PchrwppkZ
-.set _PchrwppkZ, 0x107CF710
+.set _PchrwppkZ, 0x1000107CF710
 .globl _end_PchrwppkZ
-.set _end_PchrwppkZ, 0x107CF950
+.set _end_PchrwppkZ, 0x1000107CF950
 .globl _PchrwppksilZ
-.set _PchrwppksilZ, 0x107CF950
+.set _PchrwppksilZ, 0x1000107CF950
 .globl _end_PchrwppksilZ
-.set _end_PchrwppksilZ, 0x107CFC30
+.set _end_PchrwppksilZ, 0x1000107CFC30
 .globl _PchrwristdartZ
-.set _PchrwristdartZ, 0x107CFC30
+.set _PchrwristdartZ, 0x1000107CFC30
 .globl _end_PchrwristdartZ
-.set _end_PchrwristdartZ, 0x107CFDA0
+.set _end_PchrwristdartZ, 0x1000107CFDA0
 .globl _Pconsole1Z
-.set _Pconsole1Z, 0x107CFDA0
+.set _Pconsole1Z, 0x1000107CFDA0
 .globl _end_Pconsole1Z
-.set _end_Pconsole1Z, 0x107D0420
+.set _end_Pconsole1Z, 0x1000107D0420
 .globl _Pconsole2Z
-.set _Pconsole2Z, 0x107D0420
+.set _Pconsole2Z, 0x1000107D0420
 .globl _end_Pconsole2Z
-.set _end_Pconsole2Z, 0x107D0AA0
+.set _end_Pconsole2Z, 0x1000107D0AA0
 .globl _Pconsole3Z
-.set _Pconsole3Z, 0x107D0AA0
+.set _Pconsole3Z, 0x1000107D0AA0
 .globl _end_Pconsole3Z
-.set _end_Pconsole3Z, 0x107D1130
+.set _end_Pconsole3Z, 0x1000107D1130
 .globl _Pconsole_sev2aZ
-.set _Pconsole_sev2aZ, 0x107D1130
+.set _Pconsole_sev2aZ, 0x1000107D1130
 .globl _end_Pconsole_sev2aZ
-.set _end_Pconsole_sev2aZ, 0x107D1550
+.set _end_Pconsole_sev2aZ, 0x1000107D1550
 .globl _Pconsole_sev2bZ
-.set _Pconsole_sev2bZ, 0x107D1550
+.set _Pconsole_sev2bZ, 0x1000107D1550
 .globl _end_Pconsole_sev2bZ
-.set _end_Pconsole_sev2bZ, 0x107D1A10
+.set _end_Pconsole_sev2bZ, 0x1000107D1A10
 .globl _Pconsole_sev2cZ
-.set _Pconsole_sev2cZ, 0x107D1A10
+.set _Pconsole_sev2cZ, 0x1000107D1A10
 .globl _end_Pconsole_sev2cZ
-.set _end_Pconsole_sev2cZ, 0x107D1E50
+.set _end_Pconsole_sev2cZ, 0x1000107D1E50
 .globl _Pconsole_sev2dZ
-.set _Pconsole_sev2dZ, 0x107D1E50
+.set _Pconsole_sev2dZ, 0x1000107D1E50
 .globl _end_Pconsole_sev2dZ
-.set _end_Pconsole_sev2dZ, 0x107D2280
+.set _end_Pconsole_sev2dZ, 0x1000107D2280
 .globl _Pconsole_sev_GEaZ
-.set _Pconsole_sev_GEaZ, 0x107D2280
+.set _Pconsole_sev_GEaZ, 0x1000107D2280
 .globl _end_Pconsole_sev_GEaZ
-.set _end_Pconsole_sev_GEaZ, 0x107D26B0
+.set _end_Pconsole_sev_GEaZ, 0x1000107D26B0
 .globl _Pconsole_sev_GEbZ
-.set _Pconsole_sev_GEbZ, 0x107D26B0
+.set _Pconsole_sev_GEbZ, 0x1000107D26B0
 .globl _end_Pconsole_sev_GEbZ
-.set _end_Pconsole_sev_GEbZ, 0x107D2AE0
+.set _end_Pconsole_sev_GEbZ, 0x1000107D2AE0
 .globl _Pconsole_sevaZ
-.set _Pconsole_sevaZ, 0x107D2AE0
+.set _Pconsole_sevaZ, 0x1000107D2AE0
 .globl _end_Pconsole_sevaZ
-.set _end_Pconsole_sevaZ, 0x107D2F60
+.set _end_Pconsole_sevaZ, 0x1000107D2F60
 .globl _Pconsole_sevbZ
-.set _Pconsole_sevbZ, 0x107D2F60
+.set _Pconsole_sevbZ, 0x1000107D2F60
 .globl _end_Pconsole_sevbZ
-.set _end_Pconsole_sevbZ, 0x107D33D0
+.set _end_Pconsole_sevbZ, 0x1000107D33D0
 .globl _Pconsole_sevcZ
-.set _Pconsole_sevcZ, 0x107D33D0
+.set _Pconsole_sevcZ, 0x1000107D33D0
 .globl _end_Pconsole_sevcZ
-.set _end_Pconsole_sevcZ, 0x107D3800
+.set _end_Pconsole_sevcZ, 0x1000107D3800
 .globl _Pconsole_sevdZ
-.set _Pconsole_sevdZ, 0x107D3800
+.set _Pconsole_sevdZ, 0x1000107D3800
 .globl _end_Pconsole_sevdZ
-.set _end_Pconsole_sevdZ, 0x107D3C30
+.set _end_Pconsole_sevdZ, 0x1000107D3C30
 .globl _Pcryptdoor1aZ
-.set _Pcryptdoor1aZ, 0x107D3C30
+.set _Pcryptdoor1aZ, 0x1000107D3C30
 .globl _end_Pcryptdoor1aZ
-.set _end_Pcryptdoor1aZ, 0x107D3DC0
+.set _end_Pcryptdoor1aZ, 0x1000107D3DC0
 .globl _Pcryptdoor1bZ
-.set _Pcryptdoor1bZ, 0x107D3DC0
+.set _Pcryptdoor1bZ, 0x1000107D3DC0
 .globl _end_Pcryptdoor1bZ
-.set _end_Pcryptdoor1bZ, 0x107D3F50
+.set _end_Pcryptdoor1bZ, 0x1000107D3F50
 .globl _Pcryptdoor2aZ
-.set _Pcryptdoor2aZ, 0x107D3F50
+.set _Pcryptdoor2aZ, 0x1000107D3F50
 .globl _end_Pcryptdoor2aZ
-.set _end_Pcryptdoor2aZ, 0x107D40E0
+.set _end_Pcryptdoor2aZ, 0x1000107D40E0
 .globl _Pcryptdoor2bZ
-.set _Pcryptdoor2bZ, 0x107D40E0
+.set _Pcryptdoor2bZ, 0x1000107D40E0
 .globl _end_Pcryptdoor2bZ
-.set _end_Pcryptdoor2bZ, 0x107D4270
+.set _end_Pcryptdoor2bZ, 0x1000107D4270
 .globl _Pcryptdoor3Z
-.set _Pcryptdoor3Z, 0x107D4270
+.set _Pcryptdoor3Z, 0x1000107D4270
 .globl _end_Pcryptdoor3Z
-.set _end_Pcryptdoor3Z, 0x107D44E0
+.set _end_Pcryptdoor3Z, 0x1000107D44E0
 .globl _Pcryptdoor4Z
-.set _Pcryptdoor4Z, 0x107D44E0
+.set _Pcryptdoor4Z, 0x1000107D44E0
 .globl _end_Pcryptdoor4Z
-.set _end_Pcryptdoor4Z, 0x107D4660
+.set _end_Pcryptdoor4Z, 0x1000107D4660
 .globl _PdamchaindoorZ
-.set _PdamchaindoorZ, 0x107D4660
+.set _PdamchaindoorZ, 0x1000107D4660
 .globl _end_PdamchaindoorZ
-.set _end_PdamchaindoorZ, 0x107D48E0
+.set _end_PdamchaindoorZ, 0x1000107D48E0
 .globl _PdamgatedoorZ
-.set _PdamgatedoorZ, 0x107D48E0
+.set _PdamgatedoorZ, 0x1000107D48E0
 .globl _end_PdamgatedoorZ
-.set _end_PdamgatedoorZ, 0x107D4B00
+.set _end_PdamgatedoorZ, 0x1000107D4B00
 .globl _PdamtundoorZ
-.set _PdamtundoorZ, 0x107D4B00
+.set _PdamtundoorZ, 0x1000107D4B00
 .globl _end_PdamtundoorZ
-.set _end_PdamtundoorZ, 0x107D4E70
+.set _end_PdamtundoorZ, 0x1000107D4E70
 .globl _Pdepot_door_steelZ
-.set _Pdepot_door_steelZ, 0x107D4E70
+.set _Pdepot_door_steelZ, 0x1000107D4E70
 .globl _end_Pdepot_door_steelZ
-.set _end_Pdepot_door_steelZ, 0x107D5010
+.set _end_Pdepot_door_steelZ, 0x1000107D5010
 .globl _Pdepot_gate_entryZ
-.set _Pdepot_gate_entryZ, 0x107D5010
+.set _Pdepot_gate_entryZ, 0x1000107D5010
 .globl _end_Pdepot_gate_entryZ
-.set _end_Pdepot_gate_entryZ, 0x107D5250
+.set _end_Pdepot_gate_entryZ, 0x1000107D5250
 .globl _Pdesk1Z
-.set _Pdesk1Z, 0x107D5250
+.set _Pdesk1Z, 0x1000107D5250
 .globl _end_Pdesk1Z
-.set _end_Pdesk1Z, 0x107D53D0
+.set _end_Pdesk1Z, 0x1000107D53D0
 .globl _Pdesk2Z
-.set _Pdesk2Z, 0x107D53D0
+.set _Pdesk2Z, 0x1000107D53D0
 .globl _end_Pdesk2Z
-.set _end_Pdesk2Z, 0x107D5550
+.set _end_Pdesk2Z, 0x1000107D5550
 .globl _Pdesk_arecibo1Z
-.set _Pdesk_arecibo1Z, 0x107D5550
+.set _Pdesk_arecibo1Z, 0x1000107D5550
 .globl _end_Pdesk_arecibo1Z
-.set _end_Pdesk_arecibo1Z, 0x107D5790
+.set _end_Pdesk_arecibo1Z, 0x1000107D5790
 .globl _Pdesk_lamp2Z
-.set _Pdesk_lamp2Z, 0x107D5790
+.set _Pdesk_lamp2Z, 0x1000107D5790
 .globl _end_Pdesk_lamp2Z
-.set _end_Pdesk_lamp2Z, 0x107D5A90
+.set _end_Pdesk_lamp2Z, 0x1000107D5A90
 .globl _Pdest_engineZ
-.set _Pdest_engineZ, 0x107D5A90
+.set _Pdest_engineZ, 0x1000107D5A90
 .globl _end_Pdest_engineZ
-.set _end_Pdest_engineZ, 0x107D7380
+.set _end_Pdest_engineZ, 0x1000107D7380
 .globl _Pdest_exocetZ
-.set _Pdest_exocetZ, 0x107D7380
+.set _Pdest_exocetZ, 0x1000107D7380
 .globl _end_Pdest_exocetZ
-.set _end_Pdest_exocetZ, 0x107D79E0
+.set _end_Pdest_exocetZ, 0x1000107D79E0
 .globl _Pdest_gunZ
-.set _Pdest_gunZ, 0x107D79E0
+.set _Pdest_gunZ, 0x1000107D79E0
 .globl _end_Pdest_gunZ
-.set _end_Pdest_gunZ, 0x107D8050
+.set _end_Pdest_gunZ, 0x1000107D8050
 .globl _Pdest_harpoonZ
-.set _Pdest_harpoonZ, 0x107D8050
+.set _Pdest_harpoonZ, 0x1000107D8050
 .globl _end_Pdest_harpoonZ
-.set _end_Pdest_harpoonZ, 0x107D88F0
+.set _end_Pdest_harpoonZ, 0x1000107D88F0
 .globl _Pdest_seawolfZ
-.set _Pdest_seawolfZ, 0x107D88F0
+.set _Pdest_seawolfZ, 0x1000107D88F0
 .globl _end_Pdest_seawolfZ
-.set _end_Pdest_seawolfZ, 0x107D98A0
+.set _end_Pdest_seawolfZ, 0x1000107D98A0
 .globl _Pdisc_readerZ
-.set _Pdisc_readerZ, 0x107D98A0
+.set _Pdisc_readerZ, 0x1000107D98A0
 .globl _end_Pdisc_readerZ
-.set _end_Pdisc_readerZ, 0x107D9A60
+.set _end_Pdisc_readerZ, 0x1000107D9A60
 .globl _Pdisk_drive1Z
-.set _Pdisk_drive1Z, 0x107D9A60
+.set _Pdisk_drive1Z, 0x1000107D9A60
 .globl _end_Pdisk_drive1Z
-.set _end_Pdisk_drive1Z, 0x107D9BF0
+.set _end_Pdisk_drive1Z, 0x1000107D9BF0
 .globl _Pdoor_azt_chairZ
-.set _Pdoor_azt_chairZ, 0x107D9BF0
+.set _Pdoor_azt_chairZ, 0x1000107D9BF0
 .globl _end_Pdoor_azt_chairZ
-.set _end_Pdoor_azt_chairZ, 0x107D9D70
+.set _end_Pdoor_azt_chairZ, 0x1000107D9D70
 .globl _Pdoor_azt_deskZ
-.set _Pdoor_azt_deskZ, 0x107D9D70
+.set _Pdoor_azt_deskZ, 0x1000107D9D70
 .globl _end_Pdoor_azt_deskZ
-.set _end_Pdoor_azt_deskZ, 0x107DA1B0
+.set _end_Pdoor_azt_deskZ, 0x1000107DA1B0
 .globl _Pdoor_azt_desk_topZ
-.set _Pdoor_azt_desk_topZ, 0x107DA1B0
+.set _Pdoor_azt_desk_topZ, 0x1000107DA1B0
 .globl _end_Pdoor_azt_desk_topZ
-.set _end_Pdoor_azt_desk_topZ, 0x107DA540
+.set _end_Pdoor_azt_desk_topZ, 0x1000107DA540
 .globl _Pdoor_aztecZ
-.set _Pdoor_aztecZ, 0x107DA540
+.set _Pdoor_aztecZ, 0x1000107DA540
 .globl _end_Pdoor_aztecZ
-.set _end_Pdoor_aztecZ, 0x107DA770
+.set _end_Pdoor_aztecZ, 0x1000107DA770
 .globl _Pdoor_dest1Z
-.set _Pdoor_dest1Z, 0x107DA770
+.set _Pdoor_dest1Z, 0x1000107DA770
 .globl _end_Pdoor_dest1Z
-.set _end_Pdoor_dest1Z, 0x107DAA70
+.set _end_Pdoor_dest1Z, 0x1000107DAA70
 .globl _Pdoor_dest2Z
-.set _Pdoor_dest2Z, 0x107DAA70
+.set _Pdoor_dest2Z, 0x1000107DAA70
 .globl _end_Pdoor_dest2Z
-.set _end_Pdoor_dest2Z, 0x107DAE30
+.set _end_Pdoor_dest2Z, 0x1000107DAE30
 .globl _Pdoor_eyelidZ
-.set _Pdoor_eyelidZ, 0x107DAE30
+.set _Pdoor_eyelidZ, 0x1000107DAE30
 .globl _end_Pdoor_eyelidZ
-.set _end_Pdoor_eyelidZ, 0x107DB390
+.set _end_Pdoor_eyelidZ, 0x1000107DB390
 .globl _Pdoor_irisZ
-.set _Pdoor_irisZ, 0x107DB390
+.set _Pdoor_irisZ, 0x1000107DB390
 .globl _end_Pdoor_irisZ
-.set _end_Pdoor_irisZ, 0x107DBDE0
+.set _end_Pdoor_irisZ, 0x1000107DBDE0
 .globl _Pdoor_mfZ
-.set _Pdoor_mfZ, 0x107DBDE0
+.set _Pdoor_mfZ, 0x1000107DBDE0
 .globl _end_Pdoor_mfZ
-.set _end_Pdoor_mfZ, 0x107DC0D0
+.set _end_Pdoor_mfZ, 0x1000107DC0D0
 .globl _Pdoor_roller1Z
-.set _Pdoor_roller1Z, 0x107DC0D0
+.set _Pdoor_roller1Z, 0x1000107DC0D0
 .globl _end_Pdoor_roller1Z
-.set _end_Pdoor_roller1Z, 0x107DC440
+.set _end_Pdoor_roller1Z, 0x1000107DC440
 .globl _Pdoor_roller2Z
-.set _Pdoor_roller2Z, 0x107DC440
+.set _Pdoor_roller2Z, 0x1000107DC440
 .globl _end_Pdoor_roller2Z
-.set _end_Pdoor_roller2Z, 0x107DC680
+.set _end_Pdoor_roller2Z, 0x1000107DC680
 .globl _Pdoor_roller3Z
-.set _Pdoor_roller3Z, 0x107DC680
+.set _Pdoor_roller3Z, 0x1000107DC680
 .globl _end_Pdoor_roller3Z
-.set _end_Pdoor_roller3Z, 0x107DC8C0
+.set _end_Pdoor_roller3Z, 0x1000107DC8C0
 .globl _Pdoor_roller4Z
-.set _Pdoor_roller4Z, 0x107DC8C0
+.set _Pdoor_roller4Z, 0x1000107DC8C0
 .globl _end_Pdoor_roller4Z
-.set _end_Pdoor_roller4Z, 0x107DCB20
+.set _end_Pdoor_roller4Z, 0x1000107DCB20
 .globl _Pdoor_rollertrainZ
-.set _Pdoor_rollertrainZ, 0x107DCB20
+.set _Pdoor_rollertrainZ, 0x1000107DCB20
 .globl _end_Pdoor_rollertrainZ
-.set _end_Pdoor_rollertrainZ, 0x107DCC50
+.set _end_Pdoor_rollertrainZ, 0x1000107DCC50
 .globl _Pdoor_st_arec1Z
-.set _Pdoor_st_arec1Z, 0x107DCC50
+.set _Pdoor_st_arec1Z, 0x1000107DCC50
 .globl _end_Pdoor_st_arec1Z
-.set _end_Pdoor_st_arec1Z, 0x107DCEB0
+.set _end_Pdoor_st_arec1Z, 0x1000107DCEB0
 .globl _Pdoor_st_arec2Z
-.set _Pdoor_st_arec2Z, 0x107DCEB0
+.set _Pdoor_st_arec2Z, 0x1000107DCEB0
 .globl _end_Pdoor_st_arec2Z
-.set _end_Pdoor_st_arec2Z, 0x107DD190
+.set _end_Pdoor_st_arec2Z, 0x1000107DD190
 .globl _Pdoor_winZ
-.set _Pdoor_winZ, 0x107DD190
+.set _Pdoor_winZ, 0x1000107DD190
 .globl _end_Pdoor_winZ
-.set _end_Pdoor_winZ, 0x107DD330
+.set _end_Pdoor_winZ, 0x1000107DD330
 .globl _PdoorconsoleZ
-.set _PdoorconsoleZ, 0x107DD330
+.set _PdoorconsoleZ, 0x1000107DD330
 .globl _end_PdoorconsoleZ
-.set _end_PdoorconsoleZ, 0x107DD7A0
+.set _end_PdoorconsoleZ, 0x1000107DD7A0
 .globl _PdoorpanelZ
-.set _PdoorpanelZ, 0x107DD7A0
+.set _PdoorpanelZ, 0x1000107DD7A0
 .globl _end_PdoorpanelZ
-.set _end_PdoorpanelZ, 0x107DDB10
+.set _end_PdoorpanelZ, 0x1000107DDB10
 .globl _Pdoorprison1Z
-.set _Pdoorprison1Z, 0x107DDB10
+.set _Pdoorprison1Z, 0x1000107DDB10
 .globl _end_Pdoorprison1Z
-.set _end_Pdoorprison1Z, 0x107DDC60
+.set _end_Pdoorprison1Z, 0x1000107DDC60
 .globl _PdoorstatgateZ
-.set _PdoorstatgateZ, 0x107DDC60
+.set _PdoorstatgateZ, 0x1000107DDC60
 .globl _end_PdoorstatgateZ
-.set _end_PdoorstatgateZ, 0x107DDE60
+.set _end_PdoorstatgateZ, 0x1000107DDE60
 .globl _PexplosionbitZ
-.set _PexplosionbitZ, 0x107DDE60
+.set _PexplosionbitZ, 0x1000107DDE60
 .globl _end_PexplosionbitZ
-.set _end_PexplosionbitZ, 0x107DDF80
+.set _end_PexplosionbitZ, 0x1000107DDF80
 .globl _Pfiling_cabinet1Z
-.set _Pfiling_cabinet1Z, 0x107DDF80
+.set _Pfiling_cabinet1Z, 0x1000107DDF80
 .globl _end_Pfiling_cabinet1Z
-.set _end_Pfiling_cabinet1Z, 0x107DE100
+.set _end_Pfiling_cabinet1Z, 0x1000107DE100
 .globl _PflagZ
-.set _PflagZ, 0x107DE100
+.set _PflagZ, 0x1000107DE100
 .globl _end_PflagZ
-.set _end_PflagZ, 0x107DE230
+.set _end_PflagZ, 0x1000107DE230
 .globl _PfloppyZ
-.set _PfloppyZ, 0x107DE230
+.set _PfloppyZ, 0x1000107DE230
 .globl _end_PfloppyZ
-.set _end_PfloppyZ, 0x107DE550
+.set _end_PfloppyZ, 0x1000107DE550
 .globl _Pfnp90magZ
-.set _Pfnp90magZ, 0x107DE550
+.set _Pfnp90magZ, 0x1000107DE550
 .globl _end_Pfnp90magZ
-.set _end_Pfnp90magZ, 0x107DE6F0
+.set _end_Pfnp90magZ, 0x1000107DE6F0
 .globl _Pgas_plant_met1_do1Z
-.set _Pgas_plant_met1_do1Z, 0x107DE6F0
+.set _Pgas_plant_met1_do1Z, 0x1000107DE6F0
 .globl _end_Pgas_plant_met1_do1Z
-.set _end_Pgas_plant_met1_do1Z, 0x107DEA70
+.set _end_Pgas_plant_met1_do1Z, 0x1000107DEA70
 .globl _Pgas_plant_sw2_do1Z
-.set _Pgas_plant_sw2_do1Z, 0x107DEA70
+.set _Pgas_plant_sw2_do1Z, 0x1000107DEA70
 .globl _end_Pgas_plant_sw2_do1Z
-.set _end_Pgas_plant_sw2_do1Z, 0x107DEC50
+.set _end_Pgas_plant_sw2_do1Z, 0x1000107DEC50
 .globl _Pgas_plant_sw3_do1Z
-.set _Pgas_plant_sw3_do1Z, 0x107DEC50
+.set _Pgas_plant_sw3_do1Z, 0x1000107DEC50
 .globl _end_Pgas_plant_sw3_do1Z
-.set _end_Pgas_plant_sw3_do1Z, 0x107DEE50
+.set _end_Pgas_plant_sw3_do1Z, 0x1000107DEE50
 .globl _Pgas_plant_sw4_do1Z
-.set _Pgas_plant_sw4_do1Z, 0x107DEE50
+.set _Pgas_plant_sw4_do1Z, 0x1000107DEE50
 .globl _end_Pgas_plant_sw4_do1Z
-.set _end_Pgas_plant_sw4_do1Z, 0x107DEFB0
+.set _end_Pgas_plant_sw4_do1Z, 0x1000107DEFB0
 .globl _Pgas_plant_sw_do1Z
-.set _Pgas_plant_sw_do1Z, 0x107DEFB0
+.set _Pgas_plant_sw_do1Z, 0x1000107DEFB0
 .globl _end_Pgas_plant_sw_do1Z
-.set _end_Pgas_plant_sw_do1Z, 0x107DF240
+.set _end_Pgas_plant_sw_do1Z, 0x1000107DF240
 .globl _Pgas_plant_wc_cub1Z
-.set _Pgas_plant_wc_cub1Z, 0x107DF240
+.set _Pgas_plant_wc_cub1Z, 0x1000107DF240
 .globl _end_Pgas_plant_wc_cub1Z
-.set _end_Pgas_plant_wc_cub1Z, 0x107DF450
+.set _end_Pgas_plant_wc_cub1Z, 0x1000107DF450
 .globl _PgasbarrelZ
-.set _PgasbarrelZ, 0x107DF450
+.set _PgasbarrelZ, 0x1000107DF450
 .globl _end_PgasbarrelZ
-.set _end_PgasbarrelZ, 0x107DF660
+.set _end_PgasbarrelZ, 0x1000107DF660
 .globl _PgasbarrelsZ
-.set _PgasbarrelsZ, 0x107DF660
+.set _PgasbarrelsZ, 0x1000107DF660
 .globl _end_PgasbarrelsZ
-.set _end_PgasbarrelsZ, 0x107DFBA0
+.set _end_PgasbarrelsZ, 0x1000107DFBA0
 .globl _Pgasplant_clear_doorZ
-.set _Pgasplant_clear_doorZ, 0x107DFBA0
+.set _Pgasplant_clear_doorZ, 0x1000107DFBA0
 .globl _end_Pgasplant_clear_doorZ
-.set _end_Pgasplant_clear_doorZ, 0x107E0100
+.set _end_Pgasplant_clear_doorZ, 0x1000107E0100
 .globl _PgastankZ
-.set _PgastankZ, 0x107E0100
+.set _PgastankZ, 0x1000107E0100
 .globl _end_PgastankZ
-.set _end_PgastankZ, 0x107E06B0
+.set _end_PgastankZ, 0x1000107E06B0
 .globl _Pglassware1Z
-.set _Pglassware1Z, 0x107E06B0
+.set _Pglassware1Z, 0x1000107E06B0
 .globl _end_Pglassware1Z
-.set _end_Pglassware1Z, 0x107E0810
+.set _end_Pglassware1Z, 0x1000107E0810
 .globl _Pglassware2Z
-.set _Pglassware2Z, 0x107E0810
+.set _Pglassware2Z, 0x1000107E0810
 .globl _end_Pglassware2Z
-.set _end_Pglassware2Z, 0x107E0AA0
+.set _end_Pglassware2Z, 0x1000107E0AA0
 .globl _Pglassware3Z
-.set _Pglassware3Z, 0x107E0AA0
+.set _Pglassware3Z, 0x1000107E0AA0
 .globl _end_Pglassware3Z
-.set _end_Pglassware3Z, 0x107E0CB0
+.set _end_Pglassware3Z, 0x1000107E0CB0
 .globl _Pglassware4Z
-.set _Pglassware4Z, 0x107E0CB0
+.set _Pglassware4Z, 0x1000107E0CB0
 .globl _end_Pglassware4Z
-.set _end_Pglassware4Z, 0x107E1230
+.set _end_Pglassware4Z, 0x1000107E1230
 .globl _PgoldeneyelogoZ
-.set _PgoldeneyelogoZ, 0x107E1230
+.set _PgoldeneyelogoZ, 0x1000107E1230
 .globl _end_PgoldeneyelogoZ
-.set _end_PgoldeneyelogoZ, 0x107E20E0
+.set _end_PgoldeneyelogoZ, 0x1000107E20E0
 .globl _PgoldenshellsZ
-.set _PgoldenshellsZ, 0x107E20E0
+.set _PgoldenshellsZ, 0x1000107E20E0
 .globl _end_PgoldenshellsZ
-.set _end_PgoldenshellsZ, 0x107E22E0
+.set _end_PgoldenshellsZ, 0x1000107E22E0
 .globl _PgroundgunZ
-.set _PgroundgunZ, 0x107E22E0
+.set _PgroundgunZ, 0x1000107E22E0
 .globl _end_PgroundgunZ
-.set _end_PgroundgunZ, 0x107E2AB0
+.set _end_PgroundgunZ, 0x1000107E2AB0
 .globl _Pgun_runway1Z
-.set _Pgun_runway1Z, 0x107E2AB0
+.set _Pgun_runway1Z, 0x1000107E2AB0
 .globl _end_Pgun_runway1Z
-.set _end_Pgun_runway1Z, 0x107E31F0
+.set _end_Pgun_runway1Z, 0x1000107E31F0
 .globl _PhatberetZ
-.set _PhatberetZ, 0x107E31F0
+.set _PhatberetZ, 0x1000107E31F0
 .globl _end_PhatberetZ
-.set _end_PhatberetZ, 0x107E3490
+.set _end_PhatberetZ, 0x1000107E3490
 .globl _PhatberetblueZ
-.set _PhatberetblueZ, 0x107E3490
+.set _PhatberetblueZ, 0x1000107E3490
 .globl _end_PhatberetblueZ
-.set _end_PhatberetblueZ, 0x107E3760
+.set _end_PhatberetblueZ, 0x1000107E3760
 .globl _PhatberetredZ
-.set _PhatberetredZ, 0x107E3760
+.set _PhatberetredZ, 0x1000107E3760
 .globl _end_PhatberetredZ
-.set _end_PhatberetredZ, 0x107E3A40
+.set _end_PhatberetredZ, 0x1000107E3A40
 .globl _PhatchboltZ
-.set _PhatchboltZ, 0x107E3A40
+.set _PhatchboltZ, 0x1000107E3A40
 .globl _end_PhatchboltZ
-.set _end_PhatchboltZ, 0x107E3B10
+.set _end_PhatchboltZ, 0x1000107E3B10
 .globl _PhatchdoorZ
-.set _PhatchdoorZ, 0x107E3B10
+.set _PhatchdoorZ, 0x1000107E3B10
 .globl _end_PhatchdoorZ
-.set _end_PhatchdoorZ, 0x107E3D30
+.set _end_PhatchdoorZ, 0x1000107E3D30
 .globl _PhatchsevxZ
-.set _PhatchsevxZ, 0x107E3D30
+.set _PhatchsevxZ, 0x1000107E3D30
 .globl _end_PhatchsevxZ
-.set _end_PhatchsevxZ, 0x107E3EA0
+.set _end_PhatchsevxZ, 0x1000107E3EA0
 .globl _PhatfurryZ
-.set _PhatfurryZ, 0x107E3EA0
+.set _PhatfurryZ, 0x1000107E3EA0
 .globl _end_PhatfurryZ
-.set _end_PhatfurryZ, 0x107E40D0
+.set _end_PhatfurryZ, 0x1000107E40D0
 .globl _PhatfurryblackZ
-.set _PhatfurryblackZ, 0x107E40D0
+.set _PhatfurryblackZ, 0x1000107E40D0
 .globl _end_PhatfurryblackZ
-.set _end_PhatfurryblackZ, 0x107E42F0
+.set _end_PhatfurryblackZ, 0x1000107E42F0
 .globl _PhatfurrybrownZ
-.set _PhatfurrybrownZ, 0x107E42F0
+.set _PhatfurrybrownZ, 0x1000107E42F0
 .globl _end_PhatfurrybrownZ
-.set _end_PhatfurrybrownZ, 0x107E4500
+.set _end_PhatfurrybrownZ, 0x1000107E4500
 .globl _PhathelmetZ
-.set _PhathelmetZ, 0x107E4500
+.set _PhathelmetZ, 0x1000107E4500
 .globl _end_PhathelmetZ
-.set _end_PhathelmetZ, 0x107E4730
+.set _end_PhathelmetZ, 0x1000107E4730
 .globl _PhathelmetgreyZ
-.set _PhathelmetgreyZ, 0x107E4730
+.set _PhathelmetgreyZ, 0x1000107E4730
 .globl _end_PhathelmetgreyZ
-.set _end_PhathelmetgreyZ, 0x107E4960
+.set _end_PhathelmetgreyZ, 0x1000107E4960
 .globl _PhatmoonZ
-.set _PhatmoonZ, 0x107E4960
+.set _PhatmoonZ, 0x1000107E4960
 .globl _end_PhatmoonZ
-.set _end_PhatmoonZ, 0x107E4D40
+.set _end_PhatmoonZ, 0x1000107E4D40
 .globl _PhatpeakedZ
-.set _PhatpeakedZ, 0x107E4D40
+.set _PhatpeakedZ, 0x1000107E4D40
 .globl _end_PhatpeakedZ
-.set _end_PhatpeakedZ, 0x107E5050
+.set _end_PhatpeakedZ, 0x1000107E5050
 .globl _PhattbirdZ
-.set _PhattbirdZ, 0x107E5050
+.set _PhattbirdZ, 0x1000107E5050
 .globl _end_PhattbirdZ
-.set _end_PhattbirdZ, 0x107E52A0
+.set _end_PhattbirdZ, 0x1000107E52A0
 .globl _PhattbirdbrownZ
-.set _PhattbirdbrownZ, 0x107E52A0
+.set _PhattbirdbrownZ, 0x1000107E52A0
 .globl _end_PhattbirdbrownZ
-.set _end_PhattbirdbrownZ, 0x107E5510
+.set _end_PhattbirdbrownZ, 0x1000107E5510
 .globl _PhelicopterZ
-.set _PhelicopterZ, 0x107E5510
+.set _PhelicopterZ, 0x1000107E5510
 .globl _end_PhelicopterZ
-.set _end_PhelicopterZ, 0x107E9730
+.set _end_PhelicopterZ, 0x1000107E9730
 .globl _PhindZ
-.set _PhindZ, 0x107E9730
+.set _PhindZ, 0x1000107E9730
 .globl _end_PhindZ
-.set _end_PhindZ, 0x107EAEA0
+.set _end_PhindZ, 0x1000107EAEA0
 .globl _PjeepZ
-.set _PjeepZ, 0x107EAEA0
+.set _PjeepZ, 0x1000107EAEA0
 .globl _end_PjeepZ
-.set _end_PjeepZ, 0x107EC000
+.set _end_PjeepZ, 0x1000107EC000
 .globl _Pjerry_can1Z
-.set _Pjerry_can1Z, 0x107EC000
+.set _Pjerry_can1Z, 0x1000107EC000
 .globl _end_Pjerry_can1Z
-.set _end_Pjerry_can1Z, 0x107EC260
+.set _end_Pjerry_can1Z, 0x1000107EC260
 .globl _Pjungle3_treeZ
-.set _Pjungle3_treeZ, 0x107EC260
+.set _Pjungle3_treeZ, 0x1000107EC260
 .globl _end_Pjungle3_treeZ
-.set _end_Pjungle3_treeZ, 0x107EC9E0
+.set _end_Pjungle3_treeZ, 0x1000107EC9E0
 .globl _Pjungle5_treeZ
-.set _Pjungle5_treeZ, 0x107EC9E0
+.set _Pjungle5_treeZ, 0x1000107EC9E0
 .globl _end_Pjungle5_treeZ
-.set _end_Pjungle5_treeZ, 0x107ECF10
+.set _end_Pjungle5_treeZ, 0x1000107ECF10
 .globl _Pkey_holderZ
-.set _Pkey_holderZ, 0x107ECF10
+.set _Pkey_holderZ, 0x1000107ECF10
 .globl _end_Pkey_holderZ
-.set _end_Pkey_holderZ, 0x107ED260
+.set _end_Pkey_holderZ, 0x1000107ED260
 .globl _Pkeyboard1Z
-.set _Pkeyboard1Z, 0x107ED260
+.set _Pkeyboard1Z, 0x1000107ED260
 .globl _end_Pkeyboard1Z
-.set _end_Pkeyboard1Z, 0x107ED3D0
+.set _end_Pkeyboard1Z, 0x1000107ED3D0
 .globl _Pkit_units1Z
-.set _Pkit_units1Z, 0x107ED3D0
+.set _Pkit_units1Z, 0x1000107ED3D0
 .globl _end_Pkit_units1Z
-.set _end_Pkit_units1Z, 0x107ED670
+.set _end_Pkit_units1Z, 0x1000107ED670
 .globl _PlabbenchZ
-.set _PlabbenchZ, 0x107ED670
+.set _PlabbenchZ, 0x1000107ED670
 .globl _end_PlabbenchZ
-.set _end_PlabbenchZ, 0x107EDA40
+.set _end_PlabbenchZ, 0x1000107EDA40
 .globl _PlandmineZ
-.set _PlandmineZ, 0x107EDA40
+.set _PlandmineZ, 0x1000107EDA40
 .globl _end_PlandmineZ
-.set _end_PlandmineZ, 0x107EDCB0
+.set _end_PlandmineZ, 0x1000107EDCB0
 .globl _PlegalpageZ
-.set _PlegalpageZ, 0x107EDCB0
+.set _PlegalpageZ, 0x1000107EDCB0
 .globl _end_PlegalpageZ
-.set _end_PlegalpageZ, 0x107EEC70
+.set _end_PlegalpageZ, 0x1000107EEC70
 .globl _Pletter_tray1Z
-.set _Pletter_tray1Z, 0x107EEC70
+.set _Pletter_tray1Z, 0x1000107EEC70
 .globl _end_Pletter_tray1Z
-.set _end_Pletter_tray1Z, 0x107EEDD0
+.set _end_Pletter_tray1Z, 0x1000107EEDD0
 .globl _Plocker3Z
-.set _Plocker3Z, 0x107EEDD0
+.set _Plocker3Z, 0x1000107EEDD0
 .globl _end_Plocker3Z
-.set _end_Plocker3Z, 0x107EEF60
+.set _end_Plocker3Z, 0x1000107EEF60
 .globl _Plocker4Z
-.set _Plocker4Z, 0x107EEF60
+.set _Plocker4Z, 0x1000107EEF60
 .globl _end_Plocker4Z
-.set _end_Plocker4Z, 0x107EF0F0
+.set _end_Plocker4Z, 0x1000107EF0F0
 .globl _Pm16magZ
-.set _Pm16magZ, 0x107EF0F0
+.set _Pm16magZ, 0x1000107EF0F0
 .globl _end_Pm16magZ
-.set _end_Pm16magZ, 0x107EF230
+.set _end_Pm16magZ, 0x1000107EF230
 .globl _PmagnumshellsZ
-.set _PmagnumshellsZ, 0x107EF230
+.set _PmagnumshellsZ, 0x1000107EF230
 .globl _end_PmagnumshellsZ
-.set _end_PmagnumshellsZ, 0x107EF430
+.set _end_PmagnumshellsZ, 0x1000107EF430
 .globl _Pmainframe1Z
-.set _Pmainframe1Z, 0x107EF430
+.set _Pmainframe1Z, 0x1000107EF430
 .globl _end_Pmainframe1Z
-.set _end_Pmainframe1Z, 0x107EF730
+.set _end_Pmainframe1Z, 0x1000107EF730
 .globl _Pmainframe2Z
-.set _Pmainframe2Z, 0x107EF730
+.set _Pmainframe2Z, 0x1000107EF730
 .globl _end_Pmainframe2Z
-.set _end_Pmainframe2Z, 0x107EFA00
+.set _end_Pmainframe2Z, 0x1000107EFA00
 .globl _Pmetal_chair1Z
-.set _Pmetal_chair1Z, 0x107EFA00
+.set _Pmetal_chair1Z, 0x1000107EFA00
 .globl _end_Pmetal_chair1Z
-.set _end_Pmetal_chair1Z, 0x107EFD40
+.set _end_Pmetal_chair1Z, 0x1000107EFD40
 .globl _Pmetal_crate1Z
-.set _Pmetal_crate1Z, 0x107EFD40
+.set _Pmetal_crate1Z, 0x1000107EFD40
 .globl _end_Pmetal_crate1Z
-.set _end_Pmetal_crate1Z, 0x107EFF00
+.set _end_Pmetal_crate1Z, 0x1000107EFF00
 .globl _Pmetal_crate2Z
-.set _Pmetal_crate2Z, 0x107EFF00
+.set _Pmetal_crate2Z, 0x1000107EFF00
 .globl _end_Pmetal_crate2Z
-.set _end_Pmetal_crate2Z, 0x107F00C0
+.set _end_Pmetal_crate2Z, 0x1000107F00C0
 .globl _Pmetal_crate3Z
-.set _Pmetal_crate3Z, 0x107F00C0
+.set _Pmetal_crate3Z, 0x1000107F00C0
 .globl _end_Pmetal_crate3Z
-.set _end_Pmetal_crate3Z, 0x107F0280
+.set _end_Pmetal_crate3Z, 0x1000107F0280
 .globl _Pmetal_crate4Z
-.set _Pmetal_crate4Z, 0x107F0280
+.set _Pmetal_crate4Z, 0x1000107F0280
 .globl _end_Pmetal_crate4Z
-.set _end_Pmetal_crate4Z, 0x107F0440
+.set _end_Pmetal_crate4Z, 0x1000107F0440
 .globl _PmilcopterZ
-.set _PmilcopterZ, 0x107F0440
+.set _PmilcopterZ, 0x1000107F0440
 .globl _end_PmilcopterZ
-.set _end_PmilcopterZ, 0x107F1D20
+.set _end_PmilcopterZ, 0x1000107F1D20
 .globl _PmiltruckZ
-.set _PmiltruckZ, 0x107F1D20
+.set _PmiltruckZ, 0x1000107F1D20
 .globl _end_PmiltruckZ
-.set _end_PmiltruckZ, 0x107F4020
+.set _end_PmiltruckZ, 0x1000107F4020
 .globl _Pmissile_rack2Z
-.set _Pmissile_rack2Z, 0x107F4020
+.set _Pmissile_rack2Z, 0x1000107F4020
 .globl _end_Pmissile_rack2Z
-.set _end_Pmissile_rack2Z, 0x107F4A30
+.set _end_Pmissile_rack2Z, 0x1000107F4A30
 .globl _Pmissile_rackZ
-.set _Pmissile_rackZ, 0x107F4A30
+.set _Pmissile_rackZ, 0x1000107F4A30
 .globl _end_Pmissile_rackZ
-.set _end_Pmissile_rackZ, 0x107F4E10
+.set _end_Pmissile_rackZ, 0x1000107F4E10
 .globl _PmodemboxZ
-.set _PmodemboxZ, 0x107F4E10
+.set _PmodemboxZ, 0x1000107F4E10
 .globl _end_PmodemboxZ
-.set _end_PmodemboxZ, 0x107F5150
+.set _end_PmodemboxZ, 0x1000107F5150
 .globl _PmotorbikeZ
-.set _PmotorbikeZ, 0x107F5150
+.set _PmotorbikeZ, 0x1000107F5150
 .globl _end_PmotorbikeZ
-.set _end_PmotorbikeZ, 0x107F6010
+.set _end_PmotorbikeZ, 0x1000107F6010
 .globl _Pmp5kmagZ
-.set _Pmp5kmagZ, 0x107F6010
+.set _Pmp5kmagZ, 0x1000107F6010
 .globl _end_Pmp5kmagZ
-.set _end_Pmp5kmagZ, 0x107F6160
+.set _end_Pmp5kmagZ, 0x1000107F6160
 .globl _PnintendologoZ
-.set _PnintendologoZ, 0x107F6160
+.set _PnintendologoZ, 0x1000107F6160
 .globl _end_PnintendologoZ
-.set _end_PnintendologoZ, 0x107F8C40
+.set _end_PnintendologoZ, 0x1000107F8C40
 .globl _Poil_drum1Z
-.set _Poil_drum1Z, 0x107F8C40
+.set _Poil_drum1Z, 0x1000107F8C40
 .globl _end_Poil_drum1Z
-.set _end_Poil_drum1Z, 0x107F8EB0
+.set _end_Poil_drum1Z, 0x1000107F8EB0
 .globl _Poil_drum2Z
-.set _Poil_drum2Z, 0x107F8EB0
+.set _Poil_drum2Z, 0x1000107F8EB0
 .globl _end_Poil_drum2Z
-.set _end_Poil_drum2Z, 0x107F91A0
+.set _end_Poil_drum2Z, 0x1000107F91A0
 .globl _Poil_drum3Z
-.set _Poil_drum3Z, 0x107F91A0
+.set _Poil_drum3Z, 0x1000107F91A0
 .globl _end_Poil_drum3Z
-.set _end_Poil_drum3Z, 0x107F9490
+.set _end_Poil_drum3Z, 0x1000107F9490
 .globl _Poil_drum5Z
-.set _Poil_drum5Z, 0x107F9490
+.set _Poil_drum5Z, 0x1000107F9490
 .globl _end_Poil_drum5Z
-.set _end_Poil_drum5Z, 0x107F9780
+.set _end_Poil_drum5Z, 0x1000107F9780
 .globl _Poil_drum6Z
-.set _Poil_drum6Z, 0x107F9780
+.set _Poil_drum6Z, 0x1000107F9780
 .globl _end_Poil_drum6Z
-.set _end_Poil_drum6Z, 0x107F9A90
+.set _end_Poil_drum6Z, 0x1000107F9A90
 .globl _Poil_drum7Z
-.set _Poil_drum7Z, 0x107F9A90
+.set _Poil_drum7Z, 0x1000107F9A90
 .globl _end_Poil_drum7Z
-.set _end_Poil_drum7Z, 0x107F9D90
+.set _end_Poil_drum7Z, 0x1000107F9D90
 .globl _PpadlockZ
-.set _PpadlockZ, 0x107F9D90
+.set _PpadlockZ, 0x1000107F9D90
 .globl _end_PpadlockZ
-.set _end_PpadlockZ, 0x107FA7E0
+.set _end_PpadlockZ, 0x1000107FA7E0
 .globl _PpalmZ
-.set _PpalmZ, 0x107FA7E0
+.set _PpalmZ, 0x1000107FA7E0
 .globl _end_PpalmZ
-.set _end_PpalmZ, 0x107FAC30
+.set _end_PpalmZ, 0x1000107FAC30
 .globl _PpalmtreeZ
-.set _PpalmtreeZ, 0x107FAC30
+.set _PpalmtreeZ, 0x1000107FAC30
 .globl _end_PpalmtreeZ
-.set _end_PpalmtreeZ, 0x107FB100
+.set _end_PpalmtreeZ, 0x1000107FB100
 .globl _Pphone1Z
-.set _Pphone1Z, 0x107FB100
+.set _Pphone1Z, 0x1000107FB100
 .globl _end_Pphone1Z
-.set _end_Pphone1Z, 0x107FB240
+.set _end_Pphone1Z, 0x1000107FB240
 .globl _PplaneZ
-.set _PplaneZ, 0x107FB240
+.set _PplaneZ, 0x1000107FB240
 .globl _end_PplaneZ
-.set _end_PplaneZ, 0x107FD820
+.set _end_PplaneZ, 0x1000107FD820
 .globl _Pplant11Z
-.set _Pplant11Z, 0x107FD820
+.set _Pplant11Z, 0x1000107FD820
 .globl _end_Pplant11Z
-.set _end_Pplant11Z, 0x107FDBE0
+.set _end_Pplant11Z, 0x1000107FDBE0
 .globl _Pplant1Z
-.set _Pplant1Z, 0x107FDBE0
+.set _Pplant1Z, 0x1000107FDBE0
 .globl _end_Pplant1Z
-.set _end_Pplant1Z, 0x107FDF70
+.set _end_Pplant1Z, 0x1000107FDF70
 .globl _Pplant2Z
-.set _Pplant2Z, 0x107FDF70
+.set _Pplant2Z, 0x1000107FDF70
 .globl _end_Pplant2Z
-.set _end_Pplant2Z, 0x107FE2D0
+.set _end_Pplant2Z, 0x1000107FE2D0
 .globl _Pplant2bZ
-.set _Pplant2bZ, 0x107FE2D0
+.set _Pplant2bZ, 0x1000107FE2D0
 .globl _end_Pplant2bZ
-.set _end_Pplant2bZ, 0x107FE6E0
+.set _end_Pplant2bZ, 0x1000107FE6E0
 .globl _Pplant3Z
-.set _Pplant3Z, 0x107FE6E0
+.set _Pplant3Z, 0x1000107FE6E0
 .globl _end_Pplant3Z
-.set _end_Pplant3Z, 0x107FEB30
+.set _end_Pplant3Z, 0x1000107FEB30
 .globl _Pradio_unit1Z
-.set _Pradio_unit1Z, 0x107FEB30
+.set _Pradio_unit1Z, 0x1000107FEB30
 .globl _end_Pradio_unit1Z
-.set _end_Pradio_unit1Z, 0x107FECE0
+.set _end_Pradio_unit1Z, 0x1000107FECE0
 .globl _Pradio_unit2Z
-.set _Pradio_unit2Z, 0x107FECE0
+.set _Pradio_unit2Z, 0x1000107FECE0
 .globl _end_Pradio_unit2Z
-.set _end_Pradio_unit2Z, 0x107FEEA0
+.set _end_Pradio_unit2Z, 0x1000107FEEA0
 .globl _Pradio_unit3Z
-.set _Pradio_unit3Z, 0x107FEEA0
+.set _Pradio_unit3Z, 0x1000107FEEA0
 .globl _end_Pradio_unit3Z
-.set _end_Pradio_unit3Z, 0x107FF060
+.set _end_Pradio_unit3Z, 0x1000107FF060
 .globl _Pradio_unit4Z
-.set _Pradio_unit4Z, 0x107FF060
+.set _Pradio_unit4Z, 0x1000107FF060
 .globl _end_Pradio_unit4Z
-.set _end_Pradio_unit4Z, 0x107FF220
+.set _end_Pradio_unit4Z, 0x1000107FF220
 .globl _ProofgunZ
-.set _ProofgunZ, 0x107FF220
+.set _ProofgunZ, 0x1000107FF220
 .globl _end_ProofgunZ
-.set _end_ProofgunZ, 0x107FF880
+.set _end_ProofgunZ, 0x1000107FF880
 .globl _PsafeZ
-.set _PsafeZ, 0x107FF880
+.set _PsafeZ, 0x1000107FF880
 .globl _end_PsafeZ
-.set _end_PsafeZ, 0x107FFBD0
+.set _end_PsafeZ, 0x1000107FFBD0
 .globl _PsafedoorZ
-.set _PsafedoorZ, 0x107FFBD0
+.set _PsafedoorZ, 0x1000107FFBD0
 .globl _end_PsafedoorZ
-.set _end_PsafedoorZ, 0x108000C0
+.set _end_PsafedoorZ, 0x1000108000C0
 .globl _Psat1_reflectZ
-.set _Psat1_reflectZ, 0x108000C0
+.set _Psat1_reflectZ, 0x1000108000C0
 .globl _end_Psat1_reflectZ
-.set _end_Psat1_reflectZ, 0x10801630
+.set _end_Psat1_reflectZ, 0x100010801630
 .globl _PsatboxZ
-.set _PsatboxZ, 0x10801630
+.set _PsatboxZ, 0x100010801630
 .globl _end_PsatboxZ
-.set _end_PsatboxZ, 0x10801750
+.set _end_PsatboxZ, 0x100010801750
 .globl _PsatdishZ
-.set _PsatdishZ, 0x10801750
+.set _PsatdishZ, 0x100010801750
 .globl _end_PsatdishZ
-.set _end_PsatdishZ, 0x10801BB0
+.set _end_PsatdishZ, 0x100010801BB0
 .globl _Psec_panelZ
-.set _Psec_panelZ, 0x10801BB0
+.set _Psec_panelZ, 0x100010801BB0
 .globl _end_Psec_panelZ
-.set _end_Psec_panelZ, 0x10801D50
+.set _end_Psec_panelZ, 0x100010801D50
 .globl _Psev_door3Z
-.set _Psev_door3Z, 0x10801D50
+.set _Psev_door3Z, 0x100010801D50
 .globl _end_Psev_door3Z
-.set _end_Psev_door3Z, 0x10801FE0
+.set _end_Psev_door3Z, 0x100010801FE0
 .globl _Psev_door3_windZ
-.set _Psev_door3_windZ, 0x10801FE0
+.set _Psev_door3_windZ, 0x100010801FE0
 .globl _end_Psev_door3_windZ
-.set _end_Psev_door3_windZ, 0x10802370
+.set _end_Psev_door3_windZ, 0x100010802370
 .globl _Psev_door4_windZ
-.set _Psev_door4_windZ, 0x10802370
+.set _Psev_door4_windZ, 0x100010802370
 .globl _end_Psev_door4_windZ
-.set _end_Psev_door4_windZ, 0x10802750
+.set _end_Psev_door4_windZ, 0x100010802750
 .globl _Psev_doorZ
-.set _Psev_doorZ, 0x10802750
+.set _Psev_doorZ, 0x100010802750
 .globl _end_Psev_doorZ
-.set _end_Psev_doorZ, 0x10802AA0
+.set _end_Psev_doorZ, 0x100010802AA0
 .globl _Psev_door_v1Z
-.set _Psev_door_v1Z, 0x10802AA0
+.set _Psev_door_v1Z, 0x100010802AA0
 .globl _end_Psev_door_v1Z
-.set _end_Psev_door_v1Z, 0x10802DD0
+.set _end_Psev_door_v1Z, 0x100010802DD0
 .globl _Psev_trislideZ
-.set _Psev_trislideZ, 0x10802DD0
+.set _Psev_trislideZ, 0x100010802DD0
 .globl _end_Psev_trislideZ
-.set _end_Psev_trislideZ, 0x10803180
+.set _end_Psev_trislideZ, 0x100010803180
 .globl _PsevdishZ
-.set _PsevdishZ, 0x10803180
+.set _PsevdishZ, 0x100010803180
 .globl _end_PsevdishZ
-.set _end_PsevdishZ, 0x108040A0
+.set _end_PsevdishZ, 0x1000108040A0
 .globl _PsevdoormetslideZ
-.set _PsevdoormetslideZ, 0x108040A0
+.set _PsevdoormetslideZ, 0x1000108040A0
 .globl _end_PsevdoormetslideZ
-.set _end_PsevdoormetslideZ, 0x10804380
+.set _end_PsevdoormetslideZ, 0x100010804380
 .globl _PsevdoornowindZ
-.set _PsevdoornowindZ, 0x10804380
+.set _PsevdoornowindZ, 0x100010804380
 .globl _end_PsevdoornowindZ
-.set _end_PsevdoornowindZ, 0x108044F0
+.set _end_PsevdoornowindZ, 0x1000108044F0
 .globl _PsevdoorwindZ
-.set _PsevdoorwindZ, 0x108044F0
+.set _PsevdoorwindZ, 0x1000108044F0
 .globl _end_PsevdoorwindZ
-.set _end_PsevdoorwindZ, 0x10804920
+.set _end_PsevdoorwindZ, 0x100010804920
 .globl _PsevdoorwoodZ
-.set _PsevdoorwoodZ, 0x10804920
+.set _PsevdoorwoodZ, 0x100010804920
 .globl _end_PsevdoorwoodZ
-.set _end_PsevdoorwoodZ, 0x10804CD0
+.set _end_PsevdoorwoodZ, 0x100010804CD0
 .globl _PshuttleZ
-.set _PshuttleZ, 0x10804CD0
+.set _PshuttleZ, 0x100010804CD0
 .globl _end_PshuttleZ
-.set _end_PshuttleZ, 0x108076D0
+.set _end_PshuttleZ, 0x1000108076D0
 .globl _Pshuttle_door_lZ
-.set _Pshuttle_door_lZ, 0x108076D0
+.set _Pshuttle_door_lZ, 0x1000108076D0
 .globl _end_Pshuttle_door_lZ
-.set _end_Pshuttle_door_lZ, 0x10808300
+.set _end_Pshuttle_door_lZ, 0x100010808300
 .globl _Pshuttle_door_rZ
-.set _Pshuttle_door_rZ, 0x10808300
+.set _Pshuttle_door_rZ, 0x100010808300
 .globl _end_Pshuttle_door_rZ
-.set _end_Pshuttle_door_rZ, 0x10809000
+.set _end_Pshuttle_door_rZ, 0x100010809000
 .globl _PsilencerZ
-.set _PsilencerZ, 0x10809000
+.set _PsilencerZ, 0x100010809000
 .globl _end_PsilencerZ
-.set _end_PsilencerZ, 0x108091A0
+.set _end_PsilencerZ, 0x1000108091A0
 .globl _Psilo_lift_doorZ
-.set _Psilo_lift_doorZ, 0x108091A0
+.set _Psilo_lift_doorZ, 0x1000108091A0
 .globl _end_Psilo_lift_doorZ
-.set _end_Psilo_lift_doorZ, 0x108093E0
+.set _end_Psilo_lift_doorZ, 0x1000108093E0
 .globl _PsilotopdoorZ
-.set _PsilotopdoorZ, 0x108093E0
+.set _PsilotopdoorZ, 0x1000108093E0
 .globl _end_PsilotopdoorZ
-.set _end_PsilotopdoorZ, 0x108096D0
+.set _end_PsilotopdoorZ, 0x1000108096D0
 .globl _PskorpionmagZ
-.set _PskorpionmagZ, 0x108096D0
+.set _PskorpionmagZ, 0x1000108096D0
 .globl _end_PskorpionmagZ
-.set _end_PskorpionmagZ, 0x10809830
+.set _end_PskorpionmagZ, 0x100010809830
 .globl _PspectremagZ
-.set _PspectremagZ, 0x10809830
+.set _PspectremagZ, 0x100010809830
 .globl _end_PspectremagZ
-.set _end_PspectremagZ, 0x108099A0
+.set _end_PspectremagZ, 0x1000108099A0
 .globl _PspeedboatZ
-.set _PspeedboatZ, 0x108099A0
+.set _PspeedboatZ, 0x1000108099A0
 .globl _end_PspeedboatZ
-.set _end_PspeedboatZ, 0x1080A6E0
+.set _end_PspeedboatZ, 0x10001080A6E0
 .globl _Pst_pete_room_1iZ
-.set _Pst_pete_room_1iZ, 0x1080A6E0
+.set _Pst_pete_room_1iZ, 0x10001080A6E0
 .globl _end_Pst_pete_room_1iZ
-.set _end_Pst_pete_room_1iZ, 0x1080D820
+.set _end_Pst_pete_room_1iZ, 0x10001080D820
 .globl _Pst_pete_room_2iZ
-.set _Pst_pete_room_2iZ, 0x1080D820
+.set _Pst_pete_room_2iZ, 0x10001080D820
 .globl _end_Pst_pete_room_2iZ
-.set _end_Pst_pete_room_2iZ, 0x10810A00
+.set _end_Pst_pete_room_2iZ, 0x100010810A00
 .globl _Pst_pete_room_3tZ
-.set _Pst_pete_room_3tZ, 0x10810A00
+.set _Pst_pete_room_3tZ, 0x100010810A00
 .globl _end_Pst_pete_room_3tZ
-.set _end_Pst_pete_room_3tZ, 0x10813940
+.set _end_Pst_pete_room_3tZ, 0x100010813940
 .globl _Pst_pete_room_5cZ
-.set _Pst_pete_room_5cZ, 0x10813940
+.set _Pst_pete_room_5cZ, 0x100010813940
 .globl _end_Pst_pete_room_5cZ
-.set _end_Pst_pete_room_5cZ, 0x10816ED0
+.set _end_Pst_pete_room_5cZ, 0x100010816ED0
 .globl _Pst_pete_room_6cZ
-.set _Pst_pete_room_6cZ, 0x10816ED0
+.set _Pst_pete_room_6cZ, 0x100010816ED0
 .globl _end_Pst_pete_room_6cZ
-.set _end_Pst_pete_room_6cZ, 0x1081A2E0
+.set _end_Pst_pete_room_6cZ, 0x10001081A2E0
 .globl _Psteel_door1Z
-.set _Psteel_door1Z, 0x1081A2E0
+.set _Psteel_door1Z, 0x10001081A2E0
 .globl _end_Psteel_door1Z
-.set _end_Psteel_door1Z, 0x1081A550
+.set _end_Psteel_door1Z, 0x10001081A550
 .globl _Psteel_door2Z
-.set _Psteel_door2Z, 0x1081A550
+.set _Psteel_door2Z, 0x10001081A550
 .globl _end_Psteel_door2Z
-.set _end_Psteel_door2Z, 0x1081A800
+.set _end_Psteel_door2Z, 0x10001081A800
 .globl _Psteel_door2bZ
-.set _Psteel_door2bZ, 0x1081A800
+.set _Psteel_door2bZ, 0x10001081A800
 .globl _end_Psteel_door2bZ
-.set _end_Psteel_door2bZ, 0x1081AAD0
+.set _end_Psteel_door2bZ, 0x10001081AAD0
 .globl _Psteel_door3Z
-.set _Psteel_door3Z, 0x1081AAD0
+.set _Psteel_door3Z, 0x10001081AAD0
 .globl _end_Psteel_door3Z
-.set _end_Psteel_door3Z, 0x1081ADA0
+.set _end_Psteel_door3Z, 0x10001081ADA0
 .globl _Pstool1Z
-.set _Pstool1Z, 0x1081ADA0
+.set _Pstool1Z, 0x10001081ADA0
 .globl _end_Pstool1Z
-.set _end_Pstool1Z, 0x1081B060
+.set _end_Pstool1Z, 0x10001081B060
 .globl _Pswipe_card2Z
-.set _Pswipe_card2Z, 0x1081B060
+.set _Pswipe_card2Z, 0x10001081B060
 .globl _end_Pswipe_card2Z
-.set _end_Pswipe_card2Z, 0x1081B1F0
+.set _end_Pswipe_card2Z, 0x10001081B1F0
 .globl _Pswivel_chair1Z
-.set _Pswivel_chair1Z, 0x1081B1F0
+.set _Pswivel_chair1Z, 0x10001081B1F0
 .globl _end_Pswivel_chair1Z
-.set _end_Pswivel_chair1Z, 0x1081B480
+.set _end_Pswivel_chair1Z, 0x10001081B480
 .globl _PtankZ
-.set _PtankZ, 0x1081B480
+.set _PtankZ, 0x10001081B480
 .globl _end_PtankZ
-.set _end_PtankZ, 0x1081CF20
+.set _end_PtankZ, 0x10001081CF20
 .globl _PtigerZ
-.set _PtigerZ, 0x1081CF20
+.set _PtigerZ, 0x10001081CF20
 .globl _end_PtigerZ
-.set _end_PtigerZ, 0x1081EDB0
+.set _end_PtigerZ, 0x10001081EDB0
 .globl _Ptorpedo_rackZ
-.set _Ptorpedo_rackZ, 0x1081EDB0
+.set _Ptorpedo_rackZ, 0x10001081EDB0
 .globl _end_Ptorpedo_rackZ
-.set _end_Ptorpedo_rackZ, 0x1081F630
+.set _end_Ptorpedo_rackZ, 0x10001081F630
 .globl _Ptrain_door2Z
-.set _Ptrain_door2Z, 0x1081F630
+.set _Ptrain_door2Z, 0x10001081F630
 .globl _end_Ptrain_door2Z
-.set _end_Ptrain_door2Z, 0x1081FA00
+.set _end_Ptrain_door2Z, 0x10001081FA00
 .globl _Ptrain_door3Z
-.set _Ptrain_door3Z, 0x1081FA00
+.set _Ptrain_door3Z, 0x10001081FA00
 .globl _end_Ptrain_door3Z
-.set _end_Ptrain_door3Z, 0x1081FE20
+.set _end_Ptrain_door3Z, 0x10001081FE20
 .globl _Ptrain_doorZ
-.set _Ptrain_doorZ, 0x1081FE20
+.set _Ptrain_doorZ, 0x10001081FE20
 .globl _end_Ptrain_doorZ
-.set _end_Ptrain_doorZ, 0x10820090
+.set _end_Ptrain_doorZ, 0x100010820090
 .globl _PtrainextdoorZ
-.set _PtrainextdoorZ, 0x10820090
+.set _PtrainextdoorZ, 0x100010820090
 .globl _end_PtrainextdoorZ
-.set _end_PtrainextdoorZ, 0x108203D0
+.set _end_PtrainextdoorZ, 0x1000108203D0
 .globl _Ptt33magZ
-.set _Ptt33magZ, 0x108203D0
+.set _Ptt33magZ, 0x1000108203D0
 .globl _end_Ptt33magZ
-.set _end_Ptt33magZ, 0x10820510
+.set _end_Ptt33magZ, 0x100010820510
 .globl _Ptuning_console1Z
-.set _Ptuning_console1Z, 0x10820510
+.set _Ptuning_console1Z, 0x100010820510
 .globl _end_Ptuning_console1Z
-.set _end_Ptuning_console1Z, 0x10820A30
+.set _end_Ptuning_console1Z, 0x100010820A30
 .globl _Ptv1Z
-.set _Ptv1Z, 0x10820A30
+.set _Ptv1Z, 0x100010820A30
 .globl _end_Ptv1Z
-.set _end_Ptv1Z, 0x10820C00
+.set _end_Ptv1Z, 0x100010820C00
 .globl _Ptv4screenZ
-.set _Ptv4screenZ, 0x10820C00
+.set _Ptv4screenZ, 0x100010820C00
 .globl _end_Ptv4screenZ
-.set _end_Ptv4screenZ, 0x10820DA0
+.set _end_Ptv4screenZ, 0x100010820DA0
 .globl _Ptv_holderZ
-.set _Ptv_holderZ, 0x10820DA0
+.set _Ptv_holderZ, 0x100010820DA0
 .globl _end_Ptv_holderZ
-.set _end_Ptv_holderZ, 0x10821470
+.set _end_Ptv_holderZ, 0x100010821470
 .globl _PtvscreenZ
-.set _PtvscreenZ, 0x10821470
+.set _PtvscreenZ, 0x100010821470
 .globl _end_PtvscreenZ
-.set _end_PtvscreenZ, 0x10821540
+.set _end_PtvscreenZ, 0x100010821540
 .globl _PuzimagZ
-.set _PuzimagZ, 0x10821540
+.set _PuzimagZ, 0x100010821540
 .globl _end_PuzimagZ
-.set _end_PuzimagZ, 0x10821680
+.set _end_PuzimagZ, 0x100010821680
 .globl _PvertdoorZ
-.set _PvertdoorZ, 0x10821680
+.set _PvertdoorZ, 0x100010821680
 .globl _end_PvertdoorZ
-.set _end_PvertdoorZ, 0x10821C90
+.set _end_PvertdoorZ, 0x100010821C90
 .globl _PwalletbondZ
-.set _PwalletbondZ, 0x10821C90
+.set _PwalletbondZ, 0x100010821C90
 .globl _end_PwalletbondZ
-.set _end_PwalletbondZ, 0x10823240
+.set _end_PwalletbondZ, 0x100010823240
 .globl _PwindowZ
-.set _PwindowZ, 0x10823240
+.set _PwindowZ, 0x100010823240
 .globl _end_PwindowZ
-.set _end_PwindowZ, 0x10823330
+.set _end_PwindowZ, 0x100010823330
 .globl _Pwindow_cor11Z
-.set _Pwindow_cor11Z, 0x10823330
+.set _Pwindow_cor11Z, 0x100010823330
 .globl _end_Pwindow_cor11Z
-.set _end_Pwindow_cor11Z, 0x10823410
+.set _end_Pwindow_cor11Z, 0x100010823410
 .globl _Pwindow_lib_lg1Z
-.set _Pwindow_lib_lg1Z, 0x10823410
+.set _Pwindow_lib_lg1Z, 0x100010823410
 .globl _end_Pwindow_lib_lg1Z
-.set _end_Pwindow_lib_lg1Z, 0x108234F0
+.set _end_Pwindow_lib_lg1Z, 0x1000108234F0
 .globl _Pwindow_lib_sm1Z
-.set _Pwindow_lib_sm1Z, 0x108234F0
+.set _Pwindow_lib_sm1Z, 0x1000108234F0
 .globl _end_Pwindow_lib_sm1Z
-.set _end_Pwindow_lib_sm1Z, 0x108235E0
+.set _end_Pwindow_lib_sm1Z, 0x1000108235E0
 .globl _Pwood_lg_crate1Z
-.set _Pwood_lg_crate1Z, 0x108235E0
+.set _Pwood_lg_crate1Z, 0x1000108235E0
 .globl _end_Pwood_lg_crate1Z
-.set _end_Pwood_lg_crate1Z, 0x10823860
+.set _end_Pwood_lg_crate1Z, 0x100010823860
 .globl _Pwood_lg_crate2Z
-.set _Pwood_lg_crate2Z, 0x10823860
+.set _Pwood_lg_crate2Z, 0x100010823860
 .globl _end_Pwood_lg_crate2Z
-.set _end_Pwood_lg_crate2Z, 0x10823A80
+.set _end_Pwood_lg_crate2Z, 0x100010823A80
 .globl _Pwood_md_crate3Z
-.set _Pwood_md_crate3Z, 0x10823A80
+.set _Pwood_md_crate3Z, 0x100010823A80
 .globl _end_Pwood_md_crate3Z
-.set _end_Pwood_md_crate3Z, 0x10823CA0
+.set _end_Pwood_md_crate3Z, 0x100010823CA0
 .globl _Pwood_sm_crate4Z
-.set _Pwood_sm_crate4Z, 0x10823CA0
+.set _Pwood_sm_crate4Z, 0x100010823CA0
 .globl _end_Pwood_sm_crate4Z
-.set _end_Pwood_sm_crate4Z, 0x10823F00
+.set _end_Pwood_sm_crate4Z, 0x100010823F00
 .globl _Pwood_sm_crate5Z
-.set _Pwood_sm_crate5Z, 0x10823F00
+.set _Pwood_sm_crate5Z, 0x100010823F00
 .globl _end_Pwood_sm_crate5Z
-.set _end_Pwood_sm_crate5Z, 0x10824160
+.set _end_Pwood_sm_crate5Z, 0x100010824160
 .globl _Pwood_sm_crate6Z
-.set _Pwood_sm_crate6Z, 0x10824160
+.set _Pwood_sm_crate6Z, 0x100010824160
 .globl _end_Pwood_sm_crate6Z
-.set _end_Pwood_sm_crate6Z, 0x10824380
+.set _end_Pwood_sm_crate6Z, 0x100010824380
 .globl _Pwooden_table1Z
-.set _Pwooden_table1Z, 0x10824380
+.set _Pwooden_table1Z, 0x100010824380
 .globl _end_Pwooden_table1Z
-.set _end_Pwooden_table1Z, 0x108246F0
+.set _end_Pwooden_table1Z, 0x1000108246F0
 .globl _PwppkmagZ
-.set _PwppkmagZ, 0x108246F0
+.set _PwppkmagZ, 0x1000108246F0
 .globl _end_PwppkmagZ
-.set _end_PwppkmagZ, 0x10824830
+.set _end_PwppkmagZ, 0x100010824830
 .globl _Tbg_ame_all_p_stanZ
-.set _Tbg_ame_all_p_stanZ, 0x10824830
+.set _Tbg_ame_all_p_stanZ, 0x100010824830
 .globl _end_Tbg_ame_all_p_stanZ
-.set _end_Tbg_ame_all_p_stanZ, 0x10826160
+.set _end_Tbg_ame_all_p_stanZ, 0x100010826160
 .globl _Tbg_arch_all_p_stanZ
-.set _Tbg_arch_all_p_stanZ, 0x10826160
+.set _Tbg_arch_all_p_stanZ, 0x100010826160
 .globl _end_Tbg_arch_all_p_stanZ
-.set _end_Tbg_arch_all_p_stanZ, 0x1082BE50
+.set _end_Tbg_arch_all_p_stanZ, 0x10001082BE50
 .globl _Tbg_arec_all_p_stanZ
-.set _Tbg_arec_all_p_stanZ, 0x1082BE50
+.set _Tbg_arec_all_p_stanZ, 0x10001082BE50
 .globl _end_Tbg_arec_all_p_stanZ
-.set _end_Tbg_arec_all_p_stanZ, 0x108341A0
+.set _end_Tbg_arec_all_p_stanZ, 0x1000108341A0
 .globl _Tbg_ark_all_p_stanZ
-.set _Tbg_ark_all_p_stanZ, 0x108341A0
+.set _Tbg_ark_all_p_stanZ, 0x1000108341A0
 .globl _end_Tbg_ark_all_p_stanZ
-.set _end_Tbg_ark_all_p_stanZ, 0x1083D160
+.set _end_Tbg_ark_all_p_stanZ, 0x10001083D160
 .globl _Tbg_ash_all_p_stanZ
-.set _Tbg_ash_all_p_stanZ, 0x1083D160
+.set _Tbg_ash_all_p_stanZ, 0x10001083D160
 .globl _end_Tbg_ash_all_p_stanZ
-.set _end_Tbg_ash_all_p_stanZ, 0x1083EA90
+.set _end_Tbg_ash_all_p_stanZ, 0x10001083EA90
 .globl _Tbg_azt_all_p_stanZ
-.set _Tbg_azt_all_p_stanZ, 0x1083EA90
+.set _Tbg_azt_all_p_stanZ, 0x10001083EA90
 .globl _end_Tbg_azt_all_p_stanZ
-.set _end_Tbg_azt_all_p_stanZ, 0x10844010
+.set _end_Tbg_azt_all_p_stanZ, 0x100010844010
 .globl _Tbg_cat_all_p_stanZ
-.set _Tbg_cat_all_p_stanZ, 0x10844010
+.set _Tbg_cat_all_p_stanZ, 0x100010844010
 .globl _end_Tbg_cat_all_p_stanZ
-.set _end_Tbg_cat_all_p_stanZ, 0x10846740
+.set _end_Tbg_cat_all_p_stanZ, 0x100010846740
 .globl _Tbg_cave_all_p_stanZ
-.set _Tbg_cave_all_p_stanZ, 0x10846740
+.set _Tbg_cave_all_p_stanZ, 0x100010846740
 .globl _end_Tbg_cave_all_p_stanZ
-.set _end_Tbg_cave_all_p_stanZ, 0x1084B630
+.set _end_Tbg_cave_all_p_stanZ, 0x10001084B630
 .globl _Tbg_crad_all_p_stanZ
-.set _Tbg_crad_all_p_stanZ, 0x1084B630
+.set _Tbg_crad_all_p_stanZ, 0x10001084B630
 .globl _end_Tbg_crad_all_p_stanZ
-.set _end_Tbg_crad_all_p_stanZ, 0x1084DF40
+.set _end_Tbg_crad_all_p_stanZ, 0x10001084DF40
 .globl _Tbg_cryp_all_p_stanZ
-.set _Tbg_cryp_all_p_stanZ, 0x1084DF40
+.set _Tbg_cryp_all_p_stanZ, 0x10001084DF40
 .globl _end_Tbg_cryp_all_p_stanZ
-.set _end_Tbg_cryp_all_p_stanZ, 0x10850FB0
+.set _end_Tbg_cryp_all_p_stanZ, 0x100010850FB0
 .globl _Tbg_dam_all_p_stanZ
-.set _Tbg_dam_all_p_stanZ, 0x10850FB0
+.set _Tbg_dam_all_p_stanZ, 0x100010850FB0
 .globl _end_Tbg_dam_all_p_stanZ
-.set _end_Tbg_dam_all_p_stanZ, 0x1085B390
+.set _end_Tbg_dam_all_p_stanZ, 0x10001085B390
 .globl _Tbg_depo_all_p_stanZ
-.set _Tbg_depo_all_p_stanZ, 0x1085B390
+.set _Tbg_depo_all_p_stanZ, 0x10001085B390
 .globl _end_Tbg_depo_all_p_stanZ
-.set _end_Tbg_depo_all_p_stanZ, 0x108622D0
+.set _end_Tbg_depo_all_p_stanZ, 0x1000108622D0
 .globl _Tbg_dest_all_p_stanZ
-.set _Tbg_dest_all_p_stanZ, 0x108622D0
+.set _Tbg_dest_all_p_stanZ, 0x1000108622D0
 .globl _end_Tbg_dest_all_p_stanZ
-.set _end_Tbg_dest_all_p_stanZ, 0x10868BC0
+.set _end_Tbg_dest_all_p_stanZ, 0x100010868BC0
 .globl _Tbg_dish_all_p_stanZ
-.set _Tbg_dish_all_p_stanZ, 0x10868BC0
+.set _Tbg_dish_all_p_stanZ, 0x100010868BC0
 .globl _end_Tbg_dish_all_p_stanZ
-.set _end_Tbg_dish_all_p_stanZ, 0x108696D0
+.set _end_Tbg_dish_all_p_stanZ, 0x1000108696D0
 .globl _Tbg_imp_all_p_stanZ
-.set _Tbg_imp_all_p_stanZ, 0x108696D0
+.set _Tbg_imp_all_p_stanZ, 0x1000108696D0
 .globl _end_Tbg_imp_all_p_stanZ
-.set _end_Tbg_imp_all_p_stanZ, 0x1086B000
+.set _end_Tbg_imp_all_p_stanZ, 0x10001086B000
 .globl _Tbg_jun_all_p_stanZ
-.set _Tbg_jun_all_p_stanZ, 0x1086B000
+.set _Tbg_jun_all_p_stanZ, 0x10001086B000
 .globl _end_Tbg_jun_all_p_stanZ
-.set _end_Tbg_jun_all_p_stanZ, 0x10872150
+.set _end_Tbg_jun_all_p_stanZ, 0x100010872150
 .globl _Tbg_len_all_p_stanZ
-.set _Tbg_len_all_p_stanZ, 0x10872150
+.set _Tbg_len_all_p_stanZ, 0x100010872150
 .globl _end_Tbg_len_all_p_stanZ
-.set _end_Tbg_len_all_p_stanZ, 0x10872C10
+.set _end_Tbg_len_all_p_stanZ, 0x100010872C10
 .globl _Tbg_oat_all_p_stanZ
-.set _Tbg_oat_all_p_stanZ, 0x10872C10
+.set _Tbg_oat_all_p_stanZ, 0x100010872C10
 .globl _end_Tbg_oat_all_p_stanZ
-.set _end_Tbg_oat_all_p_stanZ, 0x10874510
+.set _end_Tbg_oat_all_p_stanZ, 0x100010874510
 .globl _Tbg_pete_all_p_stanZ
-.set _Tbg_pete_all_p_stanZ, 0x10874510
+.set _Tbg_pete_all_p_stanZ, 0x100010874510
 .globl _end_Tbg_pete_all_p_stanZ
-.set _end_Tbg_pete_all_p_stanZ, 0x10878BA0
+.set _end_Tbg_pete_all_p_stanZ, 0x100010878BA0
 .globl _Tbg_ref_all_p_stanZ
-.set _Tbg_ref_all_p_stanZ, 0x10878BA0
+.set _Tbg_ref_all_p_stanZ, 0x100010878BA0
 .globl _end_Tbg_ref_all_p_stanZ
-.set _end_Tbg_ref_all_p_stanZ, 0x1087A970
+.set _end_Tbg_ref_all_p_stanZ, 0x10001087A970
 .globl _Tbg_run_all_p_stanZ
-.set _Tbg_run_all_p_stanZ, 0x1087A970
+.set _Tbg_run_all_p_stanZ, 0x10001087A970
 .globl _end_Tbg_run_all_p_stanZ
-.set _end_Tbg_run_all_p_stanZ, 0x1087C3F0
+.set _end_Tbg_run_all_p_stanZ, 0x10001087C3F0
 .globl _Tbg_sev_all_p_stanZ
-.set _Tbg_sev_all_p_stanZ, 0x1087C3F0
+.set _Tbg_sev_all_p_stanZ, 0x10001087C3F0
 .globl _end_Tbg_sev_all_p_stanZ
-.set _end_Tbg_sev_all_p_stanZ, 0x108801C0
+.set _end_Tbg_sev_all_p_stanZ, 0x1000108801C0
 .globl _Tbg_sevb_all_p_stanZ
-.set _Tbg_sevb_all_p_stanZ, 0x108801C0
+.set _Tbg_sevb_all_p_stanZ, 0x1000108801C0
 .globl _end_Tbg_sevb_all_p_stanZ
-.set _end_Tbg_sevb_all_p_stanZ, 0x10885100
+.set _end_Tbg_sevb_all_p_stanZ, 0x100010885100
 .globl _Tbg_sevx_all_p_stanZ
-.set _Tbg_sevx_all_p_stanZ, 0x10885100
+.set _Tbg_sevx_all_p_stanZ, 0x100010885100
 .globl _end_Tbg_sevx_all_p_stanZ
-.set _end_Tbg_sevx_all_p_stanZ, 0x1088E430
+.set _end_Tbg_sevx_all_p_stanZ, 0x10001088E430
 .globl _Tbg_silo_all_p_stanZ
-.set _Tbg_silo_all_p_stanZ, 0x1088E430
+.set _Tbg_silo_all_p_stanZ, 0x10001088E430
 .globl _end_Tbg_silo_all_p_stanZ
-.set _end_Tbg_silo_all_p_stanZ, 0x108974D0
+.set _end_Tbg_silo_all_p_stanZ, 0x1000108974D0
 .globl _Tbg_stat_all_p_stanZ
-.set _Tbg_stat_all_p_stanZ, 0x108974D0
+.set _Tbg_stat_all_p_stanZ, 0x1000108974D0
 .globl _end_Tbg_stat_all_p_stanZ
-.set _end_Tbg_stat_all_p_stanZ, 0x1089C390
+.set _end_Tbg_stat_all_p_stanZ, 0x10001089C390
 .globl _Tbg_tra_all_p_stanZ
-.set _Tbg_tra_all_p_stanZ, 0x1089C390
+.set _Tbg_tra_all_p_stanZ, 0x10001089C390
 .globl _end_Tbg_tra_all_p_stanZ
-.set _end_Tbg_tra_all_p_stanZ, 0x1089E760
+.set _end_Tbg_tra_all_p_stanZ, 0x10001089E760
 .globl _UbriefarchZ
-.set _UbriefarchZ, 0x1089E760
+.set _UbriefarchZ, 0x10001089E760
 .globl _end_UbriefarchZ
-.set _end_UbriefarchZ, 0x1089E780
+.set _end_UbriefarchZ, 0x10001089E780
 .globl _UbriefarkZ
-.set _UbriefarkZ, 0x1089E780
+.set _UbriefarkZ, 0x10001089E780
 .globl _end_UbriefarkZ
-.set _end_UbriefarkZ, 0x1089E7A0
+.set _end_UbriefarkZ, 0x10001089E7A0
 .globl _UbriefaztZ
-.set _UbriefaztZ, 0x1089E7A0
+.set _UbriefaztZ, 0x10001089E7A0
 .globl _end_UbriefaztZ
-.set _end_UbriefaztZ, 0x1089E7C0
+.set _end_UbriefaztZ, 0x10001089E7C0
 .globl _UbriefcaveZ
-.set _UbriefcaveZ, 0x1089E7C0
+.set _UbriefcaveZ, 0x10001089E7C0
 .globl _end_UbriefcaveZ
-.set _end_UbriefcaveZ, 0x1089E7E0
+.set _end_UbriefcaveZ, 0x10001089E7E0
 .globl _UbriefcontrolZ
-.set _UbriefcontrolZ, 0x1089E7E0
+.set _UbriefcontrolZ, 0x10001089E7E0
 .globl _end_UbriefcontrolZ
-.set _end_UbriefcontrolZ, 0x1089E800
+.set _end_UbriefcontrolZ, 0x10001089E800
 .globl _UbriefcradZ
-.set _UbriefcradZ, 0x1089E800
+.set _UbriefcradZ, 0x10001089E800
 .globl _end_UbriefcradZ
-.set _end_UbriefcradZ, 0x1089E820
+.set _end_UbriefcradZ, 0x10001089E820
 .globl _UbriefcrypZ
-.set _UbriefcrypZ, 0x1089E820
+.set _UbriefcrypZ, 0x10001089E820
 .globl _end_UbriefcrypZ
-.set _end_UbriefcrypZ, 0x1089E840
+.set _end_UbriefcrypZ, 0x10001089E840
 .globl _UbriefdamZ
-.set _UbriefdamZ, 0x1089E840
+.set _UbriefdamZ, 0x10001089E840
 .globl _end_UbriefdamZ
-.set _end_UbriefdamZ, 0x1089E860
+.set _end_UbriefdamZ, 0x10001089E860
 .globl _UbriefdepoZ
-.set _UbriefdepoZ, 0x1089E860
+.set _UbriefdepoZ, 0x10001089E860
 .globl _end_UbriefdepoZ
-.set _end_UbriefdepoZ, 0x1089E880
+.set _end_UbriefdepoZ, 0x10001089E880
 .globl _UbriefdestZ
-.set _UbriefdestZ, 0x1089E880
+.set _UbriefdestZ, 0x10001089E880
 .globl _end_UbriefdestZ
-.set _end_UbriefdestZ, 0x1089E8A0
+.set _end_UbriefdestZ, 0x10001089E8A0
 .globl _UbriefjunZ
-.set _UbriefjunZ, 0x1089E8A0
+.set _UbriefjunZ, 0x10001089E8A0
 .globl _end_UbriefjunZ
-.set _end_UbriefjunZ, 0x1089E8C0
+.set _end_UbriefjunZ, 0x10001089E8C0
 .globl _UbriefpeteZ
-.set _UbriefpeteZ, 0x1089E8C0
+.set _UbriefpeteZ, 0x10001089E8C0
 .globl _end_UbriefpeteZ
-.set _end_UbriefpeteZ, 0x1089E8E0
+.set _end_UbriefpeteZ, 0x10001089E8E0
 .globl _UbriefrunZ
-.set _UbriefrunZ, 0x1089E8E0
+.set _UbriefrunZ, 0x10001089E8E0
 .globl _end_UbriefrunZ
-.set _end_UbriefrunZ, 0x1089E900
+.set _end_UbriefrunZ, 0x10001089E900
 .globl _UbriefsevbZ
-.set _UbriefsevbZ, 0x1089E900
+.set _UbriefsevbZ, 0x10001089E900
 .globl _end_UbriefsevbZ
-.set _end_UbriefsevbZ, 0x1089E920
+.set _end_UbriefsevbZ, 0x10001089E920
 .globl _UbriefsevbunkerZ
-.set _UbriefsevbunkerZ, 0x1089E920
+.set _UbriefsevbunkerZ, 0x10001089E920
 .globl _end_UbriefsevbunkerZ
-.set _end_UbriefsevbunkerZ, 0x1089E940
+.set _end_UbriefsevbunkerZ, 0x10001089E940
 .globl _UbriefsevxZ
-.set _UbriefsevxZ, 0x1089E940
+.set _UbriefsevxZ, 0x10001089E940
 .globl _end_UbriefsevxZ
-.set _end_UbriefsevxZ, 0x1089E960
+.set _end_UbriefsevxZ, 0x10001089E960
 .globl _UbriefsevxbZ
-.set _UbriefsevxbZ, 0x1089E960
+.set _UbriefsevxbZ, 0x10001089E960
 .globl _end_UbriefsevxbZ
-.set _end_UbriefsevxbZ, 0x1089E980
+.set _end_UbriefsevxbZ, 0x10001089E980
 .globl _UbriefsiloZ
-.set _UbriefsiloZ, 0x1089E980
+.set _UbriefsiloZ, 0x10001089E980
 .globl _end_UbriefsiloZ
-.set _end_UbriefsiloZ, 0x1089E9A0
+.set _end_UbriefsiloZ, 0x10001089E9A0
 .globl _UbriefstatueZ
-.set _UbriefstatueZ, 0x1089E9A0
+.set _UbriefstatueZ, 0x10001089E9A0
 .globl _end_UbriefstatueZ
-.set _end_UbriefstatueZ, 0x1089E9C0
+.set _end_UbriefstatueZ, 0x10001089E9C0
 .globl _UbrieftraZ
-.set _UbrieftraZ, 0x1089E9C0
+.set _UbrieftraZ, 0x10001089E9C0
 .globl _end_UbrieftraZ
-.set _end_UbrieftraZ, 0x1089E9E0
+.set _end_UbrieftraZ, 0x10001089E9E0
 .globl _Ump_setupameZ
-.set _Ump_setupameZ, 0x1089E9E0
+.set _Ump_setupameZ, 0x10001089E9E0
 .globl _end_Ump_setupameZ
-.set _end_Ump_setupameZ, 0x1089F100
+.set _end_Ump_setupameZ, 0x10001089F100
 .globl _Ump_setuparchZ
-.set _Ump_setuparchZ, 0x1089F100
+.set _Ump_setuparchZ, 0x10001089F100
 .globl _end_Ump_setuparchZ
-.set _end_Ump_setuparchZ, 0x108A1EA0
+.set _end_Ump_setuparchZ, 0x1000108A1EA0
 .globl _Ump_setuparkZ
-.set _Ump_setuparkZ, 0x108A1EA0
+.set _Ump_setuparkZ, 0x1000108A1EA0
 .globl _end_Ump_setuparkZ
-.set _end_Ump_setuparkZ, 0x108A3BE0
+.set _end_Ump_setuparkZ, 0x1000108A3BE0
 .globl _Ump_setupashZ
-.set _Ump_setupashZ, 0x108A3BE0
+.set _Ump_setupashZ, 0x1000108A3BE0
 .globl _end_Ump_setupashZ
-.set _end_Ump_setupashZ, 0x108A42D0
+.set _end_Ump_setupashZ, 0x1000108A42D0
 .globl _Ump_setupcaveZ
-.set _Ump_setupcaveZ, 0x108A42D0
+.set _Ump_setupcaveZ, 0x1000108A42D0
 .globl _end_Ump_setupcaveZ
-.set _end_Ump_setupcaveZ, 0x108A6830
+.set _end_Ump_setupcaveZ, 0x1000108A6830
 .globl _Ump_setupcradZ
-.set _Ump_setupcradZ, 0x108A6830
+.set _Ump_setupcradZ, 0x1000108A6830
 .globl _end_Ump_setupcradZ
-.set _end_Ump_setupcradZ, 0x108A7190
+.set _end_Ump_setupcradZ, 0x1000108A7190
 .globl _Ump_setupcrypZ
-.set _Ump_setupcrypZ, 0x108A7190
+.set _Ump_setupcrypZ, 0x1000108A7190
 .globl _end_Ump_setupcrypZ
-.set _end_Ump_setupcrypZ, 0x108A7EF0
+.set _end_Ump_setupcrypZ, 0x1000108A7EF0
 .globl _Ump_setupdishZ
-.set _Ump_setupdishZ, 0x108A7EF0
+.set _Ump_setupdishZ, 0x1000108A7EF0
 .globl _end_Ump_setupdishZ
-.set _end_Ump_setupdishZ, 0x108A82E0
+.set _end_Ump_setupdishZ, 0x1000108A82E0
 .globl _Ump_setupimpZ
-.set _Ump_setupimpZ, 0x108A82E0
+.set _Ump_setupimpZ, 0x1000108A82E0
 .globl _end_Ump_setupimpZ
-.set _end_Ump_setupimpZ, 0x108A8920
+.set _end_Ump_setupimpZ, 0x1000108A8920
 .globl _Ump_setupoatZ
-.set _Ump_setupoatZ, 0x108A8920
+.set _Ump_setupoatZ, 0x1000108A8920
 .globl _end_Ump_setupoatZ
-.set _end_Ump_setupoatZ, 0x108A8C70
+.set _end_Ump_setupoatZ, 0x1000108A8C70
 .globl _Ump_setuprefZ
-.set _Ump_setuprefZ, 0x108A8C70
+.set _Ump_setuprefZ, 0x1000108A8C70
 .globl _end_Ump_setuprefZ
-.set _end_Ump_setuprefZ, 0x108A9080
+.set _end_Ump_setuprefZ, 0x1000108A9080
 .globl _Ump_setupsevbZ
-.set _Ump_setupsevbZ, 0x108A9080
+.set _Ump_setupsevbZ, 0x1000108A9080
 .globl _end_Ump_setupsevbZ
-.set _end_Ump_setupsevbZ, 0x108AA390
+.set _end_Ump_setupsevbZ, 0x1000108AA390
 .globl _Ump_setupstatueZ
-.set _Ump_setupstatueZ, 0x108AA390
+.set _Ump_setupstatueZ, 0x1000108AA390
 .globl _end_Ump_setupstatueZ
-.set _end_Ump_setupstatueZ, 0x108AB210
+.set _end_Ump_setupstatueZ, 0x1000108AB210
 .globl _UsetuparchZ
-.set _UsetuparchZ, 0x108AB210
+.set _UsetuparchZ, 0x1000108AB210
 .globl _end_UsetuparchZ
-.set _end_UsetuparchZ, 0x108AF820
+.set _end_UsetuparchZ, 0x1000108AF820
 .globl _UsetuparkZ
-.set _UsetuparkZ, 0x108AF820
+.set _UsetuparkZ, 0x1000108AF820
 .globl _end_UsetuparkZ
-.set _end_UsetuparkZ, 0x108B33B0
+.set _end_UsetuparkZ, 0x1000108B33B0
 .globl _UsetupaztZ
-.set _UsetupaztZ, 0x108B33B0
+.set _UsetupaztZ, 0x1000108B33B0
 .globl _end_UsetupaztZ
-.set _end_UsetupaztZ, 0x108B5CB0
+.set _end_UsetupaztZ, 0x1000108B5CB0
 .globl _UsetupcaveZ
-.set _UsetupcaveZ, 0x108B5CB0
+.set _UsetupcaveZ, 0x1000108B5CB0
 .globl _end_UsetupcaveZ
-.set _end_UsetupcaveZ, 0x108B9B10
+.set _end_UsetupcaveZ, 0x1000108B9B10
 .globl _UsetupcontrolZ
-.set _UsetupcontrolZ, 0x108B9B10
+.set _UsetupcontrolZ, 0x1000108B9B10
 .globl _end_UsetupcontrolZ
-.set _end_UsetupcontrolZ, 0x108BD610
+.set _end_UsetupcontrolZ, 0x1000108BD610
 .globl _UsetupcradZ
-.set _UsetupcradZ, 0x108BD610
+.set _UsetupcradZ, 0x1000108BD610
 .globl _end_UsetupcradZ
-.set _end_UsetupcradZ, 0x108BF240
+.set _end_UsetupcradZ, 0x1000108BF240
 .globl _UsetupcrypZ
-.set _UsetupcrypZ, 0x108BF240
+.set _UsetupcrypZ, 0x1000108BF240
 .globl _end_UsetupcrypZ
-.set _end_UsetupcrypZ, 0x108C10D0
+.set _end_UsetupcrypZ, 0x1000108C10D0
 .globl _UsetupdamZ
-.set _UsetupdamZ, 0x108C10D0
+.set _UsetupdamZ, 0x1000108C10D0
 .globl _end_UsetupdamZ
-.set _end_UsetupdamZ, 0x108C53A0
+.set _end_UsetupdamZ, 0x1000108C53A0
 .globl _UsetupdepoZ
-.set _UsetupdepoZ, 0x108C53A0
+.set _UsetupdepoZ, 0x1000108C53A0
 .globl _end_UsetupdepoZ
-.set _end_UsetupdepoZ, 0x108C8330
+.set _end_UsetupdepoZ, 0x1000108C8330
 .globl _UsetupdestZ
-.set _UsetupdestZ, 0x108C8330
+.set _UsetupdestZ, 0x1000108C8330
 .globl _end_UsetupdestZ
-.set _end_UsetupdestZ, 0x108CA680
+.set _end_UsetupdestZ, 0x1000108CA680
 .globl _UsetupjunZ
-.set _UsetupjunZ, 0x108CA680
+.set _UsetupjunZ, 0x1000108CA680
 .globl _end_UsetupjunZ
-.set _end_UsetupjunZ, 0x108CDD80
+.set _end_UsetupjunZ, 0x1000108CDD80
 .globl _UsetuplenZ
-.set _UsetuplenZ, 0x108CDD80
+.set _UsetuplenZ, 0x1000108CDD80
 .globl _end_UsetuplenZ
-.set _end_UsetuplenZ, 0x108CE350
+.set _end_UsetuplenZ, 0x1000108CE350
 .globl _UsetuppeteZ
-.set _UsetuppeteZ, 0x108CE350
+.set _UsetuppeteZ, 0x1000108CE350
 .globl _end_UsetuppeteZ
-.set _end_UsetuppeteZ, 0x108D12D0
+.set _end_UsetuppeteZ, 0x1000108D12D0
 .globl _UsetuprunZ
-.set _UsetuprunZ, 0x108D12D0
+.set _UsetuprunZ, 0x1000108D12D0
 .globl _end_UsetuprunZ
-.set _end_UsetuprunZ, 0x108D2B30
+.set _end_UsetuprunZ, 0x1000108D2B30
 .globl _UsetupsevbZ
-.set _UsetupsevbZ, 0x108D2B30
+.set _UsetupsevbZ, 0x1000108D2B30
 .globl _end_UsetupsevbZ
-.set _end_UsetupsevbZ, 0x108D5190
+.set _end_UsetupsevbZ, 0x1000108D5190
 .globl _UsetupsevbunkerZ
-.set _UsetupsevbunkerZ, 0x108D5190
+.set _UsetupsevbunkerZ, 0x1000108D5190
 .globl _end_UsetupsevbunkerZ
-.set _end_UsetupsevbunkerZ, 0x108D6BC0
+.set _end_UsetupsevbunkerZ, 0x1000108D6BC0
 .globl _UsetupsevxZ
-.set _UsetupsevxZ, 0x108D6BC0
+.set _UsetupsevxZ, 0x1000108D6BC0
 .globl _end_UsetupsevxZ
-.set _end_UsetupsevxZ, 0x108DAED0
+.set _end_UsetupsevxZ, 0x1000108DAED0
 .globl _UsetupsevxbZ
-.set _UsetupsevxbZ, 0x108DAED0
+.set _UsetupsevxbZ, 0x1000108DAED0
 .globl _end_UsetupsevxbZ
-.set _end_UsetupsevxbZ, 0x108DEFC0
+.set _end_UsetupsevxbZ, 0x1000108DEFC0
 .globl _UsetupsiloZ
-.set _UsetupsiloZ, 0x108DEFC0
+.set _UsetupsiloZ, 0x1000108DEFC0
 .globl _end_UsetupsiloZ
-.set _end_UsetupsiloZ, 0x108E1A10
+.set _end_UsetupsiloZ, 0x1000108E1A10
 .globl _UsetupstatueZ
-.set _UsetupstatueZ, 0x108E1A10
+.set _UsetupstatueZ, 0x1000108E1A10
 .globl _end_UsetupstatueZ
-.set _end_UsetupstatueZ, 0x108E41E0
+.set _end_UsetupstatueZ, 0x1000108E41E0
 .globl _UsetuptraZ
-.set _UsetuptraZ, 0x108E41E0
+.set _UsetuptraZ, 0x1000108E41E0
 .globl _end_UsetuptraZ
-.set _end_UsetuptraZ, 0x108E7410
+.set _end_UsetuptraZ, 0x1000108E7410
 .globl _LameE
-.set _LameE, 0x108E7410
+.set _LameE, 0x1000108E7410
 .globl _end_LameE
-.set _end_LameE, 0x108E7420
+.set _end_LameE, 0x1000108E7420
 .globl _LameJ
-.set _LameJ, 0x108E7420
+.set _LameJ, 0x1000108E7420
 .globl _end_LameJ
-.set _end_LameJ, 0x108E7430
+.set _end_LameJ, 0x1000108E7430
 .globl _LarchE
-.set _LarchE, 0x108E7430
+.set _LarchE, 0x1000108E7430
 .globl _end_LarchE
-.set _end_LarchE, 0x108E7A60
+.set _end_LarchE, 0x1000108E7A60
 .globl _LarchJ
-.set _LarchJ, 0x108E7A60
+.set _LarchJ, 0x1000108E7A60
 .globl _end_LarchJ
-.set _end_LarchJ, 0x108E80C0
+.set _end_LarchJ, 0x1000108E80C0
 .globl _LarecE
-.set _LarecE, 0x108E80C0
+.set _LarecE, 0x1000108E80C0
 .globl _end_LarecE
-.set _end_LarecE, 0x108E8690
+.set _end_LarecE, 0x1000108E8690
 .globl _LarecJ
-.set _LarecJ, 0x108E8690
+.set _LarecJ, 0x1000108E8690
 .globl _end_LarecJ
-.set _end_LarecJ, 0x108E8C20
+.set _end_LarecJ, 0x1000108E8C20
 .globl _LarkE
-.set _LarkE, 0x108E8C20
+.set _LarkE, 0x1000108E8C20
 .globl _end_LarkE
-.set _end_LarkE, 0x108E92C0
+.set _end_LarkE, 0x1000108E92C0
 .globl _LarkJ
-.set _LarkJ, 0x108E92C0
+.set _LarkJ, 0x1000108E92C0
 .globl _end_LarkJ
-.set _end_LarkJ, 0x108E9970
+.set _end_LarkJ, 0x1000108E9970
 .globl _LashE
-.set _LashE, 0x108E9970
+.set _LashE, 0x1000108E9970
 .globl _end_LashE
-.set _end_LashE, 0x108E9980
+.set _end_LashE, 0x1000108E9980
 .globl _LashJ
-.set _LashJ, 0x108E9980
+.set _LashJ, 0x1000108E9980
 .globl _end_LashJ
-.set _end_LashJ, 0x108E9990
+.set _end_LashJ, 0x1000108E9990
 .globl _LaztE
-.set _LaztE, 0x108E9990
+.set _LaztE, 0x1000108E9990
 .globl _end_LaztE
-.set _end_LaztE, 0x108E9DD0
+.set _end_LaztE, 0x1000108E9DD0
 .globl _LaztJ
-.set _LaztJ, 0x108E9DD0
+.set _LaztJ, 0x1000108E9DD0
 .globl _end_LaztJ
-.set _end_LaztJ, 0x108EA280
+.set _end_LaztJ, 0x1000108EA280
 .globl _LcatE
-.set _LcatE, 0x108EA280
+.set _LcatE, 0x1000108EA280
 .globl _end_LcatE
-.set _end_LcatE, 0x108EA290
+.set _end_LcatE, 0x1000108EA290
 .globl _LcatJ
-.set _LcatJ, 0x108EA290
+.set _LcatJ, 0x1000108EA290
 .globl _end_LcatJ
-.set _end_LcatJ, 0x108EA2A0
+.set _end_LcatJ, 0x1000108EA2A0
 .globl _LcaveE
-.set _LcaveE, 0x108EA2A0
+.set _LcaveE, 0x1000108EA2A0
 .globl _end_LcaveE
-.set _end_LcaveE, 0x108EA6A0
+.set _end_LcaveE, 0x1000108EA6A0
 .globl _LcaveJ
-.set _LcaveJ, 0x108EA6A0
+.set _LcaveJ, 0x1000108EA6A0
 .globl _end_LcaveJ
-.set _end_LcaveJ, 0x108EAB00
+.set _end_LcaveJ, 0x1000108EAB00
 .globl _LcradE
-.set _LcradE, 0x108EAB00
+.set _LcradE, 0x1000108EAB00
 .globl _end_LcradE
-.set _end_LcradE, 0x108EAFD0
+.set _end_LcradE, 0x1000108EAFD0
 .globl _LcradJ
-.set _LcradJ, 0x108EAFD0
+.set _LcradJ, 0x1000108EAFD0
 .globl _end_LcradJ
-.set _end_LcradJ, 0x108EB480
+.set _end_LcradJ, 0x1000108EB480
 .globl _LcrypE
-.set _LcrypE, 0x108EB480
+.set _LcrypE, 0x1000108EB480
 .globl _end_LcrypE
-.set _end_LcrypE, 0x108EB6D0
+.set _end_LcrypE, 0x1000108EB6D0
 .globl _LcrypJ
-.set _LcrypJ, 0x108EB6D0
+.set _LcrypJ, 0x1000108EB6D0
 .globl _end_LcrypJ
-.set _end_LcrypJ, 0x108EB990
+.set _end_LcrypJ, 0x1000108EB990
 .globl _LdamE
-.set _LdamE, 0x108EB990
+.set _LdamE, 0x1000108EB990
 .globl _end_LdamE
-.set _end_LdamE, 0x108EBDE0
+.set _end_LdamE, 0x1000108EBDE0
 .globl _LdamJ
-.set _LdamJ, 0x108EBDE0
+.set _LdamJ, 0x1000108EBDE0
 .globl _end_LdamJ
-.set _end_LdamJ, 0x108EC250
+.set _end_LdamJ, 0x1000108EC250
 .globl _LdepoE
-.set _LdepoE, 0x108EC250
+.set _LdepoE, 0x1000108EC250
 .globl _end_LdepoE
-.set _end_LdepoE, 0x108EC5C0
+.set _end_LdepoE, 0x1000108EC5C0
 .globl _LdepoJ
-.set _LdepoJ, 0x108EC5C0
+.set _LdepoJ, 0x1000108EC5C0
 .globl _end_LdepoJ
-.set _end_LdepoJ, 0x108EC900
+.set _end_LdepoJ, 0x1000108EC900
 .globl _LdestE
-.set _LdestE, 0x108EC900
+.set _LdestE, 0x1000108EC900
 .globl _end_LdestE
-.set _end_LdestE, 0x108ECD90
+.set _end_LdestE, 0x1000108ECD90
 .globl _LdestJ
-.set _LdestJ, 0x108ECD90
+.set _LdestJ, 0x1000108ECD90
 .globl _end_LdestJ
-.set _end_LdestJ, 0x108ED1F0
+.set _end_LdestJ, 0x1000108ED1F0
 .globl _LdishE
-.set _LdishE, 0x108ED1F0
+.set _LdishE, 0x1000108ED1F0
 .globl _end_LdishE
-.set _end_LdishE, 0x108ED200
+.set _end_LdishE, 0x1000108ED200
 .globl _LdishJ
-.set _LdishJ, 0x108ED200
+.set _LdishJ, 0x1000108ED200
 .globl _end_LdishJ
-.set _end_LdishJ, 0x108ED210
+.set _end_LdishJ, 0x1000108ED210
 .globl _LearE
-.set _LearE, 0x108ED210
+.set _LearE, 0x1000108ED210
 .globl _end_LearE
-.set _end_LearE, 0x108ED220
+.set _end_LearE, 0x1000108ED220
 .globl _LearJ
-.set _LearJ, 0x108ED220
+.set _LearJ, 0x1000108ED220
 .globl _end_LearJ
-.set _end_LearJ, 0x108ED230
+.set _end_LearJ, 0x1000108ED230
 .globl _LeldE
-.set _LeldE, 0x108ED230
+.set _LeldE, 0x1000108ED230
 .globl _end_LeldE
-.set _end_LeldE, 0x108ED240
+.set _end_LeldE, 0x1000108ED240
 .globl _LeldJ
-.set _LeldJ, 0x108ED240
+.set _LeldJ, 0x1000108ED240
 .globl _end_LeldJ
-.set _end_LeldJ, 0x108ED250
+.set _end_LeldJ, 0x1000108ED250
 .globl _LgunE
-.set _LgunE, 0x108ED250
+.set _LgunE, 0x1000108ED250
 .globl _end_LgunE
-.set _end_LgunE, 0x108ED970
+.set _end_LgunE, 0x1000108ED970
 .globl _LgunJ
-.set _LgunJ, 0x108ED970
+.set _LgunJ, 0x1000108ED970
 .globl _end_LgunJ
-.set _end_LgunJ, 0x108EE0C0
+.set _end_LgunJ, 0x1000108EE0C0
 .globl _LimpE
-.set _LimpE, 0x108EE0C0
+.set _LimpE, 0x1000108EE0C0
 .globl _end_LimpE
-.set _end_LimpE, 0x108EE0D0
+.set _end_LimpE, 0x1000108EE0D0
 .globl _LimpJ
-.set _LimpJ, 0x108EE0D0
+.set _LimpJ, 0x1000108EE0D0
 .globl _end_LimpJ
-.set _end_LimpJ, 0x108EE0E0
+.set _end_LimpJ, 0x1000108EE0E0
 .globl _LjunE
-.set _LjunE, 0x108EE0E0
+.set _LjunE, 0x1000108EE0E0
 .globl _end_LjunE
-.set _end_LjunE, 0x108EE600
+.set _end_LjunE, 0x1000108EE600
 .globl _LjunJ
-.set _LjunJ, 0x108EE600
+.set _LjunJ, 0x1000108EE600
 .globl _end_LjunJ
-.set _end_LjunJ, 0x108EEB40
+.set _end_LjunJ, 0x1000108EEB40
 .globl _LleeE
-.set _LleeE, 0x108EEB40
+.set _LleeE, 0x1000108EEB40
 .globl _end_LleeE
-.set _end_LleeE, 0x108EEB50
+.set _end_LleeE, 0x1000108EEB50
 .globl _LleeJ
-.set _LleeJ, 0x108EEB50
+.set _LleeJ, 0x1000108EEB50
 .globl _end_LleeJ
-.set _end_LleeJ, 0x108EEB60
+.set _end_LleeJ, 0x1000108EEB60
 .globl _LlenE
-.set _LlenE, 0x108EEB60
+.set _LlenE, 0x1000108EEB60
 .globl _end_LlenE
-.set _end_LlenE, 0x108EF1A0
+.set _end_LlenE, 0x1000108EF1A0
 .globl _LlenJ
-.set _LlenJ, 0x108EF1A0
+.set _LlenJ, 0x1000108EF1A0
 .globl _end_LlenJ
-.set _end_LlenJ, 0x108EF450
+.set _end_LlenJ, 0x1000108EF450
 .globl _LlipE
-.set _LlipE, 0x108EF450
+.set _LlipE, 0x1000108EF450
 .globl _end_LlipE
-.set _end_LlipE, 0x108EF460
+.set _end_LlipE, 0x1000108EF460
 .globl _LlipJ
-.set _LlipJ, 0x108EF460
+.set _LlipJ, 0x1000108EF460
 .globl _end_LlipJ
-.set _end_LlipJ, 0x108EF470
+.set _end_LlipJ, 0x1000108EF470
 .globl _LlueE
-.set _LlueE, 0x108EF470
+.set _LlueE, 0x1000108EF470
 .globl _end_LlueE
-.set _end_LlueE, 0x108EF480
+.set _end_LlueE, 0x1000108EF480
 .globl _LlueJ
-.set _LlueJ, 0x108EF480
+.set _LlueJ, 0x1000108EF480
 .globl _end_LlueJ
-.set _end_LlueJ, 0x108EF490
+.set _end_LlueJ, 0x1000108EF490
 .globl _LmiscE
-.set _LmiscE, 0x108EF490
+.set _LmiscE, 0x1000108EF490
 .globl _end_LmiscE
-.set _end_LmiscE, 0x108EF730
+.set _end_LmiscE, 0x1000108EF730
 .globl _LmiscJ
-.set _LmiscJ, 0x108EF730
+.set _LmiscJ, 0x1000108EF730
 .globl _end_LmiscJ
-.set _end_LmiscJ, 0x108EFA10
+.set _end_LmiscJ, 0x1000108EFA10
 .globl _LmpmenuE
-.set _LmpmenuE, 0x108EFA10
+.set _LmpmenuE, 0x1000108EFA10
 .globl _end_LmpmenuE
-.set _end_LmpmenuE, 0x108EFBB0
+.set _end_LmpmenuE, 0x1000108EFBB0
 .globl _LmpmenuJ
-.set _LmpmenuJ, 0x108EFBB0
+.set _LmpmenuJ, 0x1000108EFBB0
 .globl _end_LmpmenuJ
-.set _end_LmpmenuJ, 0x108EFD40
+.set _end_LmpmenuJ, 0x1000108EFD40
 .globl _LmpweaponsE
-.set _LmpweaponsE, 0x108EFD40
+.set _LmpweaponsE, 0x1000108EFD40
 .globl _end_LmpweaponsE
-.set _end_LmpweaponsE, 0x108EFE00
+.set _end_LmpweaponsE, 0x1000108EFE00
 .globl _LmpweaponsJ
-.set _LmpweaponsJ, 0x108EFE00
+.set _LmpweaponsJ, 0x1000108EFE00
 .globl _end_LmpweaponsJ
-.set _end_LmpweaponsJ, 0x108EFEE0
+.set _end_LmpweaponsJ, 0x1000108EFEE0
 .globl _LoatE
-.set _LoatE, 0x108EFEE0
+.set _LoatE, 0x1000108EFEE0
 .globl _end_LoatE
-.set _end_LoatE, 0x108EFEF0
+.set _end_LoatE, 0x1000108EFEF0
 .globl _LoatJ
-.set _LoatJ, 0x108EFEF0
+.set _LoatJ, 0x1000108EFEF0
 .globl _end_LoatJ
-.set _end_LoatJ, 0x108EFF00
+.set _end_LoatJ, 0x1000108EFF00
 .globl _LoptionsE
-.set _LoptionsE, 0x108EFF00
+.set _LoptionsE, 0x1000108EFF00
 .globl _end_LoptionsE
-.set _end_LoptionsE, 0x108F0130
+.set _end_LoptionsE, 0x1000108F0130
 .globl _LoptionsJ
-.set _LoptionsJ, 0x108F0130
+.set _LoptionsJ, 0x1000108F0130
 .globl _end_LoptionsJ
-.set _end_LoptionsJ, 0x108F0380
+.set _end_LoptionsJ, 0x1000108F0380
 .globl _LpamE
-.set _LpamE, 0x108F0380
+.set _LpamE, 0x1000108F0380
 .globl _end_LpamE
-.set _end_LpamE, 0x108F0390
+.set _end_LpamE, 0x1000108F0390
 .globl _LpamJ
-.set _LpamJ, 0x108F0390
+.set _LpamJ, 0x1000108F0390
 .globl _end_LpamJ
-.set _end_LpamJ, 0x108F03A0
+.set _end_LpamJ, 0x1000108F03A0
 .globl _LpeteE
-.set _LpeteE, 0x108F03A0
+.set _LpeteE, 0x1000108F03A0
 .globl _end_LpeteE
-.set _end_LpeteE, 0x108F0820
+.set _end_LpeteE, 0x1000108F0820
 .globl _LpeteJ
-.set _LpeteJ, 0x108F0820
+.set _LpeteJ, 0x1000108F0820
 .globl _end_LpeteJ
-.set _end_LpeteJ, 0x108F0C90
+.set _end_LpeteJ, 0x1000108F0C90
 .globl _LpropobjE
-.set _LpropobjE, 0x108F0C90
+.set _LpropobjE, 0x1000108F0C90
 .globl _end_LpropobjE
-.set _end_LpropobjE, 0x108F0F30
+.set _end_LpropobjE, 0x1000108F0F30
 .globl _LpropobjJ
-.set _LpropobjJ, 0x108F0F30
+.set _LpropobjJ, 0x1000108F0F30
 .globl _end_LpropobjJ
-.set _end_LpropobjJ, 0x108F11F0
+.set _end_LpropobjJ, 0x1000108F11F0
 .globl _LrefE
-.set _LrefE, 0x108F11F0
+.set _LrefE, 0x1000108F11F0
 .globl _end_LrefE
-.set _end_LrefE, 0x108F1200
+.set _end_LrefE, 0x1000108F1200
 .globl _LrefJ
-.set _LrefJ, 0x108F1200
+.set _LrefJ, 0x1000108F1200
 .globl _end_LrefJ
-.set _end_LrefJ, 0x108F1210
+.set _end_LrefJ, 0x1000108F1210
 .globl _LritE
-.set _LritE, 0x108F1210
+.set _LritE, 0x1000108F1210
 .globl _end_LritE
-.set _end_LritE, 0x108F1220
+.set _end_LritE, 0x1000108F1220
 .globl _LritJ
-.set _LritJ, 0x108F1220
+.set _LritJ, 0x1000108F1220
 .globl _end_LritJ
-.set _end_LritJ, 0x108F1230
+.set _end_LritJ, 0x1000108F1230
 .globl _LrunE
-.set _LrunE, 0x108F1230
+.set _LrunE, 0x1000108F1230
 .globl _end_LrunE
-.set _end_LrunE, 0x108F14A0
+.set _end_LrunE, 0x1000108F14A0
 .globl _LrunJ
-.set _LrunJ, 0x108F14A0
+.set _LrunJ, 0x1000108F14A0
 .globl _end_LrunJ
-.set _end_LrunJ, 0x108F1730
+.set _end_LrunJ, 0x1000108F1730
 .globl _LsevE
-.set _LsevE, 0x108F1730
+.set _LsevE, 0x1000108F1730
 .globl _end_LsevE
-.set _end_LsevE, 0x108F1C90
+.set _end_LsevE, 0x1000108F1C90
 .globl _LsevJ
-.set _LsevJ, 0x108F1C90
+.set _LsevJ, 0x1000108F1C90
 .globl _end_LsevJ
-.set _end_LsevJ, 0x108F21A0
+.set _end_LsevJ, 0x1000108F21A0
 .globl _LsevbE
-.set _LsevbE, 0x108F21A0
+.set _LsevbE, 0x1000108F21A0
 .globl _end_LsevbE
-.set _end_LsevbE, 0x108F28F0
+.set _end_LsevbE, 0x1000108F28F0
 .globl _LsevbJ
-.set _LsevbJ, 0x108F28F0
+.set _LsevbJ, 0x1000108F28F0
 .globl _end_LsevbJ
-.set _end_LsevbJ, 0x108F30E0
+.set _end_LsevbJ, 0x1000108F30E0
 .globl _LsevxE
-.set _LsevxE, 0x108F30E0
+.set _LsevxE, 0x1000108F30E0
 .globl _end_LsevxE
-.set _end_LsevxE, 0x108F3540
+.set _end_LsevxE, 0x1000108F3540
 .globl _LsevxJ
-.set _LsevxJ, 0x108F3540
+.set _LsevxJ, 0x1000108F3540
 .globl _end_LsevxJ
-.set _end_LsevxJ, 0x108F3900
+.set _end_LsevxJ, 0x1000108F3900
 .globl _LsevxbE
-.set _LsevxbE, 0x108F3900
+.set _LsevxbE, 0x1000108F3900
 .globl _end_LsevxbE
-.set _end_LsevxbE, 0x108F3D90
+.set _end_LsevxbE, 0x1000108F3D90
 .globl _LsevxbJ
-.set _LsevxbJ, 0x108F3D90
+.set _LsevxbJ, 0x1000108F3D90
 .globl _end_LsevxbJ
-.set _end_LsevxbJ, 0x108F41E0
+.set _end_LsevxbJ, 0x1000108F41E0
 .globl _LshoE
-.set _LshoE, 0x108F41E0
+.set _LshoE, 0x1000108F41E0
 .globl _end_LshoE
-.set _end_LshoE, 0x108F41F0
+.set _end_LshoE, 0x1000108F41F0
 .globl _LshoJ
-.set _LshoJ, 0x108F41F0
+.set _LshoJ, 0x1000108F41F0
 .globl _end_LshoJ
-.set _end_LshoJ, 0x108F4200
+.set _end_LshoJ, 0x1000108F4200
 .globl _LsiloE
-.set _LsiloE, 0x108F4200
+.set _LsiloE, 0x1000108F4200
 .globl _end_LsiloE
-.set _end_LsiloE, 0x108F47B0
+.set _end_LsiloE, 0x1000108F47B0
 .globl _LsiloJ
-.set _LsiloJ, 0x108F47B0
+.set _LsiloJ, 0x1000108F47B0
 .globl _end_LsiloJ
-.set _end_LsiloJ, 0x108F4D90
+.set _end_LsiloJ, 0x1000108F4D90
 .globl _LstatE
-.set _LstatE, 0x108F4D90
+.set _LstatE, 0x1000108F4D90
 .globl _end_LstatE
-.set _end_LstatE, 0x108F56B0
+.set _end_LstatE, 0x1000108F56B0
 .globl _LstatJ
-.set _LstatJ, 0x108F56B0
+.set _LstatJ, 0x1000108F56B0
 .globl _end_LstatJ
-.set _end_LstatJ, 0x108F5F20
+.set _end_LstatJ, 0x1000108F5F20
 .globl _LtitleE
-.set _LtitleE, 0x108F5F20
+.set _LtitleE, 0x1000108F5F20
 .globl _end_LtitleE
-.set _end_LtitleE, 0x108F69E0
+.set _end_LtitleE, 0x1000108F69E0
 .globl _LtitleJ
-.set _LtitleJ, 0x108F69E0
+.set _LtitleJ, 0x1000108F69E0
 .globl _end_LtitleJ
-.set _end_LtitleJ, 0x108F7570
+.set _end_LtitleJ, 0x1000108F7570
 .globl _LtraE
-.set _LtraE, 0x108F7570
+.set _LtraE, 0x1000108F7570
 .globl _end_LtraE
-.set _end_LtraE, 0x108F79A0
+.set _end_LtraE, 0x1000108F79A0
 .globl _LtraJ
-.set _LtraJ, 0x108F79A0
+.set _LtraJ, 0x1000108F79A0
 .globl _end_LtraJ
-.set _end_LtraJ, 0x108F7DC0
+.set _end_LtraJ, 0x1000108F7DC0
 .globl _LwaxE
-.set _LwaxE, 0x108F7DC0
+.set _LwaxE, 0x1000108F7DC0
 .globl _end_LwaxE
-.set _end_LwaxE, 0x108F7DD0
+.set _end_LwaxE, 0x1000108F7DD0
 .globl _LwaxJ
-.set _LwaxJ, 0x108F7DD0
+.set _LwaxJ, 0x1000108F7DD0
 .globl _end_LwaxJ
-.set _end_LwaxJ, 0x108F7DE0
+.set _end_LwaxJ, 0x1000108F7DE0
 .globl _ob__ob_end_seg
-.set _ob__ob_end_seg, 0x108F7DE0
+.set _ob__ob_end_seg, 0x1000108F7DE0
 .globl _end_ob__ob_end_seg
-.set _end_ob__ob_end_seg, 0x108F7DF0
+.set _end_ob__ob_end_seg, 0x1000108F7DF0
 
 /* --- assets/ramrom (demo replays) ---------------------------- */
 .globl _ramrom_Dam_1
-.set _ramrom_Dam_1, 0x102BF2D0
+.set _ramrom_Dam_1, 0x1000102BF2D0
 .globl _ramrom_Dam_1_end
-.set _ramrom_Dam_1_end, 0x102C44D0
+.set _ramrom_Dam_1_end, 0x1000102C44D0
 .globl _ramrom_Dam_2
-.set _ramrom_Dam_2, 0x102C44D0
+.set _ramrom_Dam_2, 0x1000102C44D0
 .globl _ramrom_Dam_2_end
-.set _ramrom_Dam_2_end, 0x102C64A0
+.set _ramrom_Dam_2_end, 0x1000102C64A0
 .globl _ramrom_Facility_1
-.set _ramrom_Facility_1, 0x102C64A0
+.set _ramrom_Facility_1, 0x1000102C64A0
 .globl _ramrom_Facility_1_end
-.set _ramrom_Facility_1_end, 0x102C7F50
+.set _ramrom_Facility_1_end, 0x1000102C7F50
 .globl _ramrom_Facility_2
-.set _ramrom_Facility_2, 0x102C7F50
+.set _ramrom_Facility_2, 0x1000102C7F50
 .globl _ramrom_Facility_2_end
-.set _ramrom_Facility_2_end, 0x102CA330
+.set _ramrom_Facility_2_end, 0x1000102CA330
 .globl _ramrom_Facility_3
-.set _ramrom_Facility_3, 0x102CA330
+.set _ramrom_Facility_3, 0x1000102CA330
 .globl _ramrom_Facility_3_end
-.set _ramrom_Facility_3_end, 0x102CBFA0
+.set _ramrom_Facility_3_end, 0x1000102CBFA0
 .globl _ramrom_Runway_1
-.set _ramrom_Runway_1, 0x102CBFA0
+.set _ramrom_Runway_1, 0x1000102CBFA0
 .globl _ramrom_Runway_1_end
-.set _ramrom_Runway_1_end, 0x102CE6F0
+.set _ramrom_Runway_1_end, 0x1000102CE6F0
 .globl _ramrom_Runway_2
-.set _ramrom_Runway_2, 0x102CE6F0
+.set _ramrom_Runway_2, 0x1000102CE6F0
 .globl _ramrom_Runway_2_end
-.set _ramrom_Runway_2_end, 0x102D1000
+.set _ramrom_Runway_2_end, 0x1000102D1000
 .globl _ramrom_BunkerI_1
-.set _ramrom_BunkerI_1, 0x102D1000
+.set _ramrom_BunkerI_1, 0x1000102D1000
 .globl _ramrom_BunkerI_1_end
-.set _ramrom_BunkerI_1_end, 0x102D4390
+.set _ramrom_BunkerI_1_end, 0x1000102D4390
 .globl _ramrom_BunkerI_2
-.set _ramrom_BunkerI_2, 0x102D4390
+.set _ramrom_BunkerI_2, 0x1000102D4390
 .globl _ramrom_BunkerI_2_end
-.set _ramrom_BunkerI_2_end, 0x102D9610
+.set _ramrom_BunkerI_2_end, 0x1000102D9610
 .globl _ramrom_Silo_1
-.set _ramrom_Silo_1, 0x102D9610
+.set _ramrom_Silo_1, 0x1000102D9610
 .globl _ramrom_Silo_1_end
-.set _ramrom_Silo_1_end, 0x102DB7A0
+.set _ramrom_Silo_1_end, 0x1000102DB7A0
 .globl _ramrom_Silo_2
-.set _ramrom_Silo_2, 0x102DB7A0
+.set _ramrom_Silo_2, 0x1000102DB7A0
 .globl _ramrom_Silo_2_end
-.set _ramrom_Silo_2_end, 0x102DD770
+.set _ramrom_Silo_2_end, 0x1000102DD770
 .globl _ramrom_Frigate_1
-.set _ramrom_Frigate_1, 0x102DD770
+.set _ramrom_Frigate_1, 0x1000102DD770
 .globl _ramrom_Frigate_1_end
-.set _ramrom_Frigate_1_end, 0x102DF120
+.set _ramrom_Frigate_1_end, 0x1000102DF120
 .globl _ramrom_Frigate_2
-.set _ramrom_Frigate_2, 0x102DF120
+.set _ramrom_Frigate_2, 0x1000102DF120
 .globl _ramrom_Frigate_2_end
-.set _ramrom_Frigate_2_end, 0x102E2600
+.set _ramrom_Frigate_2_end, 0x1000102E2600
 .globl _ramrom_Train
-.set _ramrom_Train, 0x102E2600
+.set _ramrom_Train, 0x1000102E2600
 .globl _ramrom_Train_end
-.set _ramrom_Train_end, 0x102E63F0
+.set _ramrom_Train_end, 0x1000102E63F0
 .globl __ramromDam1SegmentRomStart
-.set __ramromDam1SegmentRomStart, 0x102BF2D0
+.set __ramromDam1SegmentRomStart, 0x1000102BF2D0
 
 /* --- assets/music ------------------------------------------------ */
 .globl __musicsampletblSegmentRomStart
-.set __musicsampletblSegmentRomStart, 0x10419790
+.set __musicsampletblSegmentRomStart, 0x100010419790
 .globl _number_music_samples
-.set _number_music_samples, 0x10419790
+.set _number_music_samples, 0x100010419790
 .globl _number_music_samples_end
-.set _number_music_samples_end, 0x10419794
+.set _number_music_samples_end, 0x100010419794
 .globl _table_music_data
-.set _table_music_data, 0x10419794
+.set _table_music_data, 0x100010419794
 .globl __musicsampletblSegmentRomEnd
-.set __musicsampletblSegmentRomEnd, 0x1041998C
+.set __musicsampletblSegmentRomEnd, 0x10001041998C
 .globl _table_music_data_end
-.set _table_music_data_end, 0x1041998C
+.set _table_music_data_end, 0x10001041998C
 .globl __sfxctlSegmentRomStart
-.set __sfxctlSegmentRomStart, 0x102EBDE0
+.set __sfxctlSegmentRomStart, 0x1000102EBDE0
 .globl __sfxctlSegmentRomEnd
-.set __sfxctlSegmentRomEnd, 0x102F19A0
+.set __sfxctlSegmentRomEnd, 0x1000102F19A0
 .globl __sfxtblSegmentRomStart
-.set __sfxtblSegmentRomStart, 0x102F19A0
+.set __sfxtblSegmentRomStart, 0x1000102F19A0
 .globl __sfxtblSegmentRomEnd
-.set __sfxtblSegmentRomEnd, 0x103B4450
+.set __sfxtblSegmentRomEnd, 0x1000103B4450
 .globl __instrumentsctlSegmentRomStart
-.set __instrumentsctlSegmentRomStart, 0x103B4450
+.set __instrumentsctlSegmentRomStart, 0x1000103B4450
 .globl __instrumentsctlSegmentRomEnd
-.set __instrumentsctlSegmentRomEnd, 0x103B87F0
+.set __instrumentsctlSegmentRomEnd, 0x1000103B87F0
 .globl __instrumentstblSegmentRomStart
-.set __instrumentstblSegmentRomStart, 0x103B87F0
+.set __instrumentstblSegmentRomStart, 0x1000103B87F0
 .globl __instrumentstblSegmentRomEnd
-.set __instrumentstblSegmentRomEnd, 0x10419790
+.set __instrumentstblSegmentRomEnd, 0x100010419790
 .globl _Mno_music
-.set _Mno_music, 0x1041998C
+.set _Mno_music, 0x10001041998C
 .globl _end_Mno_music
-.set _end_Mno_music, 0x104199B6
+.set _end_Mno_music, 0x1000104199B6
 .globl _Msolo_death_abrev
-.set _Msolo_death_abrev, 0x104199B6
+.set _Msolo_death_abrev, 0x1000104199B6
 .globl _end_Msolo_death_abrev
-.set _end_Msolo_death_abrev, 0x10419B8C
+.set _end_Msolo_death_abrev, 0x100010419B8C
 .globl _Mintro_eye
-.set _Mintro_eye, 0x10419B8C
+.set _Mintro_eye, 0x100010419B8C
 .globl _end_Mintro_eye
-.set _end_Mintro_eye, 0x1041A43A
+.set _end_Mintro_eye, 0x10001041A43A
 .globl _Mtrain
-.set _Mtrain, 0x1041A43A
+.set _Mtrain, 0x10001041A43A
 .globl _end_Mtrain
-.set _end_Mtrain, 0x1041B024
+.set _end_Mtrain, 0x10001041B024
 .globl _Mdepot
-.set _Mdepot, 0x1041B024
+.set _Mdepot, 0x10001041B024
 .globl _end_Mdepot
-.set _end_Mdepot, 0x1041BDC4
+.set _end_Mdepot, 0x10001041BDC4
 .globl _Mjungle_unused
-.set _Mjungle_unused, 0x1041BDC4
+.set _Mjungle_unused, 0x10001041BDC4
 .globl _end_Mjungle_unused
-.set _end_Mjungle_unused, 0x1041CB5C
+.set _end_Mjungle_unused, 0x10001041CB5C
 .globl _Mcitadel
-.set _Mcitadel, 0x1041CB5C
+.set _Mcitadel, 0x10001041CB5C
 .globl _end_Mcitadel
-.set _end_Mcitadel, 0x1041D91C
+.set _end_Mcitadel, 0x10001041D91C
 .globl _Mfacility
-.set _Mfacility, 0x1041D91C
+.set _Mfacility, 0x10001041D91C
 .globl _end_Mfacility
-.set _end_Mfacility, 0x1041E3EA
+.set _end_Mfacility, 0x10001041E3EA
 .globl _Mcontrol
-.set _Mcontrol, 0x1041E3EA
+.set _Mcontrol, 0x10001041E3EA
 .globl _end_Mcontrol
-.set _end_Mcontrol, 0x1041EF48
+.set _end_Mcontrol, 0x10001041EF48
 .globl _Mdam
-.set _Mdam, 0x1041EF48
+.set _Mdam, 0x10001041EF48
 .globl _end_Mdam
-.set _end_Mdam, 0x1041FD4C
+.set _end_Mdam, 0x10001041FD4C
 .globl _Mfrigate
-.set _Mfrigate, 0x1041FD4C
+.set _Mfrigate, 0x10001041FD4C
 .globl _end_Mfrigate
-.set _end_Mfrigate, 0x10420B2C
+.set _end_Mfrigate, 0x100010420B2C
 .globl _Marchives
-.set _Marchives, 0x10420B2C
+.set _Marchives, 0x100010420B2C
 .globl _end_Marchives
-.set _end_Marchives, 0x10421480
+.set _end_Marchives, 0x100010421480
 .globl _Msilo
-.set _Msilo, 0x10421480
+.set _Msilo, 0x100010421480
 .globl _end_Msilo
-.set _end_Msilo, 0x104222F0
+.set _end_Msilo, 0x1000104222F0
 .globl _Mjungle_perimeter_unused
-.set _Mjungle_perimeter_unused, 0x104222F0
+.set _Mjungle_perimeter_unused, 0x1000104222F0
 .globl _end_Mjungle_perimeter_unused
-.set _end_Mjungle_perimeter_unused, 0x1042325C
+.set _end_Mjungle_perimeter_unused, 0x10001042325C
 .globl _Mstreets
-.set _Mstreets, 0x1042325C
+.set _Mstreets, 0x10001042325C
 .globl _end_Mstreets
-.set _end_Mstreets, 0x10423F5E
+.set _end_Mstreets, 0x100010423F5E
 .globl _Mbunker1
-.set _Mbunker1, 0x10423F5E
+.set _Mbunker1, 0x100010423F5E
 .globl _end_Mbunker1
-.set _end_Mbunker1, 0x104245D0
+.set _end_Mbunker1, 0x1000104245D0
 .globl _Mbunker2
-.set _Mbunker2, 0x104245D0
+.set _Mbunker2, 0x1000104245D0
 .globl _end_Mbunker2
-.set _end_Mbunker2, 0x10424C50
+.set _end_Mbunker2, 0x100010424C50
 .globl _Mstatue
-.set _Mstatue, 0x10424C50
+.set _Mstatue, 0x100010424C50
 .globl _end_Mstatue
-.set _end_Mstatue, 0x104255E8
+.set _end_Mstatue, 0x1000104255E8
 .globl _Melevator_control
-.set _Melevator_control, 0x104255E8
+.set _Melevator_control, 0x1000104255E8
 .globl _end_Melevator_control
-.set _end_Melevator_control, 0x10425FC2
+.set _end_Melevator_control, 0x100010425FC2
 .globl _Mcradle
-.set _Mcradle, 0x10425FC2
+.set _Mcradle, 0x100010425FC2
 .globl _end_Mcradle
-.set _end_Mcradle, 0x10426D22
+.set _end_Mcradle, 0x100010426D22
 .globl _Mnull1
-.set _Mnull1, 0x10426D22
+.set _Mnull1, 0x100010426D22
 .globl _end_Mnull1
-.set _end_Mnull1, 0x10426D4C
+.set _end_Mnull1, 0x100010426D4C
 .globl _Melevator_wc
-.set _Melevator_wc, 0x10426D4C
+.set _Melevator_wc, 0x100010426D4C
 .globl _end_Melevator_wc
-.set _end_Melevator_wc, 0x10427392
+.set _end_Melevator_wc, 0x100010427392
 .globl _Megyptian
-.set _Megyptian, 0x10427392
+.set _Megyptian, 0x100010427392
 .globl _end_Megyptian
-.set _end_Megyptian, 0x1042812C
+.set _end_Megyptian, 0x10001042812C
 .globl _Mfolders
-.set _Mfolders, 0x1042812C
+.set _Mfolders, 0x10001042812C
 .globl _end_Mfolders
-.set _end_Mfolders, 0x1042850E
+.set _end_Mfolders, 0x10001042850E
 .globl _Mwatchmusic
-.set _Mwatchmusic, 0x1042850E
+.set _Mwatchmusic, 0x10001042850E
 .globl _end_Mwatchmusic
-.set _end_Mwatchmusic, 0x10428700
+.set _end_Mwatchmusic, 0x100010428700
 .globl _Maztec
-.set _Maztec, 0x10428700
+.set _Maztec, 0x100010428700
 .globl _end_Maztec
-.set _end_Maztec, 0x10429372
+.set _end_Maztec, 0x100010429372
 .globl _Mwatercaverns
-.set _Mwatercaverns, 0x10429372
+.set _Mwatercaverns, 0x100010429372
 .globl _end_Mwatercaverns
-.set _end_Mwatercaverns, 0x1042A19E
+.set _end_Mwatercaverns, 0x10001042A19E
 .globl _Mdeathsolo
-.set _Mdeathsolo, 0x1042A19E
+.set _Mdeathsolo, 0x10001042A19E
 .globl _end_Mdeathsolo
-.set _end_Mdeathsolo, 0x1042A504
+.set _end_Mdeathsolo, 0x10001042A504
 .globl _Msurface2
-.set _Msurface2, 0x1042A504
+.set _Msurface2, 0x10001042A504
 .globl _end_Msurface2
-.set _end_Msurface2, 0x1042B2BA
+.set _end_Msurface2, 0x10001042B2BA
 .globl _Mtrainx
-.set _Mtrainx, 0x1042B2BA
+.set _Mtrainx, 0x10001042B2BA
 .globl _end_Mtrainx
-.set _end_Mtrainx, 0x1042BB5A
+.set _end_Mtrainx, 0x10001042BB5A
 .globl _Mnull2
-.set _Mnull2, 0x1042BB5A
+.set _Mnull2, 0x10001042BB5A
 .globl _end_Mnull2
-.set _end_Mnull2, 0x1042BB84
+.set _end_Mnull2, 0x10001042BB84
 .globl _Mfacilityx
-.set _Mfacilityx, 0x1042BB84
+.set _Mfacilityx, 0x10001042BB84
 .globl _end_Mfacilityx
-.set _end_Mfacilityx, 0x1042C4DC
+.set _end_Mfacilityx, 0x10001042C4DC
 .globl _Mdepotx
-.set _Mdepotx, 0x1042C4DC
+.set _Mdepotx, 0x10001042C4DC
 .globl _end_Mdepotx
-.set _end_Mdepotx, 0x1042CC98
+.set _end_Mdepotx, 0x10001042CC98
 .globl _Mcontrolx
-.set _Mcontrolx, 0x1042CC98
+.set _Mcontrolx, 0x10001042CC98
 .globl _end_Mcontrolx
-.set _end_Mcontrolx, 0x1042D1E0
+.set _end_Mcontrolx, 0x10001042D1E0
 .globl _Mwatercavernsx
-.set _Mwatercavernsx, 0x1042D1E0
+.set _Mwatercavernsx, 0x10001042D1E0
 .globl _end_Mwatercavernsx
-.set _end_Mwatercavernsx, 0x1042D934
+.set _end_Mwatercavernsx, 0x10001042D934
 .globl _Mdamx
-.set _Mdamx, 0x1042D934
+.set _Mdamx, 0x10001042D934
 .globl _end_Mdamx
-.set _end_Mdamx, 0x1042DE54
+.set _end_Mdamx, 0x10001042DE54
 .globl _Mfrigatex
-.set _Mfrigatex, 0x1042DE54
+.set _Mfrigatex, 0x10001042DE54
 .globl _end_Mfrigatex
-.set _end_Mfrigatex, 0x1042E416
+.set _end_Mfrigatex, 0x10001042E416
 .globl _Marchivesx
-.set _Marchivesx, 0x1042E416
+.set _Marchivesx, 0x10001042E416
 .globl _end_Marchivesx
-.set _end_Marchivesx, 0x1042EB3A
+.set _end_Marchivesx, 0x10001042EB3A
 .globl _Msilox
-.set _Msilox, 0x1042EB3A
+.set _Msilox, 0x10001042EB3A
 .globl _end_Msilox
-.set _end_Msilox, 0x1042F42E
+.set _end_Msilox, 0x10001042F42E
 .globl _Mnull3
-.set _Mnull3, 0x1042F42E
+.set _Mnull3, 0x10001042F42E
 .globl _end_Mnull3
-.set _end_Mnull3, 0x1042F458
+.set _end_Mnull3, 0x10001042F458
 .globl _Mstreetsx
-.set _Mstreetsx, 0x1042F458
+.set _Mstreetsx, 0x10001042F458
 .globl _end_Mstreetsx
-.set _end_Mstreetsx, 0x1042FAC4
+.set _end_Mstreetsx, 0x10001042FAC4
 .globl _Mbunker1x
-.set _Mbunker1x, 0x1042FAC4
+.set _Mbunker1x, 0x10001042FAC4
 .globl _end_Mbunker1x
-.set _end_Mbunker1x, 0x1043026A
+.set _end_Mbunker1x, 0x10001043026A
 .globl _Mbunker2x
-.set _Mbunker2x, 0x1043026A
+.set _Mbunker2x, 0x10001043026A
 .globl _end_Mbunker2x
-.set _end_Mbunker2x, 0x104308B8
+.set _end_Mbunker2x, 0x1000104308B8
 .globl _Mjunglex
-.set _Mjunglex, 0x104308B8
+.set _Mjunglex, 0x1000104308B8
 .globl _end_Mjunglex
-.set _end_Mjunglex, 0x104310CE
+.set _end_Mjunglex, 0x1000104310CE
 .globl _Mnint_rare_logo
-.set _Mnint_rare_logo, 0x104310CE
+.set _Mnint_rare_logo, 0x1000104310CE
 .globl _end_Mnint_rare_logo
-.set _end_Mnint_rare_logo, 0x10431500
+.set _end_Mnint_rare_logo, 0x100010431500
 .globl _Mstatuex
-.set _Mstatuex, 0x10431500
+.set _Mstatuex, 0x100010431500
 .globl _end_Mstatuex
-.set _end_Mstatuex, 0x10431BB8
+.set _end_Mstatuex, 0x100010431BB8
 .globl _Maztecx
-.set _Maztecx, 0x10431BB8
+.set _Maztecx, 0x100010431BB8
 .globl _end_Maztecx
-.set _end_Maztecx, 0x1043248E
+.set _end_Maztecx, 0x10001043248E
 .globl _Megyptianx
-.set _Megyptianx, 0x1043248E
+.set _Megyptianx, 0x10001043248E
 .globl _end_Megyptianx
-.set _end_Megyptianx, 0x10432D3E
+.set _end_Megyptianx, 0x100010432D3E
 .globl _Mcradlex
-.set _Mcradlex, 0x10432D3E
+.set _Mcradlex, 0x100010432D3E
 .globl _end_Mcradlex
-.set _end_Mcradlex, 0x10433408
+.set _end_Mcradlex, 0x100010433408
 .globl _Mcuba
-.set _Mcuba, 0x10433408
+.set _Mcuba, 0x100010433408
 .globl _end_Mcuba
-.set _end_Mcuba, 0x10433C52
+.set _end_Mcuba, 0x100010433C52
 .globl _Mrunway
-.set _Mrunway, 0x10433C52
+.set _Mrunway, 0x100010433C52
 .globl _end_Mrunway
-.set _end_Mrunway, 0x10434970
+.set _end_Mrunway, 0x100010434970
 .globl _Mrunway_plane
-.set _Mrunway_plane, 0x10434970
+.set _Mrunway_plane, 0x100010434970
 .globl _end_Mrunway_plane
-.set _end_Mrunway_plane, 0x10434C4A
+.set _end_Mrunway_plane, 0x100010434C4A
 .globl _Msurface2x
-.set _Msurface2x, 0x10434C4A
+.set _Msurface2x, 0x100010434C4A
 .globl _end_Msurface2x
-.set _end_Msurface2x, 0x10435372
+.set _end_Msurface2x, 0x100010435372
 .globl _Mwindblowing
-.set _Mwindblowing, 0x10435372
+.set _Mwindblowing, 0x100010435372
 .globl _end_Mwindblowing
-.set _end_Mwindblowing, 0x10435894
+.set _end_Mwindblowing, 0x100010435894
 .globl _Mmultideath_alt
-.set _Mmultideath_alt, 0x10435894
+.set _Mmultideath_alt, 0x100010435894
 .globl _end_Mmultideath_alt
-.set _end_Mmultideath_alt, 0x10435AA0
+.set _end_Mmultideath_alt, 0x100010435AA0
 .globl _Mjungle
-.set _Mjungle, 0x10435AA0
+.set _Mjungle, 0x100010435AA0
 .globl _end_Mjungle
-.set _end_Mjungle, 0x10436228
+.set _end_Mjungle, 0x100010436228
 .globl _Mrunwayx
-.set _Mrunwayx, 0x10436228
+.set _Mrunwayx, 0x100010436228
 .globl _end_Mrunwayx
-.set _end_Mrunwayx, 0x1043684A
+.set _end_Mrunwayx, 0x10001043684A
 .globl _Msurface1
-.set _Msurface1, 0x1043684A
+.set _Msurface1, 0x10001043684A
 .globl _end_Msurface1
-.set _end_Msurface1, 0x104375B2
+.set _end_Msurface1, 0x1000104375B2
 .globl _Mmultiplayerdeath
-.set _Mmultiplayerdeath, 0x104375B2
+.set _Mmultiplayerdeath, 0x1000104375B2
 .globl _end_Mmultiplayerdeath
-.set _end_Mmultiplayerdeath, 0x1043787A
+.set _end_Mmultiplayerdeath, 0x10001043787A
 .globl _Msurface1x
-.set _Msurface1x, 0x1043787A
+.set _Msurface1x, 0x10001043787A
 .globl _end_Msurface1x
-.set _end_Msurface1x, 0x10437FA2
+.set _end_Msurface1x, 0x100010437FA2
 .globl _Msurface2_ending
-.set _Msurface2_ending, 0x10437FA2
+.set _Msurface2_ending, 0x100010437FA2
 .globl _end_Msurface2_ending
-.set _end_Msurface2_ending, 0x1043823E
+.set _end_Msurface2_ending, 0x10001043823E
 .globl _Mstatue_ending
-.set _Mstatue_ending, 0x1043823E
+.set _Mstatue_ending, 0x10001043823E
 .globl _end_Mstatue_ending
-.set _end_Mstatue_ending, 0x104383A4
+.set _end_Mstatue_ending, 0x1000104383A4
 .globl _Mfrigate_outro
-.set _Mfrigate_outro, 0x104383A4
+.set _Mfrigate_outro, 0x1000104383A4
 .globl _end_Mfrigate_outro
-.set _end_Mfrigate_outro, 0x10438660
+.set _end_Mfrigate_outro, 0x100010438660
 
 /* --- assets/romfiles2.s -------------------------------------- */
 .globl _unknown2
-.set _unknown2, 0x102A4D50
+.set _unknown2, 0x1000102A4D50
 .globl _unknown2_end
-.set _unknown2_end, 0x102BF2D0
+.set _unknown2_end, 0x1000102BF2D0
 
 /* --- ge007.ld segment markers ------------------------------------ */
 /* RomStart/RomEnd are exact for asset segments; Start/End mirror them
    (game code only ever uses End-Start size differences for these).
    Code segments are approximate (see generator header comment). */
 .globl __headerSegmentRomStart
-.set __headerSegmentRomStart, 0x10000000
+.set __headerSegmentRomStart, 0x100010000000
 .globl __headerSegmentRomEnd
-.set __headerSegmentRomEnd, 0x10000040
+.set __headerSegmentRomEnd, 0x100010000040
 .globl __headerSegmentStart
-.set __headerSegmentStart, 0x10000000
+.set __headerSegmentStart, 0x100010000000
 .globl __headerSegmentEnd
-.set __headerSegmentEnd, 0x10000040  /* approximate */
+.set __headerSegmentEnd, 0x100010000040  /* approximate */
 .globl __bootSegmentRomStart
-.set __bootSegmentRomStart, 0x10000040
+.set __bootSegmentRomStart, 0x100010000040
 .globl __bootSegmentRomEnd
-.set __bootSegmentRomEnd, 0x10001000
+.set __bootSegmentRomEnd, 0x100010001000
 .globl __bootSegmentStart
-.set __bootSegmentStart, 0x10000040
+.set __bootSegmentStart, 0x100010000040
 .globl __bootSegmentEnd
-.set __bootSegmentEnd, 0x10001000  /* approximate */
+.set __bootSegmentEnd, 0x100010001000  /* approximate */
 .globl __startSegmentRomStart
-.set __startSegmentRomStart, 0x10001000
+.set __startSegmentRomStart, 0x100010001000
 .globl __startSegmentRomEnd
-.set __startSegmentRomEnd, 0x10001050
+.set __startSegmentRomEnd, 0x100010001050
 .globl __startSegmentStart
-.set __startSegmentStart, 0x10001000
+.set __startSegmentStart, 0x100010001000
 .globl __startSegmentEnd
-.set __startSegmentEnd, 0x10001050  /* approximate */
+.set __startSegmentEnd, 0x100010001050  /* approximate */
 .globl __codeSegmentRomStart
-.set __codeSegmentRomStart, 0x10001050
+.set __codeSegmentRomStart, 0x100010001050
 .globl __codeSegmentRomEnd
-.set __codeSegmentRomEnd, 0x10021990
+.set __codeSegmentRomEnd, 0x100010021990
 .globl __codeSegmentStart
-.set __codeSegmentStart, 0x10001050
+.set __codeSegmentStart, 0x100010001050
 .globl __codeSegmentEnd
-.set __codeSegmentEnd, 0x10021990  /* approximate */
+.set __codeSegmentEnd, 0x100010021990  /* approximate */
 .globl __cdataSegmentRomStart
-.set __cdataSegmentRomStart, 0x10021990
+.set __cdataSegmentRomStart, 0x100010021990
 .globl __cdataSegmentRomEnd
-.set __cdataSegmentRomEnd, 0x10032172
+.set __cdataSegmentRomEnd, 0x100010032172
 .globl __cdataSegmentStart
-.set __cdataSegmentStart, 0x10021990
+.set __cdataSegmentStart, 0x100010021990
 .globl __cdataSegmentEnd
-.set __cdataSegmentEnd, 0x10032172  /* approximate */
+.set __cdataSegmentEnd, 0x100010032172  /* approximate */
 .globl __inflateSegmentRomStart
-.set __inflateSegmentRomStart, 0x10032172
+.set __inflateSegmentRomStart, 0x100010032172
 .globl __inflateSegmentRomEnd
-.set __inflateSegmentRomEnd, 0x10034B2F
+.set __inflateSegmentRomEnd, 0x100010034B2F
 .globl __inflateSegmentStart
-.set __inflateSegmentStart, 0x10032172
+.set __inflateSegmentStart, 0x100010032172
 .globl __inflateSegmentEnd
-.set __inflateSegmentEnd, 0x10034B2F  /* approximate */
+.set __inflateSegmentEnd, 0x100010034B2F  /* approximate */
 .globl __gameSegmentRomStart
-.set __gameSegmentRomStart, 0x10034B2F
+.set __gameSegmentRomStart, 0x100010034B2F
 .globl __gameSegmentRomEnd
-.set __gameSegmentRomEnd, 0x10117880
+.set __gameSegmentRomEnd, 0x100010117880
 .globl __gameSegmentStart
-.set __gameSegmentStart, 0x10034B2F
+.set __gameSegmentStart, 0x100010034B2F
 .globl __gameSegmentEnd
-.set __gameSegmentEnd, 0x10117880  /* approximate */
+.set __gameSegmentEnd, 0x100010117880  /* approximate */
 .globl __fontdlSegmentRomStart
-.set __fontdlSegmentRomStart, 0x10117880
+.set __fontdlSegmentRomStart, 0x100010117880
 .globl __fontdlSegmentRomEnd
-.set __fontdlSegmentRomEnd, 0x10117940
+.set __fontdlSegmentRomEnd, 0x100010117940
 .globl __fontdlSegmentStart
-.set __fontdlSegmentStart, 0x10117880
+.set __fontdlSegmentStart, 0x100010117880
 .globl __fontdlSegmentEnd
-.set __fontdlSegmentEnd, 0x10117940
+.set __fontdlSegmentEnd, 0x100010117940
 .globl __jfontchardataSegmentRomStart
-.set __jfontchardataSegmentRomStart, 0x10117940
+.set __jfontchardataSegmentRomStart, 0x100010117940
 .globl __jfontchardataSegmentRomEnd
-.set __jfontchardataSegmentRomEnd, 0x10123040
+.set __jfontchardataSegmentRomEnd, 0x100010123040
 .globl __jfontchardataSegmentStart
-.set __jfontchardataSegmentStart, 0x10117940
+.set __jfontchardataSegmentStart, 0x100010117940
 .globl __jfontchardataSegmentEnd
-.set __jfontchardataSegmentEnd, 0x10123040
+.set __jfontchardataSegmentEnd, 0x100010123040
 .globl __efontchardataSegmentRomStart
-.set __efontchardataSegmentRomStart, 0x10123040
+.set __efontchardataSegmentRomStart, 0x100010123040
 .globl __efontchardataSegmentRomEnd
-.set __efontchardataSegmentRomEnd, 0x10124AC0
+.set __efontchardataSegmentRomEnd, 0x100010124AC0
 .globl __efontchardataSegmentStart
-.set __efontchardataSegmentStart, 0x10123040
+.set __efontchardataSegmentStart, 0x100010123040
 .globl __efontchardataSegmentEnd
-.set __efontchardataSegmentEnd, 0x10124AC0
+.set __efontchardataSegmentEnd, 0x100010124AC0
 .globl __animation_entriesSegmentRomStart
-.set __animation_entriesSegmentRomStart, 0x10124AC0
+.set __animation_entriesSegmentRomStart, 0x100010124AC0
 .globl __animation_entriesSegmentRomEnd
-.set __animation_entriesSegmentRomEnd, 0x1028E980
+.set __animation_entriesSegmentRomEnd, 0x10001028E980
 .globl __animation_entriesSegmentStart
-.set __animation_entriesSegmentStart, 0x10124AC0
+.set __animation_entriesSegmentStart, 0x100010124AC0
 .globl __animation_entriesSegmentEnd
-.set __animation_entriesSegmentEnd, 0x1028E980
+.set __animation_entriesSegmentEnd, 0x10001028E980
 .globl __animation_dataSegmentRomStart
-.set __animation_dataSegmentRomStart, 0x1028E980
+.set __animation_dataSegmentRomStart, 0x10001028E980
 .globl __animation_dataSegmentRomEnd
-.set __animation_dataSegmentRomEnd, 0x1029D160
+.set __animation_dataSegmentRomEnd, 0x10001029D160
 .globl __animation_dataSegmentStart
-.set __animation_dataSegmentStart, 0x1028E980
+.set __animation_dataSegmentStart, 0x10001028E980
 .globl __animation_dataSegmentEnd
-.set __animation_dataSegmentEnd, 0x1029D160
+.set __animation_dataSegmentEnd, 0x10001029D160
 .globl __GlobalimagetableSegmentRomStart
-.set __GlobalimagetableSegmentRomStart, 0x1029D160
+.set __GlobalimagetableSegmentRomStart, 0x10001029D160
 .globl __GlobalimagetableSegmentRomEnd
-.set __GlobalimagetableSegmentRomEnd, 0x1029E558
+.set __GlobalimagetableSegmentRomEnd, 0x10001029E558
 .globl __GlobalimagetableSegmentStart
-.set __GlobalimagetableSegmentStart, 0x1029D160
+.set __GlobalimagetableSegmentStart, 0x10001029D160
 .globl __GlobalimagetableSegmentEnd
-.set __GlobalimagetableSegmentEnd, 0x1029E558
+.set __GlobalimagetableSegmentEnd, 0x10001029E558
 .globl __rarewarelogoSegmentRomStart
-.set __rarewarelogoSegmentRomStart, 0x1029E560
+.set __rarewarelogoSegmentRomStart, 0x10001029E560
 .globl __rarewarelogoSegmentRomEnd
-.set __rarewarelogoSegmentRomEnd, 0x102A4D50
+.set __rarewarelogoSegmentRomEnd, 0x1000102A4D50
 .globl __rarewarelogoSegmentStart
-.set __rarewarelogoSegmentStart, 0x1029E560
+.set __rarewarelogoSegmentStart, 0x10001029E560
 .globl __rarewarelogoSegmentEnd
-.set __rarewarelogoSegmentEnd, 0x102A4D50
+.set __rarewarelogoSegmentEnd, 0x1000102A4D50
 .globl __romfiles2SegmentRomStart
-.set __romfiles2SegmentRomStart, 0x102A4D50
+.set __romfiles2SegmentRomStart, 0x1000102A4D50
 .globl __romfiles2SegmentRomEnd
-.set __romfiles2SegmentRomEnd, 0x102BF2D0
+.set __romfiles2SegmentRomEnd, 0x1000102BF2D0
 .globl __romfiles2SegmentStart
-.set __romfiles2SegmentStart, 0x102A4D50
+.set __romfiles2SegmentStart, 0x1000102A4D50
 .globl __romfiles2SegmentEnd
-.set __romfiles2SegmentEnd, 0x102BF2D0
+.set __romfiles2SegmentEnd, 0x1000102BF2D0
 .globl __ramromfilesSegmentRomStart
-.set __ramromfilesSegmentRomStart, 0x102BF2D0
+.set __ramromfilesSegmentRomStart, 0x1000102BF2D0
 .globl __ramromfilesSegmentRomEnd
-.set __ramromfilesSegmentRomEnd, 0x102E63F0
+.set __ramromfilesSegmentRomEnd, 0x1000102E63F0
 .globl __ramromfilesSegmentStart
-.set __ramromfilesSegmentStart, 0x102BF2D0
+.set __ramromfilesSegmentStart, 0x1000102BF2D0
 .globl __ramromfilesSegmentEnd
-.set __ramromfilesSegmentEnd, 0x102E63F0
+.set __ramromfilesSegmentEnd, 0x1000102E63F0
 .globl __fontbankgothicSegmentRomStart
-.set __fontbankgothicSegmentRomStart, 0x102E63F0
+.set __fontbankgothicSegmentRomStart, 0x1000102E63F0
 .globl __fontbankgothicSegmentRomEnd
-.set __fontbankgothicSegmentRomEnd, 0x102E88A0
+.set __fontbankgothicSegmentRomEnd, 0x1000102E88A0
 .globl __fontbankgothicSegmentStart
-.set __fontbankgothicSegmentStart, 0x102E63F0
+.set __fontbankgothicSegmentStart, 0x1000102E63F0
 .globl __fontbankgothicSegmentEnd
-.set __fontbankgothicSegmentEnd, 0x102E88A0
+.set __fontbankgothicSegmentEnd, 0x1000102E88A0
 .globl __fontzurichboldSegmentRomStart
-.set __fontzurichboldSegmentRomStart, 0x102E88A0
+.set __fontzurichboldSegmentRomStart, 0x1000102E88A0
 .globl __fontzurichboldSegmentRomEnd
-.set __fontzurichboldSegmentRomEnd, 0x102EBDE0
+.set __fontzurichboldSegmentRomEnd, 0x1000102EBDE0
 .globl __fontzurichboldSegmentStart
-.set __fontzurichboldSegmentStart, 0x102E88A0
+.set __fontzurichboldSegmentStart, 0x1000102E88A0
 .globl __fontzurichboldSegmentEnd
-.set __fontzurichboldSegmentEnd, 0x102EBDE0
+.set __fontzurichboldSegmentEnd, 0x1000102EBDE0
 .globl __musicfilesSegmentRomStart
-.set __musicfilesSegmentRomStart, 0x102EBDE0
+.set __musicfilesSegmentRomStart, 0x1000102EBDE0
 .globl __musicfilesSegmentRomEnd
-.set __musicfilesSegmentRomEnd, 0x10438660
+.set __musicfilesSegmentRomEnd, 0x100010438660
 .globl __musicfilesSegmentStart
-.set __musicfilesSegmentStart, 0x102EBDE0
+.set __musicfilesSegmentStart, 0x1000102EBDE0
 .globl __musicfilesSegmentEnd
-.set __musicfilesSegmentEnd, 0x10438660
+.set __musicfilesSegmentEnd, 0x100010438660
 .globl __obsegSegmentRomStart
-.set __obsegSegmentRomStart, 0x10438660
+.set __obsegSegmentRomStart, 0x100010438660
 .globl __obsegSegmentRomEnd
-.set __obsegSegmentRomEnd, 0x108F7DF0
+.set __obsegSegmentRomEnd, 0x1000108F7DF0
 .globl __obsegSegmentStart
-.set __obsegSegmentStart, 0x10438660
+.set __obsegSegmentStart, 0x100010438660
 .globl __obsegSegmentEnd
-.set __obsegSegmentEnd, 0x108F7DF0
+.set __obsegSegmentEnd, 0x1000108F7DF0
 .globl __imagesSegmentRomStart
-.set __imagesSegmentRomStart, 0x108F7DF0
+.set __imagesSegmentRomStart, 0x1000108F7DF0
 .globl __imagesSegmentRomEnd
-.set __imagesSegmentRomEnd, 0x10C00000
+.set __imagesSegmentRomEnd, 0x100010C00000
 .globl __imagesSegmentStart
-.set __imagesSegmentStart, 0x108F7DF0
+.set __imagesSegmentStart, 0x1000108F7DF0
 .globl __imagesSegmentEnd
-.set __imagesSegmentEnd, 0x10C00000
+.set __imagesSegmentEnd, 0x100010C00000
 .globl __alt_startSegmentRomStart
-.set __alt_startSegmentRomStart, 0x10101000
+.set __alt_startSegmentRomStart, 0x100010101000
 .globl __alt_startSegmentStart
-.set __alt_startSegmentStart, 0x10101000
+.set __alt_startSegmentStart, 0x100010101000

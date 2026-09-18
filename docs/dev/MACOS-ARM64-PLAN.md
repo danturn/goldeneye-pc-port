@@ -542,10 +542,35 @@ Record as a `Dxx`.
 |---|---|---|
 | Research | done | §1 F1–F18 measured 2026-09-18 |
 | M0 | **done** | `build-pc/ge007.aarch64` (Mach-O arm64) **compiles, links and runs** — reaches ROM load. 186/186 TUs. |
-| M1 | not started | the shifted-window address model; this is what makes it boot past ROM load |
-| M2 | not started | |
+| M1 | **code done; runtime verification blocked on a ROM** | shifted-window address model implemented and self-tested (D298). M1.7's level boot needs a `.z64` in `data/`. |
+| M2 | not started | the game-code cast census; needs a ROM to surface the sites (and M1.7) |
 | M3 | not started | |
 | M4 | not started | |
+
+### M1 status detail (2026-09-18)
+
+`PORT_ADDR_BASE = 0x100000000000` (16 TiB) on macOS/arm64, 0 elsewhere.
+`build-pc/ge007.aarch64` reserves the window and its ROM-free self-test logs
+**ALL PASS** (window round-trips, absolute-symbol base, image-relative
+encoding). See **D298** in `findings.md`.
+
+| Item | Outcome |
+|---|---|
+| M1.1 `port_addr.h` + `portAddrInit()` | done — reserves the 4 GiB window `PROT_NONE` via `mach_vm_map(VM_FLAGS_FIXED)`, fatal on failure; asserts `cfb_16` matches the base |
+| M1.2 OS chokepoints | done — `osVirtualToPhysical`/`osPhysicalToVirtual`, `OS_K0_TO_PHYSICAL`, `tlbmanageGetTlbAllocatedBlock` |
+| M1.3 DRAM/cart/stacks in-window | done — `dram.c`, `romdata.c` (`CART_HOST`), `libultra.c` stack carve |
+| M1.4 fast3d | done — `seg_addr` (full-pointer early-out + `portN64ToHost`), `G_MW_SEGMENT`, texture classifier |
+| M1.5 mixer/PI DMA/validity | done — `piServiceDma` memcpy, `dramHostAddrValid` |
+| M1.6 absolute symbols with base | done — `.darwin.s` regenerated at `--base 0x100000000000` |
+| M1.7 boot attempt | **blocked** — no ROM available in this environment; see below |
+
+**To continue:** put the ROM in `data/` (`docs/building.md`) and run
+`./build-pc/ge007.aarch64 -level_09`. Triage the first crash against the M2
+census. Expect the first failures at raw `u32 -> pointer` casts in game code
+(mempool addresses, ROM-serialised pointer fields) — the class `PORT_N64PTR`
+exists for. The M2.1 census (`-Wint-to-pointer-cast` / `-Wpointer-to-int-cast`
+/ `-Wint-conversion` on the build log) already has hits, e.g.
+`src/game/image_bank.c:305`, `src/game/blood_decrypt.c:180,192`.
 
 ### M0 completion detail (2026-09-18)
 
