@@ -4,12 +4,10 @@
 #include "image_bank.h"
 #ifdef PORT
 #include <gimgfixup.h>
-/* D298/M2: pGlobalimagetable holds an N64 DRAM address (s32-safe). Re-base
- * when it becomes a host pointer; identity at PORT_ADDR_BASE == 0. */
 #include "port_addr.h"
-#define GBANK_PTR(x) ((void *)portN64ToHost((u32)(x)))
 #else
-#define GBANK_PTR(x) ((void *)(x))
+/* N64 build: the port address window is the identity (see port_addr.h). */
+#define PORT_N64PTR(T, x) ((T *)(x))
 #endif
 
 // bss
@@ -261,13 +259,13 @@ void texReset(void)
     pGlobalimagetable = mempAllocBytesInBank(size + 0x1000, MEMPOOL_STAGE);
     pGlobalimagetable = ((u32)pGlobalimagetable + 0xFFFU) & 0xFFFFF000;
 
-    romCopy(GBANK_PTR(pGlobalimagetable), &_GlobalimagetableSegmentRomStart, size);
+    romCopy(PORT_N64PTR(void, pGlobalimagetable), &_GlobalimagetableSegmentRomStart, size);
 
 #ifdef PORT
     /* D68 (docs/dev/findings.md): the ROM copy is N64 big-endian; convert
      * the CPU-interpreted u32 fields (IMAGESEG Gfx w1 words and
      * sImageTableEntry.index) to host order before any code reads them. */
-    gimgFixupGlobalimagetable((u8 *)GBANK_PTR(pGlobalimagetable));
+    gimgFixupGlobalimagetable((u8 *)PORT_N64PTR(void, pGlobalimagetable));
 #endif
 
 #if defined(PORT)
@@ -346,6 +344,6 @@ void texReset(void)
     /* D68: explosion.c executes the compiled globalDL_0xNNN shadows via
      * g_ExplosionDisplayLists[]; copy the IMAGESEG words that texLoad()
      * patched in the ROM copy over into those arrays. */
-    gimgSyncCompiledGlobalDLs((u8 *)GBANK_PTR(pGlobalimagetable));
+    gimgSyncCompiledGlobalDLs((u8 *)PORT_N64PTR(void, pGlobalimagetable));
 #endif
 }

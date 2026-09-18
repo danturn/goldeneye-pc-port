@@ -23,11 +23,10 @@ static void langFixupLoadedBank(char *name, void *p)
  * memp.h / D298). Re-base only where a slot becomes a pointer; identity at
  * PORT_ADDR_BASE == 0, so Windows/Linux are unchanged. */
 #if defined(PORT)
-#define LANGBANK_PTR(x)    ((void *)portN64ToHost((u32)(x)))
-#define LANGBANK_U32PTR(x) ((u32 *)portN64ToHost((u32)(x)))
+#include "port_addr.h"
 #else
-#define LANGBANK_PTR(x)    ((void *)(x))
-#define LANGBANK_U32PTR(x) ((u32 *)(x))
+/* N64 build: the port address window is the identity (see port_addr.h). */
+#define PORT_N64PTR(T, x) ((T *)(x))
 #endif
 
 // bss
@@ -276,13 +275,13 @@ void langInit(void) {
     g_LangBanks[LOPTIONS] = _fileNameLoadToBank(LnameX_lookuptable[LOPTIONS][j_text_trigger], FILELOADMETHOD_DEFAULT, 0x100, MEMPOOL_PERMANENT);
     g_LangBanks[LMISC] = _fileNameLoadToBank(LnameX_lookuptable[LMISC][j_text_trigger], FILELOADMETHOD_DEFAULT, 0x100, MEMPOOL_PERMANENT);
 #ifdef PORT
-    langFixupLoadedBank(LnameX_lookuptable[LGUN][j_text_trigger], LANGBANK_PTR(g_LangBanks[LGUN]));
-    langFixupLoadedBank(LnameX_lookuptable[LTITLE][j_text_trigger], LANGBANK_PTR(g_LangBanks[LTITLE]));
-    langFixupLoadedBank(LnameX_lookuptable[LMPMENU][j_text_trigger], LANGBANK_PTR(g_LangBanks[LMPMENU]));
-    langFixupLoadedBank(LnameX_lookuptable[LPROPOBJ][j_text_trigger], LANGBANK_PTR(g_LangBanks[LPROPOBJ]));
-    langFixupLoadedBank(LnameX_lookuptable[LMPWEAPONS][j_text_trigger], LANGBANK_PTR(g_LangBanks[LMPWEAPONS]));
-    langFixupLoadedBank(LnameX_lookuptable[LOPTIONS][j_text_trigger], LANGBANK_PTR(g_LangBanks[LOPTIONS]));
-    langFixupLoadedBank(LnameX_lookuptable[LMISC][j_text_trigger], LANGBANK_PTR(g_LangBanks[LMISC]));
+    langFixupLoadedBank(LnameX_lookuptable[LGUN][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LGUN]));
+    langFixupLoadedBank(LnameX_lookuptable[LTITLE][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LTITLE]));
+    langFixupLoadedBank(LnameX_lookuptable[LMPMENU][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LMPMENU]));
+    langFixupLoadedBank(LnameX_lookuptable[LPROPOBJ][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LPROPOBJ]));
+    langFixupLoadedBank(LnameX_lookuptable[LMPWEAPONS][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LMPWEAPONS]));
+    langFixupLoadedBank(LnameX_lookuptable[LOPTIONS][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LOPTIONS]));
+    langFixupLoadedBank(LnameX_lookuptable[LMISC][j_text_trigger], PORT_N64PTR(void, g_LangBanks[LMISC]));
 #endif
 }
 
@@ -390,7 +389,7 @@ void langLoadToAddr(u32 id)
 {
     g_LangBanks[id] = _fileNameLoadToBank(LnameX_lookuptable[id][j_text_trigger],1,0x100,MEMPOOL_STAGE);
 #ifdef PORT
-    langFixupLoadedBank(LnameX_lookuptable[id][j_text_trigger], LANGBANK_PTR(g_LangBanks[id]));
+    langFixupLoadedBank(LnameX_lookuptable[id][j_text_trigger], PORT_N64PTR(void, g_LangBanks[id]));
 #endif
 }
 
@@ -399,7 +398,7 @@ void langLoadToBank(int id,u8 *target,int size)
 {
     g_LangBanks[id] = _fileNameLoadToAddr(LnameX_lookuptable[id][j_text_trigger],1,target,size);
 #ifdef PORT
-    langFixupLoadedBank(LnameX_lookuptable[id][j_text_trigger], LANGBANK_PTR(g_LangBanks[id]));
+    langFixupLoadedBank(LnameX_lookuptable[id][j_text_trigger], PORT_N64PTR(void, g_LangBanks[id]));
 #endif
 }
 
@@ -426,7 +425,7 @@ u8 * langGet(s32 slotID)
         return NULL;
     }
 #endif
-    u32 * textbank_ptr = LANGBANK_U32PTR(g_LangBanks[slotID >> 10]); /* get the text file bank ID index the text ptr table */
+    u32 * textbank_ptr = PORT_N64PTR(u32, g_LangBanks[slotID >> 10]); /* get the text file bank ID index the text ptr table */
 #ifdef PORT
     /* D129 cont.: g_LangBanks[] is s32 and only populated for banks the
      * current flow has loaded.  A bare `-level_XX` boot that reaches the
@@ -452,7 +451,7 @@ u8 * langGet(s32 slotID)
             d65first = 0;
             for (int b = 0; b < 45; b++)
                 if (g_LangBanks[b])
-                    osSyncPrintf("D65 bank %d = %p\n", b, LANGBANK_PTR(g_LangBanks[b]));
+                    osSyncPrintf("D65 bank %d = %p\n", b, PORT_N64PTR(void, g_LangBanks[b]));
         }
         if (!textbank_ptr)
             osSyncPrintf("D65 langGet slotID=0x%08x bank=%d ptr=NULL\n", (unsigned)slotID, slotID >> 10);

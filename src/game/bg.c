@@ -9,11 +9,9 @@
 #include "bg.h"
 #if defined(PORT)
 #include "port_addr.h"
-/* D298/M2: ptr_bg_data (and friends) hold N64/window offsets as s32; re-base
- * where they become pointers. Identity at PORT_ADDR_BASE == 0. */
-#define BG_PTR(x) ((void *)portN64ToHost((u32)(x)))
 #else
-#define BG_PTR(x) ((void *)(x))
+/* N64 build: the port address window is the identity (see port_addr.h). */
+#define PORT_N64PTR(T, x) ((T *)(x))
 #endif
 #include "bondview.h"
 #include "chr.h"
@@ -863,22 +861,22 @@ void load_bg_file(LEVEL_INDEX levelid)
     lightFixtureInitTables();
  
     ptr_bg_data = (s32)header;
-    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *)BG_PTR(ptr_bg_data), 0, 0x40);
+    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *)PORT_N64PTR(void, ptr_bg_data), 0, 0x40);
 
     if (((levelid && ptr_bg_data) && levelentry_index));
 
     ptr_bgdata_offsets = ptr_bg_data;
-    ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *)BG_PTR(ptr_bg_data))[1]);
+    ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *)PORT_N64PTR(void, ptr_bg_data))[1]);
  
     size = (((((u32) ptr_bgdata_room_fileposition_list[1].pPointTableBin) & 0x00ffffff) - 1) | 0xf) + 1;
  
     ptr_bg_data = (s32) mempAllocBytesInBank(size, 4);
-    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *)BG_PTR(ptr_bg_data), 0, size);
+    obLoadBGFileBytesAtOffset(levelinfotable[levelentry_index].bg_seg_filename, (u8 *)PORT_N64PTR(void, ptr_bg_data), 0, size);
  
     gptr_stan = (s32) _fileNameLoadToBank(levelinfotable[levelentry_index].bg_stan_filename, 2, 0, 4);
  
-    stanDetermineEOF((struct StanPrefixRecord *)BG_PTR(gptr_stan), 0, (u8 *)BG_PTR(gptr_stan));
-    stanLoadFile((struct StanPrefixRecord *)BG_PTR(gptr_stan));
+    stanDetermineEOF((struct StanPrefixRecord *)PORT_N64PTR(void, gptr_stan), 0, (u8 *)PORT_N64PTR(void, gptr_stan));
+    stanLoadFile((struct StanPrefixRecord *)PORT_N64PTR(void, gptr_stan));
  
     sub_GAME_7F0B4810(levelinfotable[levelentry_index].levelscale);
     setLevelScale(levelinfotable[levelentry_index].levelscale);
@@ -890,7 +888,7 @@ void load_bg_file(LEVEL_INDEX levelid)
     sub_GAME_7F08976C(mCurrentLevelVisibilityScale);
     matrix_4x4_7F058C4C(mCurrentLevelVisibilityScale);
  
-    data = (s32 *)BG_PTR(ptr_bg_data);
+    data = (s32 *)PORT_N64PTR(void, ptr_bg_data);
     dword_CODE_bss_8007BF98 = *data;
     dword_CODE_bss_8007FF88 = 1;
  
@@ -898,7 +896,7 @@ void load_bg_file(LEVEL_INDEX levelid)
     {
         dword_CODE_bss_8007FF88 = 2;
         ptr_bgdata_offsets = (s32)data;
-        ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[1]);
+        ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)PORT_N64PTR(void, ptr_bgdata_offsets))[1]);
         
         // Keep this fake goto for matching.
         goto dummy_label_543534; dummy_label_543534: ;
@@ -910,25 +908,25 @@ void load_bg_file(LEVEL_INDEX levelid)
             g_MaxNumRooms++;  
         }
  
-        g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[2]);
+        g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)PORT_N64PTR(void, ptr_bgdata_offsets))[2]);
 
         if (1);
 
-        if (((s32 *)BG_PTR(ptr_bgdata_offsets))[3] == 0)
+        if (((s32 *)PORT_N64PTR(void, ptr_bgdata_offsets))[3] == 0)
         {
             dword_CODE_bss_8007FF90 = 0;
         }
         else
         {
-            dword_CODE_bss_8007FF90 = (s32 *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[3]);
+            dword_CODE_bss_8007FF90 = (s32 *) BG_SEG_TO_PTR(data, ((s32 *)PORT_N64PTR(void, ptr_bgdata_offsets))[3]);
  
-            if (((s32 *)BG_PTR(ptr_bgdata_offsets))[4] == 0)
+            if (((s32 *)PORT_N64PTR(void, ptr_bgdata_offsets))[4] == 0)
             {
                 dword_CODE_bss_8007FF94 = NULL;
             }
             else
             {
-                dword_CODE_bss_8007FF94 = (f32 *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[4]);
+                dword_CODE_bss_8007FF94 = (f32 *) BG_SEG_TO_PTR(data, ((s32 *)PORT_N64PTR(void, ptr_bgdata_offsets))[4]);
             }
         }
  
@@ -3081,7 +3079,7 @@ void bgBuildRoomVtxBounds(s32 roomID)
 
             numvertices = ((gdl[cmdindex].dma.par >> 4) & 0xf) + 1;
 
-            vtx = (Vtx *)BG_PTR(SEGMENT_OFFSET(gdl[cmdindex].dma.addr) + (u32)vertices);
+            vtx = (Vtx *)PORT_N64PTR(void, SEGMENT_OFFSET(gdl[cmdindex].dma.addr) + (u32)vertices);
 
 #if defined(PORT)
             /* TEMP D69 safety net: the room primary/secondary DL binaries

@@ -38,9 +38,9 @@
  * PORT_ADDR_BASE == 0. */
 #if defined(PORT)
 #include "port_addr.h"
-#define CHR_N64PTR(T, x) ((T *)portN64ToHost((u32)(x)))
 #else
-#define CHR_N64PTR(T, x) ((T *)(x))
+/* N64 build: the port address window is the identity (see port_addr.h). */
+#define PORT_N64PTR(T, x) ((T *)(x))
 #endif
 
 #ifdef PORT
@@ -79,7 +79,7 @@ static s32 d193aAnimIndex(void *anim) {
     s32 i;
     if (anim == NULL) return -1;
     for (i = 0; animation_table_ptrs1[i] != 0; i++) {
-        if (CHR_N64PTR(void, animation_table_ptrs1[i]) == anim) return i;
+        if (PORT_N64PTR(void, animation_table_ptrs1[i]) == anim) return i;
     }
     return -1;
 }
@@ -2472,11 +2472,11 @@ s32 chrTick(PropRecord *prop)
     {
         if (D_8002C904)
         {
-            if (CHR_N64PTR(ModelAnimation, animation_table_ptrs1[g_AnimationTablePointerCountRelated]) != CHR_N64PTR(ModelAnimation, 1))
+            if (PORT_N64PTR(ModelAnimation, animation_table_ptrs1[g_AnimationTablePointerCountRelated]) != PORT_N64PTR(ModelAnimation, 1))
             {
-                if (objecthandlerGetModelAnim(model) != CHR_N64PTR(ModelAnimation, animation_table_ptrs1[g_AnimationTablePointerCountRelated]))
+                if (objecthandlerGetModelAnim(model) != PORT_N64PTR(ModelAnimation, animation_table_ptrs1[g_AnimationTablePointerCountRelated]))
                 {
-                    modelSetAnimation(model, CHR_N64PTR(ModelAnimation, animation_table_ptrs1[g_AnimationTablePointerCountRelated]), 0, 0.0f, 0.5f, 0.0f);
+                    modelSetAnimation(model, PORT_N64PTR(ModelAnimation, animation_table_ptrs1[g_AnimationTablePointerCountRelated]), 0, 0.0f, 0.5f, 0.0f);
                 }
             }
         }
@@ -3391,7 +3391,7 @@ after_opcode:
 
     if (((ModelRwData_DisplayList_CollisionRecord *) rwdata)->Vertices == ((ModelRoData_DisplayList_CollisionRecord *) node)->Vertices)
     {
-        newvertices = CHR_N64PTR(Vertex, vtxstore_allocate(((ModelRoData_DisplayList_CollisionRecord *) node)->numVertices, 0xcccc, 0, 0));
+        newvertices = PORT_N64PTR(Vertex, vtxstore_allocate(((ModelRoData_DisplayList_CollisionRecord *) node)->numVertices, 0xcccc, 0, 0));
 
         if (newvertices != NULL)
         {
@@ -3408,7 +3408,7 @@ after_opcode:
 
     if ((relatedrwdata != NULL) && (relatedrwdata->Vertices == relatedrodata->Vertices))
     {
-        newvertices = CHR_N64PTR(Vertex, vtxstore_allocate(relatedrodata->numVertices, 0xcccc, 0, 0));
+        newvertices = PORT_N64PTR(Vertex, vtxstore_allocate(relatedrodata->numVertices, 0xcccc, 0, 0));
 
         if (newvertices != NULL)
         {

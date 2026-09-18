@@ -1046,6 +1046,31 @@ pointer — need work.
   Keep the `s32` the game passes around: `mempCheckMemflagTokens(s32, s32)`
   needs a value that fits `s32` (V1 must stay positive), so N64 addresses stay
   N64 addresses in the game's fields and only the pointer-typed sinks re-base.
+- **One canonical macro.** `port/include/port_addr.h` defines
+  `PORT_N64PTR(T, expr)`. Ported game code uses that, not a file-local alias —
+  an earlier pass grew seven names (`BG_PTR`, `OPT_N64PTR`, `CHR_N64PTR`,
+  `FRONT_N64PTR`, `TITLE_N64PTR`, `STAN_N64PTR`, `MODEL_N64PTR`, …) which is
+  exactly the drift this file exists to prevent. A game file defines the N64
+  fallback once:
+
+  ```c
+  #if defined(PORT)
+  #include "port_addr.h"
+  #else
+  #define PORT_N64PTR(T, x) ((T *)(x))
+  #endif
+  ```
+- **Prefer boundary fixes over consumer fixes.** Where a subsystem's fields are
+  already pointers but are fed N64 addresses, convert once at the hand-out
+  (`mempCheckMemflagTokens`/`mempSetBankStarts`, `memaAlloc`,
+  `globalbank_rdram_offset`, `texSetBitstring`) instead of at every use — the
+  single `globalbank_rdram_offset` change cleared ~43 sites.
+- **Do not blind-pattern-match the cast.** `(s32)someFloatField` (e.g.
+  `(s32)foo[room].pos.x`) is a float→int conversion, not an address; a regex
+  over the `(s32)` pattern rewrites those and breaks the build. Type the
+  operand first. Also left alone by design: `(s32)` stack-pointer truncations
+  used as matching hacks (e.g. `options.c` watch-table locals) — a different,
+  pre-existing bug class.
 - Image pointers (exe globals) have their own encoding:
   `0x40000000 + (ptr - image_base)`. `portHostToN64` produces it and
   `portN64ToHost` decodes it; `osVirtualToPhysical` returns it, fast3d's

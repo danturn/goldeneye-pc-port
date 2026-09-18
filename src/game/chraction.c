@@ -50,9 +50,9 @@
  * such a value becomes a pointer. Identity at PORT_ADDR_BASE == 0. */
 #if defined(PORT)
 #include "port_addr.h"
-#define CHR_N64PTR(T, x) ((T *)portN64ToHost((u32)(x)))
 #else
-#define CHR_N64PTR(T, x) ((T *)(x))
+/* N64 build: the port address window is the identity (see port_addr.h). */
+#define PORT_N64PTR(T, x) ((T *)(x))
 #endif
 
 point2d D_800309F0 = {0, 0};
@@ -517,7 +517,7 @@ void chrlvKneelingAnimationRelated(ChrRecord *self)
 
         if ((s32)objecthandlerGetModelAnim(self->model) == (s32)&ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow + (s32)&ptr_animation_table->data)
         {
-            modelSetAnimation(self->model, CHR_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow + (s32)&ptr_animation_table->data), (s32) self->model->gunhand, 109.0f, chrlvGetGuard007SpeedRating(self, 0.5f, 0.8f), 16.0f);
+            modelSetAnimation(self->model, PORT_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_fire_kneel_forward_one_handed_weapon_slow + (s32)&ptr_animation_table->data), (s32) self->model->gunhand, 109.0f, chrlvGetGuard007SpeedRating(self, 0.5f, 0.8f), 16.0f);
             modelSetAnimEndFrame(self->model, 140.0f);
         }
         else
@@ -610,7 +610,7 @@ void chrlvPerformAnimationForActor(ChrRecord *self, s32 animID, s32 startframe, 
     }
 
     chrStopFiring(self);
-    modelSetAnimation(self->model, CHR_N64PTR(void, animation_table_ptrs1[animID]), (bitfield & ANIM_MIRROR) != 0, startframef, phi_f0, (f32)interpol_time60);
+    modelSetAnimation(self->model, PORT_N64PTR(void, animation_table_ptrs1[animID]), (bitfield & ANIM_MIRROR) != 0, startframef, phi_f0, (f32)interpol_time60);
 
     if (endframe >= 0)
     {
@@ -2807,7 +2807,7 @@ s32 chrlvExplosionDamage(ChrRecord *self, coord3d *arg1, f32 damage, s32 arg3)
 
         modelSetAnimation(
             self_model,
-            CHR_N64PTR(struct ModelAnimation, (s32)sp38->anonymous_0 + (s32)&ptr_animation_table->data),
+            PORT_N64PTR(struct ModelAnimation, (s32)sp38->anonymous_0 + (s32)&ptr_animation_table->data),
             sp38->anonymous_1,
             sp38->anonymous_3,
             sp38->anonymous_2,
@@ -5060,7 +5060,7 @@ void chrlvTickStand(ChrRecord *self)
                     modelSetAnimation(
                         self->model,
                         // awkward fix: addu instruction is backwards
-                        CHR_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_walking_unarmed + (s32)&ptr_animation_table->data),
+                        PORT_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_walking_unarmed + (s32)&ptr_animation_table->data),
                         i,
                         0.0f,
                         0.5f,
@@ -5068,14 +5068,14 @@ void chrlvTickStand(ChrRecord *self)
 
                     modelSetAnimEndFrame(
                         self->model,
-                        (CHR_N64PTR(u16, (s32)&ANIM_DATA_walking_unarmed + (s32)&ptr_animation_table->data)[2] - 1));
+                        (PORT_N64PTR(u16, (s32)&ANIM_DATA_walking_unarmed + (s32)&ptr_animation_table->data)[2] - 1));
                 }
                 else if ((right != NULL) || (left != NULL))
                 {
                     modelSetAnimation(
                         self->model,
                         // awkward fix: addu instruction is backwards
-                        CHR_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_walking + (s32)&ptr_animation_table->data),
+                        PORT_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_walking + (s32)&ptr_animation_table->data),
                         left != NULL,
                         0.0f,
                         0.5f,
@@ -5083,7 +5083,7 @@ void chrlvTickStand(ChrRecord *self)
 
                     modelSetAnimEndFrame(
                         self->model,
-                        (CHR_N64PTR(u16, (s32)&ANIM_DATA_walking + (s32)&ptr_animation_table->data)[2] - 1));
+                        (PORT_N64PTR(u16, (s32)&ANIM_DATA_walking + (s32)&ptr_animation_table->data)[2] - 1));
                 }
             }
             else if (self->act_stand.face_entitytype & 0x10)
@@ -5435,13 +5435,13 @@ void chrlvTickDie(ChrRecord *self)
         {
             modelSetAnimation(
                 model,
-                CHR_N64PTR(void, (s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data),
+                PORT_N64PTR(void, (s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data),
                 objecthandlerGetModelGunhand(model) == 0,
                 50.0f,
                 0.3f,
-                ((CHR_N64PTR(u16, (s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data))[2] - 1.0f) - 50.0f);
+                ((PORT_N64PTR(u16, (s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data))[2] - 1.0f) - 50.0f);
 
-            modelSetAnimSpeed(model, 0.5f, ((CHR_N64PTR(u16, (s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data))[2] - 1.0f) - 50.0f);
+            modelSetAnimSpeed(model, 0.5f, ((PORT_N64PTR(u16, (s32)&ANIM_DATA_jump_backwards + (s32)&ptr_animation_table->data))[2] - 1.0f) - 50.0f);
 
             return;
         }
@@ -9117,8 +9117,8 @@ void chrlvTravelTick(ChrRecord *self, coord3d *arg1, StandTile *arg2, struct way
 
         if ((phi_s3 == NULL) || ((self->hidden & CHRHIDDEN_OFFSCREEN_PATROL) != 0))
         {
-            if ((objecthandlerGetModelAnim(self->model) == CHR_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_idle_unarmed + (s32)&ptr_animation_table->data))
-                || (objecthandlerGetModelAnim(self->model) == CHR_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_idle + (s32)&ptr_animation_table->data)))
+            if ((objecthandlerGetModelAnim(self->model) == PORT_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_idle_unarmed + (s32)&ptr_animation_table->data))
+                || (objecthandlerGetModelAnim(self->model) == PORT_N64PTR(struct ModelAnimation, (s32)&ANIM_DATA_idle + (s32)&ptr_animation_table->data)))
             {
                 if (self->actiontype == ACT_PATROL)
                 {
