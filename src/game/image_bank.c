@@ -4,6 +4,12 @@
 #include "image_bank.h"
 #ifdef PORT
 #include <gimgfixup.h>
+/* D298/M2: pGlobalimagetable holds an N64 DRAM address (s32-safe). Re-base
+ * when it becomes a host pointer; identity at PORT_ADDR_BASE == 0. */
+#include "port_addr.h"
+#define GBANK_PTR(x) ((void *)portN64ToHost((u32)(x)))
+#else
+#define GBANK_PTR(x) ((void *)(x))
 #endif
 
 // bss
@@ -16,7 +22,11 @@ s32 img_bitcount;
 //8008D0AC
 s32 dword_CODE_bss_8008D0AC;
 //8008D0B0;
+#if defined(PORT)
+uintptr_t globalbank_rdram_offset; /* D298/M2: host-based, see image_bank.h */
+#else
 s32 globalbank_rdram_offset;
+#endif
 //8008D0B4;
 s32 *pGlobalimagetable;
 //8008D0B8;
@@ -244,16 +254,24 @@ void texReset(void)
     pGlobalimagetable = mempAllocBytesInBank(size + 0x1000, MEMPOOL_STAGE);
     pGlobalimagetable = ((u32)pGlobalimagetable + 0xFFFU) & 0xFFFFF000;
 
-    romCopy(pGlobalimagetable, &_GlobalimagetableSegmentRomStart, size);
+    romCopy(GBANK_PTR(pGlobalimagetable), &_GlobalimagetableSegmentRomStart, size);
 
 #ifdef PORT
     /* D68 (docs/dev/findings.md): the ROM copy is N64 big-endian; convert
      * the CPU-interpreted u32 fields (IMAGESEG Gfx w1 words and
      * sImageTableEntry.index) to host order before any code reads them. */
-    gimgFixupGlobalimagetable((u8 *)pGlobalimagetable);
+    gimgFixupGlobalimagetable((u8 *)GBANK_PTR(pGlobalimagetable));
 #endif
 
+#if defined(PORT)
+    /* D298/M2: store a HOST-based offset. GIMG_OFF(sym) adds 0x02000000, so
+     * `globalbank_rdram_offset + GIMG_OFF(sym)` is then a live host pointer.
+     * `- 0x02000000` is the 64-bit equivalent of the original 32-bit
+     * `+ 0xFE000000` wraparound (which relied on mod-2^32 cancellation). */
+    globalbank_rdram_offset = (uintptr_t)portN64ToHost((u32)pGlobalimagetable) - 0x02000000UL;
+#else
     globalbank_rdram_offset = (u32)pGlobalimagetable + 0xFE000000;
+#endif
     genericimage = (void *) (globalbank_rdram_offset + GIMG_OFF(s_genericimage));
     impactimages = (void *) (globalbank_rdram_offset + GIMG_OFF(s_impactimages));
     explosion_smokeimages = (void *) (globalbank_rdram_offset + GIMG_OFF(s_explosion_smokeimages));

@@ -2462,7 +2462,7 @@ void texLoadFromDisplayList(Gfx *gdl, struct texpool *arg1)
         if (bytes[0] == G_SETTIMG && bytes[4] == 0xab && bytes[5] == 0xcd)
 #endif
         {
-            texLoad((u32 *)((s32)bytes + 4), arg1);
+            texLoad((u32 *)(bytes + 4), arg1);
         }
 
         bytes += 8;

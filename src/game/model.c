@@ -13,6 +13,16 @@
 #include "initunk_005520.h"
 #include "math_asinfacosf.h"
 #include "math_floor.h"
+
+/* D298/M2: ModelAnimation.bitDescriptors/bitStream are u32 fields holding N64
+ * addresses (D32: the blob base is added by expand_ani_table_entries). Re-base
+ * where they become pointers; identity at PORT_ADDR_BASE == 0. */
+#if defined(PORT)
+#include "port_addr.h"
+#define MODEL_N64PTR(T, x) ((T *)portN64ToHost((u32)(x)))
+#else
+#define MODEL_N64PTR(T, x) ((T *)(x))
+#endif
 #include "math_ceil.h"
 #include "math_unk_05A9E0.h"
 #include "objecthandler.h"
@@ -1025,7 +1035,7 @@ u16 modelAnimReadRootMotionValue(ModelAnimation *anim, s32 fieldIndex, s32 extra
     u8 bitsThisRead;
 
     result = 0;
-    desc = (ModelAnimBitField *)anim->bitDescriptors + fieldIndex; // D32: u32 -> ptr
+    desc = MODEL_N64PTR(struct ModelAnimBitField, anim->bitDescriptors) + fieldIndex; // D32: u32 -> ptr (D298/M2 re-base)
     bitsRemaining = desc->bitCount;
 
     if (bitsRemaining > 0)
@@ -1033,7 +1043,7 @@ u16 modelAnimReadRootMotionValue(ModelAnimation *anim, s32 fieldIndex, s32 extra
         totalBitOffset = extraBitOffset + desc->bitOffset;
         byteIndex = totalBitOffset >> 3;
         totalBitOffset &= 7;
-        byteptr = (u8 *)anim->bitStream + byteIndex; // D32: u32 -> ptr
+        byteptr = MODEL_N64PTR(u8, anim->bitStream) + byteIndex; // D32: u32 -> ptr (D298/M2 re-base)
         bitsThisRead = 8 - totalBitOffset;
 
         if (bitsRemaining >= bitsThisRead)
