@@ -43,6 +43,42 @@ threading, first frame, level sweep) → **M4** packaging/CI/docs.
 
 ---
 
+## 0b. Base change (2026-09-18, later): rebased onto PR #88 + GCC
+
+After M0/M1 were working on Apple clang, PR #88 ("Add native Intel macOS
+support", JunielKatarn) turned up: a single commit on this repo's exact base,
+targeting **Intel** macOS and explicitly leaving Apple Silicon unsupported. The
+arm64 work was rebased onto it rather than maintained in parallel. Branch:
+**`macos-arm64-gcc`** (the earlier clang branch `macos-arm64` is superseded).
+
+**Adopted from #88 — this deletes the corresponding work in §3 M0:**
+- Homebrew GNU GCC (`gcc-16`) + libstdc++. Removes every clang workaround:
+  no `-fms-extensions`/`-Wno-microsoft-anon-tag`, no libc++ wrapper header
+  shims (the old D295), no `-D_FORTIFY_SOURCE=0`.
+- `scripts/gen_macho_syms.py` — build-tree Mach-O symbol generation; the
+  committed `*.darwin.s` duplicates are gone.
+- `scripts/strip_weak_pragmas.py` + `port/src/macho_weak_aliases.s` — the
+  `#pragma weak` handling, so **`src/` carries no macOS edit for it** (the old
+  D294 in-source `#if defined(PORT) && defined(__APPLE__)` equates are gone).
+- POSIX `shm_open` DRAM backing, Darwin crash handling, and the AppKit
+  main-thread event-pump guard in `gfx_sdl2.cpp` (that last one was §3 M3.1).
+
+**Kept from this plan — the arm64 delta:**
+- §2's shifted-window address model (M1 / D298). `-pagezero_size 0x10000`,
+  the core of #88's Intel approach, is fatal on arm64 (shrinking `__PAGEZERO`
+  gets the process SIGKILLed), so CMake now sets it for x86_64 only and arm64
+  uses `PORT_ADDR_BASE`.
+- D296 (`__x86_64__` → `PLATFORM_64BIT`). Without it #88's tree does not even
+  *link* on arm64 — 23 undefined `_ANIM_DATA_*`.
+- `gen_macho_syms.py --base` (bakes `PORT_ADDR_BASE` into the absolute
+  symbols; `--base 0` output is byte-identical to #88's transform).
+- arm64 crash registers (`__ss.__pc/__lr/__sp/__fp`) and
+  `_dyld_get_image_header` / `_NSGetExecutablePath`.
+- All of M2 (the game-code re-basing sweep).
+
+Mergeability consequence: the arm64 contribution is now a small additive delta
+on top of #88, and `src/` has no macOS-specific toolchain/alias edits.
+
 ## 1. Measured facts (this machine: macOS 26.3, arm64, Apple clang 21, SDL2 via `sdl2-compat` 2.32)
 
 | # | Test | Result |
@@ -540,65 +576,46 @@ Record as a `Dxx`.
 
 | Phase | State | Notes |
 |---|---|---|
-| Research | done | §1 F1–F18 measured 2026-09-18 |
-| M0 | **done** | `build-pc/ge007.aarch64` (Mach-O arm64) **compiles, links and runs** — reaches ROM load. 186/186 TUs. |
-| M1 | **code done; runtime verification blocked on a ROM** | shifted-window address model implemented and self-tested (D298). M1.7's level boot needs a `.z64` in `data/`. |
-| M2 | not started | the game-code cast census; needs a ROM to surface the sites (and M1.7) |
-| M3 | not started | |
-| M4 | not started | |
+| Research | done | §1 F1–F18, measured 2026-09-18 |
+| M0 | **superseded by #88** | the clang build/toolchain work is replaced by PR #88's GCC-based macOS layer; only D296 + `gen_macho_syms --base` survive (§0b) |
+| M1 | **done** | shifted-window address model (D298); self-test ALL PASS on the #88 base |
+| M2 | **in progress** | game-code re-basing sweep; boot reaches the level stage load |
+| M3 | partly inherited | #88 supplies the AppKit main-thread guard; the two Core-profile GL fixes and the level sweep remain |
+| M4 | not started | packaging / CI / docs |
 
-### M1 status detail (2026-09-18)
+### Where the boot is (2026-09-18, branch `macos-arm64-gcc`)
 
-`PORT_ADDR_BASE = 0x100000000000` (16 TiB) on macOS/arm64, 0 elsewhere.
-`build-pc/ge007.aarch64` reserves the window and its ROM-free self-test logs
-**ALL PASS** (window round-trips, absolute-symbol base, image-relative
-encoding). See **D298** in `findings.md`.
+`./build-pc/ge007.aarch64 -level_09`, ROM `data/ge007.ntsc-final.z64`
+(SHA-1 `abe01e4a…`, matching the repo's `ge007.u.sha1`):
 
-| Item | Outcome |
-|---|---|
-| M1.1 `port_addr.h` + `portAddrInit()` | done — reserves the 4 GiB window `PROT_NONE` via `mach_vm_map(VM_FLAGS_FIXED)`, fatal on failure; asserts `cfb_16` matches the base |
-| M1.2 OS chokepoints | done — `osVirtualToPhysical`/`osPhysicalToVirtual`, `OS_K0_TO_PHYSICAL`, `tlbmanageGetTlbAllocatedBlock` |
-| M1.3 DRAM/cart/stacks in-window | done — `dram.c`, `romdata.c` (`CART_HOST`), `libultra.c` stack carve |
-| M1.4 fast3d | done — `seg_addr` (full-pointer early-out + `portN64ToHost`), `G_MW_SEGMENT`, texture classifier |
-| M1.5 mixer/PI DMA/validity | done — `piServiceDma` memcpy, `dramHostAddrValid` |
-| M1.6 absolute symbols with base | done — `.darwin.s` regenerated at `--base 0x100000000000` |
-| M1.7 boot attempt | **blocked** — no ROM available in this environment; see below |
+- ROM load, config, EEPROM, GL 4.1 core, audio, input, threads, VI, timers — OK
+- language banks, animation tables, `texReset`/`texLoad`, `gimgSync…` — OK
+- faults in `bg.c` `load_bg_file` (level geometry) — the next M2 site
 
-**To continue:** put the ROM in `data/` (`docs/building.md`) and run
-`./build-pc/ge007.aarch64 -level_09`. Triage the first crash against the M2
-census. Expect the first failures at raw `u32 -> pointer` casts in game code
-(mempool addresses, ROM-serialised pointer fields) — the class `PORT_N64PTR`
-exists for. The M2.1 census (`-Wint-to-pointer-cast` / `-Wpointer-to-int-cast`
-/ `-Wint-conversion` on the build log) already has hits, e.g.
-`src/game/image_bank.c:305`, `src/game/blood_decrypt.c:180,192`.
+M2 batches so far (all `#if defined(PORT)` and identity at
+`PORT_ADDR_BASE == 0`): the mempool boundary; `language.c` `g_LangBanks`;
+`initanitable.c` `expand_ani_table_entries`; `initactorpropstuff.c` anim
+groups / `ANIM_PTR`; `model.c` `bitDescriptors`/`bitStream`; `image_bank.c`
+`globalbank_rdram_offset` (structural, ~43 sites at once) + `texSetBitstring`;
+`image.c` `texLoadFromDisplayList`; `bg.c` `BG_SEG_TO_PTR`/`ptr_bg_data`
+(**under review** — the fold's value depends on the stack address, which
+differs between Windows and the macOS window, so it needs a careful look).
 
-### M0 completion detail (2026-09-18)
+### The M2 census is a checklist, not a scoreboard
 
-All M0 items landed; findings D294–D297. Final state: `./build-pc.sh ntsc-final`
-produces `build-pc/ge007.aarch64`, which starts, resolves `$S/` (writes
-`build-pc/data/ge007.ini`) and exits with "no ROM found" — the correct
-behaviour with no `.z64` present.
+The clang census is ~474 game-code rows (`-Wint-conversion` 253,
+`-Wpointer-to-int-cast` 122, `-Wint-to-pointer-cast` 54,
+`-Wint-to-void-pointer-cast` 35, `-Wvoid-pointer-to-int-cast` 10). Re-basing
+edits *add* explicit `u32 → pointer` conversions, so the raw count can rise
+while progress is made, and one structural fix can clear dozens of rows. The
+honest progress metric is boot-path reach.
 
-| Item | Outcome |
-|---|---|
-| M0.1 CMake Apple-clang path | done — compiler-ID flags (`-fms-extensions` for clang), `-D_FORTIFY_SOURCE=0`, SDK-derived host-header paths, deployment target 11.0 (via `uname -m`, since no processor var exists before `project()`) |
-| M0.2 `__x86_64__` → `PLATFORM_64BIT` | done — 22 sites in 14 files + `pc_protos.h` (D296) |
-| M0.3 Darwin `.s` | done — `gen_romassets.py --darwin/--base/--out/--dram-out`; `romassets_u.darwin.s` + `dram_syms.darwin.s`; ELF output unchanged (comment-only diff) |
-| M0.4 `#pragma weak` | done (D294) |
-| M0.5 header/libc clashes | **did not materialise** — with M0.1/M0.6 in place, `pc_netorder.c`, the K&R `size_t` redeclarations and `_POSIX_C_SOURCE` all compiled. No change needed. |
-| M0.6 libc++ shims | done (D295) — new `port/shim/math.h` + `hostmath.h.in`; libc++ wrapper added to the existing `host{string,stdlib,stddef}.h.in`. `limits.h`/`assert.h` needed no shim. |
-| M0.7 `crash.c`/`system.c` | done (D297) |
-| M0.8 `dram.c` macOS | done (D297) — `shm_open` double-map |
-| M0.9 link-check | done — the AGENTS.md sweep is clean: no undefined/duplicate symbols; `/linkcheck` equivalent is a green link |
+### Next
 
-**Known non-fatal warnings (M2 census inputs, not blockers):**
-`-Wpointer-to-int-cast` on `src/game/image_bank.c:305` (`cast to smaller integer
-type 'u32' from 'Gfx **'`) is exactly the M2 class; the full census is an M2.1
-task. `ld: warning: building for macOS-11.0 … libSDL2 built for newer version
-26.0` is the brew `sdl2-compat` package (see §5 risk 5).
-
-**M1 is the next phase** and the only thing between this binary and a first
-frame: DRAM/cart fixed mappings at `0x70000000`/`0x10000000` are unimplementable
-on native arm64 (§1 F1–F3). M1 introduces `PORT_ADDR_BASE` and the shifted
-window. The Darwin `.s` files are already generated with `--base 0`; M1.6
-regenerates them with the real base.
+1. Finish the `bg.c` level-geometry re-basing (the current fault), then keep
+   triaging `-level_09` until a frame renders.
+2. Refresh §1/§3 for the #88/GCC base (the M0 rows elsewhere in this doc are
+   historical).
+3. M3: the two Core-profile GL bugs (`gfx_opengl.cpp:1271` binds the FBO
+   index instead of `.fbo`; `glReadBuffer(GL_FRONT)`), the MSAA clamp, then
+   the level sweep and the arm64 float→int / memory-ordering checks.
