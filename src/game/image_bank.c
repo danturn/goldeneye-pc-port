@@ -99,7 +99,14 @@ extern u8* _GlobalimagetableSegmentRomStart;
 
 
 void texSetBitstring(s32 pos) {
+#if defined(PORT)
+    /* D298/M2: callers pass a host pointer through this s32 parameter, which
+     * truncates it. Because PORT_ADDR_BASE is 4 GiB-aligned the low 32 bits
+     * are the N64/window offset, so re-base them. Identity at base 0. */
+    img_curpos = (u8 *)portN64ToHost((u32)pos);
+#else
     img_curpos = pos;
+#endif
     img_curdatatable = 0;
     img_bitcount = 0;
 }
