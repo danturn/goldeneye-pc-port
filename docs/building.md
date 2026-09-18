@@ -194,8 +194,12 @@ tools_pc/bundle-mac.sh           # -> dist/GoldenEye.app + a .zip + sha256
 ```
 
 Builds a double-clickable, ad-hoc-signed `GoldenEye.app` (the engine plus
-bundled SDL2 / `libstdc++` / `libgcc_s`, README, licenses, and the
-`prepare-assets` tool). It contains **no ROM and no game data**: the player
+bundled SDL2 / SDL3 / `libstdc++` / `libgcc_s`, README, licenses, and the
+`prepare-assets` tool). Note that Homebrew's `sdl2` is **sdl2-compat**, a
+shim over SDL3 that locates its backend through a *relative* rpath
+(`@loader_path/../../../../opt/sdl3/lib`): copy it without SDL3 and
+repointing that rpath, and it shows a modal error dialog from its
+initializer and the app hangs before `main()`. The script does both. It contains **no ROM and no game data**: the player
 drops their own ROM at
 `GoldenEye.app/Contents/MacOS/data/ge007.ntsc-final.z64` and the app finds it
 next to the executable. Because the app is ad-hoc signed rather than

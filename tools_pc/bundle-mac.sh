@@ -79,6 +79,35 @@ STDC_BASE="$(copy_dep "$STDC_SRC")"
 install_name_tool -change "$SDL2_SRC" "@executable_path/$SDL2_BASE" "$MACOS/$EXE_NAME"
 install_name_tool -change "$STDC_SRC" "@executable_path/$STDC_BASE" "$MACOS/$EXE_NAME"
 
+# Homebrew's `sdl2` is sdl2-compat, a thin shim over SDL3 that finds its
+# backend through a RELATIVE rpath baked into the dylib:
+#     @loader_path/../../../../opt/sdl3/lib
+# That resolves correctly at /opt/homebrew/opt/sdl2-compat/lib/ and to
+# nothing once the dylib is copied into the bundle -- sdl2-compat then shows
+# a MODAL ERROR DIALOG from its initializer (dllinit -> error_dialog ->
+# NSAlert runModal) and the app hangs before main(). Bundle SDL3 and repoint
+# every Homebrew rpath at the bundle directory.
+SDL3_SRC="$(dirname "$(readlink -f /opt/homebrew/opt/sdl3/lib/libSDL3.dylib 2>/dev/null || echo /opt/homebrew/opt/sdl3/lib/libSDL3.0.dylib)")"
+if [ -f /opt/homebrew/opt/sdl3/lib/libSDL3.0.dylib ]; then
+  cp -L /opt/homebrew/opt/sdl3/lib/libSDL3.0.dylib "$MACOS/libSDL3.0.dylib"
+  chmod 644 "$MACOS/libSDL3.0.dylib"
+  ( cd "$MACOS" && ln -sf libSDL3.0.dylib libSDL3.dylib )
+  echo "    + libSDL3.0.dylib (+ libSDL3.dylib symlink; sdl2-compat backend)"
+else
+  echo "error: SDL3 not found at /opt/homebrew/opt/sdl3/lib — required by sdl2-compat" >&2
+  exit 1
+fi
+# Repoint the bundled SDL2's Homebrew rpaths at @loader_path so the SDL3
+# dlopen finds the copy sitting next to it.
+while IFS= read -r rp; do
+  case "$rp" in
+    /opt/*|@loader_path/../../..*)
+      install_name_tool -rpath "$rp" "@loader_path" "$MACOS/$SDL2_BASE" && \
+        echo "    ~ SDL2 rpath: $rp -> @loader_path" ;;
+  esac
+done < <(otool -l "$MACOS/$SDL2_BASE" | awk '/LC_RPATH/{getline; getline; sub(/^ *path /,""); sub(/ \(offset.*/,""); print}')
+install_name_tool -id "@rpath/$SDL2_BASE" "$MACOS/$SDL2_BASE" 2>/dev/null || true
+
 GCC_S_SRC="$(otool -L "$MACOS/$STDC_BASE" | awk '/libgcc_s/ {print $1; exit}')"
 if [ -n "$GCC_S_SRC" ]; then
   if [ ! -f "$GCC_S_SRC" ]; then
