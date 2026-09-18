@@ -12,6 +12,13 @@
 #define _GNU_SOURCE 1
 #endif
 
+/* Darwin's <ucontext.h> is guarded by _XOPEN_SOURCE; the POSIX signal handler
+ * needs ucontext_t/uc_mcontext to read the faulting registers. Must precede
+ * the first system header. */
+#if defined(__APPLE__) && !defined(_XOPEN_SOURCE)
+#define _XOPEN_SOURCE 1
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -303,7 +310,7 @@ static LONG __stdcall crashHandler(PEXCEPTION_POINTERS exinfo)
     return EXCEPTION_CONTINUE_EXECUTION;
 }
 
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 
 #include <ucontext.h>
 #include <signal.h>
@@ -312,6 +319,9 @@ static LONG __stdcall crashHandler(PEXCEPTION_POINTERS exinfo)
 #include <ctype.h>
 #include <dlfcn.h>
 #include <sys/fcntl.h>
+#if defined(PLATFORM_MACOS)
+#include <mach-o/dyld.h> /* _dyld_get_image_vmaddr_slide (for atos) */
+#endif
 
 static struct sigaction prevSigAction;
 
@@ -357,6 +367,28 @@ static void crashStackTrace(char *msg, int sig, void *pc, ucontext_t *ucontext, 
                   (void *)ucontext->uc_mcontext.gregs[REG_RSP],
                   (void *)ucontext->uc_mcontext.gregs[REG_RBP]);
     }
+#elif defined(PLATFORM_MACOS) && defined(PLATFORM_ARM)
+    /* Darwin's uc_mcontext is a pointer to __darwin_mcontext64, whose thread
+     * state is aarch64 (__ss.__x[0..28], __fp, __lr, __sp, __pc). x0..x7 are
+     * the argument/return registers; PC/LR/SP/FP are the frame-chain trio. */
+    if (ucontext) {
+        CRASH_MSG("REGS: x0=%p x1=%p x2=%p x3=%p x4=%p x5=%p x6=%p x7=%p\n",
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[0],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[1],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[2],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[3],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[4],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[5],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[6],
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__x[7]);
+        CRASH_MSG("Pc=%p Lr=%p Sp=%p Fp=%p\n",
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__pc,
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__lr,
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__sp,
+                  (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__fp);
+    }
+    CRASH_MSG("IMAGE SLIDE: 0x%lx\n",
+              (unsigned long)(uintptr_t)_dyld_get_image_vmaddr_slide(0));
 #endif
     CRASH_MSG("PC: ");
     if (pc) {
@@ -414,6 +446,8 @@ static void crashHandler(int sig, siginfo_t *siginfo, void *ctx)
         pc = (void *)ucontext->uc_mcontext.gregs[REG_EIP];
 #elif defined(PLATFORM_X86_64)
         pc = (void *)ucontext->uc_mcontext.gregs[REG_RIP];
+#elif defined(PLATFORM_MACOS) && defined(PLATFORM_ARM)
+        pc = (void *)(uintptr_t)ucontext->uc_mcontext->__ss.__pc;
 #endif
     }
 
@@ -480,7 +514,7 @@ void crashInit(void)
     SetErrorMode(SEM_FAILCRITICALERRORS);
     prevExFilter = SetUnhandledExceptionFilter(crashHandler);
     g_CrashEnabled = 1;
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
     struct sigaction sigact = { 0 };
     sigact.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sigact.sa_sigaction = crashHandler;
@@ -501,7 +535,7 @@ void crashShutdown(void)
     if (prevExFilter) {
         SetUnhandledExceptionFilter(prevExFilter);
     }
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
     sigaction(SIGSEGV, &prevSigAction, NULL);
     sigaction(SIGABRT, &prevSigAction, NULL);
     sigaction(SIGBUS,  &prevSigAction, NULL);

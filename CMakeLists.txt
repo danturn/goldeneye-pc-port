@@ -20,7 +20,13 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 # src/bondtypes.h): a nested `struct Base;` inside a derived struct. GCC
 # treats this as embedding the full base struct (correct layout, matches the
 # N64/IDO behaviour the decomp relies on); Clang treats it as a bare forward
-# declaration (no members) and rejects base-member access. So prefer GCC.
+# declaration unless Microsoft extensions are on. So the flag differs by
+# compiler, not by platform: GCC gets -fplan9-extensions (the superset that
+# also enables the derived->base pointer conversion the idiom relies on),
+# Clang gets -fms-extensions (same anonymous-struct layout; the pointer
+# conversion becomes a warning, already demoted below). See the flag block
+# near the bottom. On macOS `gcc` is Apple Clang, so CMAKE_C_COMPILER_ID is
+# what selects the flags, not the executable name.
 # (GCC does hard-error on the one struct that declares a member with the same
 # name as an inherited one — CCTVRecord's `pad` — see docs/internals.md.)
 # An explicit -DCMAKE_C_COMPILER=... always wins.
@@ -37,7 +43,14 @@ if(NOT DEFINED CMAKE_C_COMPILER)
 endif()
 
 if(APPLE)
-  if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+  # arm64 (Apple Silicon) requires macOS 11.0+; x86_64 keeps the older floor.
+  # CMAKE_OSX_ARCHITECTURES is empty for a native (non-universal) build, and
+  # neither CMAKE_SYSTEM_PROCESSOR nor CMAKE_HOST_SYSTEM_PROCESSOR is set until
+  # project() below — so ask uname, else a native arm64 build silently gets
+  # -mmacosx-version-min=10.13. Explicit CMAKE_OSX_ARCHITECTURES still wins.
+  execute_process(COMMAND uname -m
+    OUTPUT_VARIABLE _GE007_HOST_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(_GE007_HOST_MACHINE MATCHES "arm64|aarch64" OR CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
   else()
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "" FORCE)
@@ -163,7 +176,45 @@ configure_file(
 # the toolchain include dir from the compiler location (MinGW/MSYS2 layout:
 # bin/../include) and generate an absolute-path include.
 get_filename_component(_PORT_GCC_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
-get_filename_component(PORT_HOST_STRING_H "${_PORT_GCC_DIR}/../include/string.h" ABSOLUTE)
+# Where the HOST's real libc headers live. MinGW/Linux: bin/../include next to
+# the compiler. macOS: /usr/include does not exist (since Catalina the headers
+# are inside the SDK), so ask xcrun — otherwise the generated host*.h shims
+# point at a path that is not there and every C++ TU fails on <cmath>/<cstddef>.
+if(APPLE)
+  execute_process(COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE _PORT_APPLE_SDK OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(_PORT_APPLE_SDK AND EXISTS "${_PORT_APPLE_SDK}/usr/include/string.h")
+    set(_PORT_HOST_INCLUDE_DIR "${_PORT_APPLE_SDK}/usr/include")
+  else()
+    set(_PORT_HOST_INCLUDE_DIR "${_PORT_GCC_DIR}/../include")
+  endif()
+else()
+  set(_PORT_HOST_INCLUDE_DIR "${_PORT_GCC_DIR}/../include")
+endif()
+
+# libc++ (macOS/clang) wraps the C headers in <SDK>/usr/include/c++/v1, and its
+# <cmath>/<cstring>/<cstdlib>/<cstddef> include the C header and THEN require
+# the wrapper's _LIBCPP_*_H guard (defined only by that wrapper). libstdc++
+# (Linux/MinGW) has no such wrapper, so this is conditional. The decomp's
+# include/ sits ahead of the system path on -I, so a plain #include <math.h>
+# finds the N64 stub; the generated hostmath.h / hoststring.h / ... route C++
+# TUs to these absolute paths instead. See docs/dev/findings.md D295.
+set(PORT_LIBCPP_INCLUDE_DIR "${_PORT_HOST_INCLUDE_DIR}/c++/v1")
+if(EXISTS "${PORT_LIBCPP_INCLUDE_DIR}/math.h" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(PORT_HAVE_LIBCPP 1)
+  set(PORT_LIBCPP_MATH_H   "${PORT_LIBCPP_INCLUDE_DIR}/math.h")
+  set(PORT_LIBCPP_STRING_H "${PORT_LIBCPP_INCLUDE_DIR}/string.h")
+  set(PORT_LIBCPP_STDLIB_H "${PORT_LIBCPP_INCLUDE_DIR}/stdlib.h")
+  set(PORT_LIBCPP_STDDEF_H "${PORT_LIBCPP_INCLUDE_DIR}/stddef.h")
+else()
+  set(PORT_HAVE_LIBCPP 0)
+  set(PORT_LIBCPP_MATH_H "")
+  set(PORT_LIBCPP_STRING_H "")
+  set(PORT_LIBCPP_STDLIB_H "")
+  set(PORT_LIBCPP_STDDEF_H "")
+endif()
+
+get_filename_component(PORT_HOST_STRING_H "${_PORT_HOST_INCLUDE_DIR}/string.h" ABSOLUTE)
 configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hoststring.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hoststring.h" @ONLY)
@@ -172,7 +223,7 @@ configure_file(
 # the include path and shadows the system header; libstdc++'s <thread>/gthr
 # headers in the fast3d C++ TUs need the real <sched.h> (cpu_set_t,
 # sched_yield). Both MinGW and Linux keep <sched.h> at bin/../include.
-get_filename_component(PORT_HOST_SCHED_H "${_PORT_GCC_DIR}/../include/sched.h" ABSOLUTE)
+get_filename_component(PORT_HOST_SCHED_H "${_PORT_HOST_INCLUDE_DIR}/sched.h" ABSOLUTE)
 configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hostsched.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hostsched.h" @ONLY)
@@ -182,7 +233,7 @@ configure_file(
 # one C++ TU (fast3d): MinGW's own sec_api/stdlib_s.h does `#include
 # <stdlib.h>`, which resolves to the N64 header via -I. The shim routes C++
 # TUs to the host header by absolute path (same trick as hoststring.h).
-get_filename_component(PORT_HOST_STDLIB_H "${_PORT_GCC_DIR}/../include/stdlib.h" ABSOLUTE)
+get_filename_component(PORT_HOST_STDLIB_H "${_PORT_HOST_INCLUDE_DIR}/stdlib.h" ABSOLUTE)
 configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hoststdlib.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hoststdlib.h" @ONLY)
@@ -204,6 +255,17 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/port/include/hoststddef.h.in"
   "${CMAKE_BINARY_DIR}/port/include/hoststddef.h" @ONLY)
 
+# Host <math.h> for port/shim/math.h: the decomp's include/math.h is a
+# constants-only stub that shadows the system header on -I, which starves the
+# fast3d C++ TUs of acosf/fmodf/fabsf and, via libc++, of its wrapper guard.
+# Same absolute-path trick as hoststring.h. (limits.h/assert.h do not need a
+# shim: libc++'s <climits> defines its own guard and <cassert> only rejects a
+# libc++-provided <assert.h>, which does not exist.)
+get_filename_component(PORT_HOST_MATH_H "${_PORT_HOST_INCLUDE_DIR}/math.h" ABSOLUTE)
+configure_file(
+  "${CMAKE_SOURCE_DIR}/port/include/hostmath.h.in"
+  "${CMAKE_BINARY_DIR}/port/include/hostmath.h" @ONLY)
+
 # ----------------------------------------------------------------------------
 # Compiler definitions & flags
 # ----------------------------------------------------------------------------
@@ -216,6 +278,16 @@ add_definitions(
 )
 if(TARGET_IS_64BIT)
   add_definitions(-DPLATFORM_64BIT=1)
+endif()
+
+if(APPLE)
+  # Apple clang's SDK headers enable _FORTIFY_SOURCE by default, which rewrites
+  # sprintf() to __builtin___sprintf_chk and hard-conflicts with the N64
+  # prototype in include/PR/os.h and the definition in src/sprintf.c, in every
+  # TU that sees host <stdio.h> before <PR/os.h> (crash.c, input.c, libultra.c,
+  # main.c, mixer.c, n64stubs.c). The decomp needs its own sprintf; disable
+  # fortification, matching the -fno-stack-protector intent above.
+  add_definitions(-D_FORTIFY_SOURCE=0)
 endif()
 
 # The decomp is big-endian N64 code with unaligned accesses; these flags are
@@ -275,6 +347,15 @@ add_compile_options(
   -Wno-error=incompatible-pointer-types
   -Wno-error=implicit-function-declaration
 )
+# Clang 16+ additionally promoted these to hard errors in C99+ modes; GCC's
+# equivalents are covered by the three above. Gated by compiler because the
+# -Wno-error= names are not portable to GCC (it warns "unrecognized option").
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+  add_compile_options(
+    -Wno-error=implicit-int
+    -Wno-error=incompatible-function-pointer-types
+  )
+endif()
 add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-pointer-sign>)
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-function>)
 
@@ -282,19 +363,31 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-function>)
 # struct an unnamed tagged member and accesses its fields directly
 # (obj->type where type lives in the embedded PropRecord). GCC targeting
 # *-w64-mingw32 enables this via -fms-extensions implicitly; a native Linux/
-# macOS GCC does not, so `'ObjectRecord' has no member named 'type'`. Enable
-# the Plan 9 extensions explicitly there (superset of -fms-extensions: also the
-# automatic base-pointer conversion the idiom relies on). C only — the decomp
-# is C; fast3d C++ does not use `inherits`.
+# macOS GCC does not, so `'ObjectRecord' has no member named 'type'`. The flag
+# is compiler-specific, and on macOS `gcc` is Apple Clang, so select on
+# CMAKE_C_COMPILER_ID rather than the platform or executable name.
+# C only — the decomp is C; fast3d C++ does not use `inherits`.
 if(NOT MINGW)
-  add_compile_options($<$<COMPILE_LANGUAGE:C>:-fplan9-extensions>)
-  # GCC 14 promoted several long-standing C leniencies to hard errors
-  # (int<->pointer for a known prototype, incompatible-pointer arg types,
-  # implicit int/function). The WIP decomp still trips these (e.g.
-  # append_text_picked_up's vestigial u8* params in propobj.c). -fpermissive
-  # downgrades them to warnings — the C counterpart of the -Wno-error lines
-  # above, and the documented path for building older C against GCC 14+.
-  add_compile_options($<$<COMPILE_LANGUAGE:C>:-fpermissive>)
+  if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    # Plan 9 extensions: superset of -fms-extensions, also enables the
+    # automatic derived->base pointer conversion the idiom relies on.
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-fplan9-extensions>)
+    # GCC 14 promoted several long-standing C leniencies to hard errors
+    # (int<->pointer for a known prototype, incompatible-pointer arg types,
+    # implicit int/function). The WIP decomp still trips these (e.g.
+    # append_text_picked_up's vestigial u8* params in propobj.c). -fpermissive
+    # downgrades them to warnings — the C counterpart of the -Wno-error lines
+    # above, and the documented path for building older C against GCC 14+.
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-fpermissive>)
+  elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    # Clang has no -fplan9-extensions. -fms-extensions gives the same
+    # anonymous-struct member access for the `inherits` idiom (correct layout);
+    # the derived->base pointer conversion becomes -Wincompatible-pointer-types,
+    # already demoted to non-error above. -Wno-microsoft-anon-tag silences the
+    # 47x "anonymous structs are a Microsoft extension" diagnostic.
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-fms-extensions>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-microsoft-anon-tag>)
+  endif()
 endif()
 
 # ASLR must be OFF: dram_syms.s defines absolute symbols (cfb_16 @ 0x70000000,
@@ -414,14 +507,24 @@ file(GLOB_RECURSE SRC_FAST3D    "${CMAKE_SOURCE_DIR}/port/fast3d/*.cpp"
 # scripts/gen_romassets.py). Defines every obseg/ramrom/music label and the
 # ge007.ld segment markers as 0x10000000 + rom_offset, so `&symbol` / romCopy()
 # work once romdata.c maps the .z64 at 0x10000000.
-set(SRC_ROMASSETS "${CMAKE_SOURCE_DIR}/port/src/romassets_${ASSET_REGION}.s")
-if(NOT EXISTS ${SRC_ROMASSETS})
-  message(FATAL_ERROR "Missing ${SRC_ROMASSETS} — run: python3 scripts/gen_romassets.py ${ASSET_REGION}")
+#
+# Mach-O needs a different encoding (`.data` section, `_`-prefixed symbols), so
+# macOS uses the committed `.darwin.s` variant generated with
+# `--darwin --base <PORT_ADDR_BASE>`. The base is currently 0 (the shifted-
+# window address model is item M1 in docs/dev/MACOS-ARM64-PLAN.md); when it
+# becomes non-zero, regenerate both `.darwin.s` files with the new `--base`.
+if(APPLE)
+  set(SRC_ROMASSETS "${CMAKE_SOURCE_DIR}/port/src/romassets_${ASSET_REGION}.darwin.s")
+  set(SRC_DRAM_SYMS "${CMAKE_SOURCE_DIR}/port/src/dram_syms.darwin.s")
+  set(_GEN_ASSET_HINT "python3 scripts/gen_romassets.py ${ASSET_REGION} --darwin --base 0")
+else()
+  set(SRC_ROMASSETS "${CMAKE_SOURCE_DIR}/port/src/romassets_${ASSET_REGION}.s")
+  set(SRC_DRAM_SYMS "${CMAKE_SOURCE_DIR}/port/src/dram_syms.s")
+  set(_GEN_ASSET_HINT "python3 scripts/gen_romassets.py ${ASSET_REGION}")
 endif()
-
-# Absolute symbols inside the reserved N64-DRAM region (port/src/dram.c):
-# cfb_16 (replaces src/cfb.c) and _bssSegmentEnd (mempool start marker).
-set(SRC_DRAM_SYMS "${CMAKE_SOURCE_DIR}/port/src/dram_syms.s")
+if(NOT EXISTS ${SRC_ROMASSETS})
+  message(FATAL_ERROR "Missing ${SRC_ROMASSETS} — run: ${_GEN_ASSET_HINT}")
+endif()
 
 # Game code — compiled unmodified.
 file(GLOB_RECURSE SRC_GAME "${CMAKE_SOURCE_DIR}/src/game/*.c")

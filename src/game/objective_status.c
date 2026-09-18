@@ -159,7 +159,13 @@ s32 get_difficulty_for_objective(s32 objectiveIndex)
 
 
 //horrible hack to get ai matching, but it does correctly refrence this func with 2 params
+#if defined(PORT) && defined(__APPLE__)
+/* Mach-O/clang has no `#pragma weak` symbol alias (see lv.c / findings D294).
+ * chrai.c references this symbol cross-TU, so it must be a real global. */
+__asm__(".globl _objectiveGetStatus_WEAK\n_objectiveGetStatus_WEAK = _get_status_of_objective");
+#else
 #pragma weak    objectiveGetStatus_WEAK = get_status_of_objective
+#endif
 
 /*
  * Return Status of objective.

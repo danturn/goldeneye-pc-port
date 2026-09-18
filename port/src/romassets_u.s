@@ -3217,8 +3217,8 @@
 
 /* --- ge007.ld segment markers ------------------------------------ */
 /* RomStart/RomEnd are exact for asset segments; Start/End mirror them
-/* (game code only ever uses End-Start size differences for these).
-/* Code segments are approximate (see generator header comment). */
+   (game code only ever uses End-Start size differences for these).
+   Code segments are approximate (see generator header comment). */
 .global _headerSegmentRomStart
 .set _headerSegmentRomStart, 0x10000000
 .global _headerSegmentRomEnd

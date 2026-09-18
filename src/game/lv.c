@@ -210,10 +210,22 @@ extern s32 g_DebugPortalsInputBufferSource2;
 extern s32 g_DebugPortalsInputBufferSource3;
 extern s32 g_DebugPortalsInputBufferSource4;
 
+#if defined(PORT) && defined(__APPLE__)
+/* Mach-O/clang has no `#pragma weak` symbol alias ("aliases are not supported
+ * on darwin"; the pragma form silently emits a TU-local symbol instead, which
+ * makes the same-TU references here ambiguous). Emit the equivalent global
+ * symbol equate. The target is defined in this TU, so a strong alias has
+ * identical semantics to the ELF weak alias. See docs/dev/findings.md D294. */
+__asm__(".globl _g_DebugPortalsInputBufferSource1\n_g_DebugPortalsInputBufferSource1 = _g_DebugPortalsInputBuffer1");
+__asm__(".globl _g_DebugPortalsInputBufferSource2\n_g_DebugPortalsInputBufferSource2 = _g_DebugPortalsInputBuffer2");
+__asm__(".globl _g_DebugPortalsInputBufferSource3\n_g_DebugPortalsInputBufferSource3 = _g_DebugPortalsInputBuffer3");
+__asm__(".globl _g_DebugPortalsInputBufferSource4\n_g_DebugPortalsInputBufferSource4 = _g_DebugPortalsInputBuffer4");
+#else
 #pragma weak g_DebugPortalsInputBufferSource1 = g_DebugPortalsInputBuffer1
 #pragma weak g_DebugPortalsInputBufferSource2 = g_DebugPortalsInputBuffer2
 #pragma weak g_DebugPortalsInputBufferSource3 = g_DebugPortalsInputBuffer3
 #pragma weak g_DebugPortalsInputBufferSource4 = g_DebugPortalsInputBuffer4
+#endif
 
 /**
  * Something debug related in the MP manage method.

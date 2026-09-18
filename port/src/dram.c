@@ -52,9 +52,11 @@
 #if defined(PLATFORM_WINDOWS)
 #include <windows.h>
 #else
-#define _GNU_SOURCE /* memfd_create — must precede all system headers */
+#define _GNU_SOURCE /* memfd_create (Linux) — must precede all system headers */
 #include <sys/mman.h>
 #include <unistd.h>
+#include <fcntl.h>   /* O_RDWR/O_CREAT/O_EXCL, shm_open (macOS) */
+#include <stdio.h>   /* snprintf */
 #endif
 
 #define DRAM_V1_BASE   0x70000000UL /* s32-safe "virtual" view */
@@ -101,11 +103,23 @@ void *dramReserve(void)
     CloseHandle(hSec);
     return v1;
 #else
-    /* memfd + two MAP_SHARED mmaps = one backing store, two views. */
+    /* One shared backing store, two MAP_SHARED views. Linux uses memfd_create;
+     * macOS has no memfd, so use a POSIX shared-memory object instead and
+     * unlink it immediately (it lives as long as the fd/mappings). */
+#if defined(PLATFORM_MACOS)
+    char shm_name[64];
+    snprintf(shm_name, sizeof(shm_name), "/ge007_dram_%d", (int)getpid());
+    int fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fd < 0) {
+        sysFatalError("dram: shm_open failed");
+    }
+    shm_unlink(shm_name);
+#else
     int fd = memfd_create("ge007_dram", 0);
     if (fd < 0) {
         sysFatalError("dram: memfd_create failed");
     }
+#endif
     if (ftruncate(fd, DRAM_SIZE) != 0) {
         sysFatalError("dram: ftruncate failed");
     }
