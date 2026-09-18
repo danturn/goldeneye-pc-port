@@ -2,6 +2,14 @@
 //#include <bondtypes.h>
 #include <deb.h>
 #include "stan.h"
+#if defined(PORT)
+#include "port_addr.h"
+/* D298/M2: stan tile/room pointers are carried as s32 N64 addresses (delta
+ * arithmetic); re-base where they become pointers. Identity at base 0. */
+#define STAN_N64PTR(T, x) ((T *)portN64ToHost((u32)(x)))
+#else
+#define STAN_N64PTR(T, x) ((T *)(x))
+#endif
 #include "bg.h"
 #include "chrai.h"
 #include "chr.h"
@@ -3239,7 +3247,7 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
     assert(*r==0);
     #endif
   
-    standTileStart = (StandTile *)(((s32)file->ptr_firstroom + delta) - 0x80);
+    standTileStart = STAN_N64PTR(StandTile, ((s32)file->ptr_firstroom + delta) - 0x80);
     ptr_firstroom_0 = (s32)file->ptr_firstroom + delta;
     
     newBase = list_of_tilesizes;
@@ -3249,7 +3257,7 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
     {
         do
         {
-            *roomPtr = (void *) ((s32) (*roomPtr) + delta);
+            *roomPtr = STAN_N64PTR(void, (s32)(*roomPtr) + delta);
             roomPtr++;
         }
         while (*roomPtr != NULL);
@@ -3266,7 +3274,7 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
             // Fake but required for matching.
             if (tile->tail.half);
             
-            tile = (StandTile *)((s32)tile
+            tile = STAN_N64PTR(StandTile, (s32)tile
                 + (tileSizes = newBase)[(tile->tail.half >> 0xc) & 0xf]);
         } 
         while (*(s32 *) tile != 0);

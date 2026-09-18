@@ -877,8 +877,8 @@ void load_bg_file(LEVEL_INDEX levelid)
  
     gptr_stan = (s32) _fileNameLoadToBank(levelinfotable[levelentry_index].bg_stan_filename, 2, 0, 4);
  
-    stanDetermineEOF((struct StanPrefixRecord *) gptr_stan, 0, (u8 *) gptr_stan);
-    stanLoadFile((struct StanPrefixRecord *) gptr_stan);
+    stanDetermineEOF((struct StanPrefixRecord *)BG_PTR(gptr_stan), 0, (u8 *)BG_PTR(gptr_stan));
+    stanLoadFile((struct StanPrefixRecord *)BG_PTR(gptr_stan));
  
     sub_GAME_7F0B4810(levelinfotable[levelentry_index].levelscale);
     setLevelScale(levelinfotable[levelentry_index].levelscale);
@@ -898,7 +898,7 @@ void load_bg_file(LEVEL_INDEX levelid)
     {
         dword_CODE_bss_8007FF88 = 2;
         ptr_bgdata_offsets = (s32)data;
-        ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[1]);
+        ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[1]);
         
         // Keep this fake goto for matching.
         goto dummy_label_543534; dummy_label_543534: ;
@@ -910,25 +910,25 @@ void load_bg_file(LEVEL_INDEX levelid)
             g_MaxNumRooms++;  
         }
  
-        g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[2]);
+        g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[2]);
 
         if (1);
 
-        if (((s32 *)ptr_bgdata_offsets)[3] == 0)
+        if (((s32 *)BG_PTR(ptr_bgdata_offsets))[3] == 0)
         {
             dword_CODE_bss_8007FF90 = 0;
         }
         else
         {
-            dword_CODE_bss_8007FF90 = (s32 *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[3]);
+            dword_CODE_bss_8007FF90 = (s32 *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[3]);
  
-            if (((s32 *)ptr_bgdata_offsets)[4] == 0)
+            if (((s32 *)BG_PTR(ptr_bgdata_offsets))[4] == 0)
             {
                 dword_CODE_bss_8007FF94 = NULL;
             }
             else
             {
-                dword_CODE_bss_8007FF94 = (f32 *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[4]);
+                dword_CODE_bss_8007FF94 = (f32 *) BG_SEG_TO_PTR(data, ((s32 *)BG_PTR(ptr_bgdata_offsets))[4]);
             }
         }
  
