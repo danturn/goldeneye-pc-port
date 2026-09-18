@@ -29,6 +29,7 @@ good that you are looking at one of these.
 - [D4. N64 "interrupts off" must be a real lock on PC](#d4-n64-interrupts-off-is-not-free-on-pc--it-must-be-a-real-lock)
 - [D5. Loop bounds that assume linker adjacency of two globals](#d5-loop-bounds-that-assume-linker-adjacency-of-two-file-scope-globals)
 - [E. Process / method notes](#e-process--method-notes)
+- [F. The N64 address space on a host that cannot map it low (macOS/arm64)](#f-the-n64-address-space-on-a-host-that-cannot-map-it-low-macosarm64)
 
 ## A. Pointer-width struct growth (32→64): the dominant class
 
@@ -991,6 +992,55 @@ and turns every such overrun into a fatal `*** stack smashing detected ***`
   other byte-matched function, during stage load or the first few frames.
 - Distinct from D7 (`va_list` UB) and D6 (missing `return`) but the same
   "works on N64 + MinGW, fatal on hardened Linux" shape.
+
+## F. The N64 address space on a host that cannot map it low (macOS/arm64)
+
+Windows and Linux realise the N64's 32-bit address space **directly**: DRAM at
+`0x70000000` with the KSEG0 mirror at `0x80000000`, the cart at `0x10000000`,
+and ~1700 linker-absolute symbols carrying those values. A 32-bit address field
+and a host pointer are then the same number, so `(u32)ptr` and `(T*)u32`
+round-trip for free — which is why classes A–E could treat address fields as
+pointers.
+
+**Native arm64 macOS cannot map below 4 GiB** (`__PAGEZERO`; a shrunken
+pagezero is SIGKILLed at exec; PIE is mandatory; `MAP_32BIT` fails). So the
+whole space lives at `PORT_ADDR_BASE = 0x1000_0000_0000` (16 TiB) instead:
+`port/include/port_addr.h`, `port/src/port_addr.c` (D298). Because the base is
+4 GiB-aligned, the **pointer→u32 direction is still free** (`(u32)host_ptr` is
+the N64 address), so only *reconstruction* sites — a 32-bit value becoming a
+pointer — need work.
+
+- Symptom: a fault at a *plausible N64 address* used as a host pointer, e.g.
+  `FAULT ADDR: 0x706ff8e0` (DRAM), `0x10xxxxxx` (cart) or `0x40xxxxxx`
+  (image-relative). On Windows/Linux the same value is a valid pointer; the
+  value looking "reasonable" is the tell.
+- Fix: route the conversion through `portN64ToHost` / `PORT_N64PTR` (identity
+  at `PORT_ADDR_BASE == 0`, so Windows/Linux are unchanged). For containers
+  whose fields are already pointers but are fed N64 addresses, convert **once
+  at the boundary** — the mempool (`mempCheckMemflagTokens` /
+  `mempSetBankStarts`, `MemoryPool` fields are `u8*`) is the main one.
+  Keep the `s32` the game passes around: `mempCheckMemflagTokens(s32, s32)`
+  needs a value that fits `s32` (V1 must stay positive), so N64 addresses stay
+  N64 addresses in the game's fields and only the pointer-typed sinks re-base.
+- Image pointers (exe globals) have their own encoding:
+  `0x40000000 + (ptr - image_base)`. `portHostToN64` produces it and
+  `portN64ToHost` decodes it; `osVirtualToPhysical` returns it, fast3d's
+  `seg_addr` decodes it. On Windows the image base is `0x140000000`, so this
+  equals the raw `(u32)&sym` truncation the D131 fix relied on.
+- Instances: D294 (`#pragma weak` has no Mach-O equivalent — use a global
+  symbol equate), D295 (the decomp's `include/` stubs shadow libc++'s wrapper
+  headers), D296 (`__x86_64__` used as the "64-bit PC" gate → `PLATFORM_64BIT`),
+  D297 (macOS platform branches: `shm_open`, Darwin `ucontext`, `_NSGetExecutablePath`),
+  D298 (the window + chokepoints + mappings).
+- Grep heuristic: build with clang and collect
+  `-Wint-to-pointer-cast` / `-Wint-to-void-pointer-cast` / `-Wint-conversion`
+  (u32→pointer: actionable) and `-Wpointer-to-int-cast` (only *image* pointers
+  are actionable — in-window truncation is correct). The M2 census and its
+  counts live in `docs/dev/MACOS-ARM64-PLAN.md`.
+- Also macOS-specific and worth knowing: the game's fixed-address maps
+  (`dram.c`, `romdata.c`, `libultra.c` stacks) all move into the window, and
+  the window is reserved `PROT_NONE` up front (`portAddrInit`) so those carves
+  cannot collide with libmalloc/the dyld cache.
 
 ## E. Process / method notes
 

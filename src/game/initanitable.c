@@ -6,6 +6,15 @@
 
 /* D33: ROM-file endianness fixup for the animation data segment (port layer). */
 #include "romdata.h"
+#if defined(PORT)
+#include "port_addr.h" /* D298/M2: DRAM window base */
+/* expand_ani_table_entries() builds N64 addresses in s32 variables (they must
+ * fit s32). Re-base when such a value becomes a pointer; identity at
+ * PORT_ADDR_BASE == 0. */
+#define ANI_N64PTR(T, x) ((T *)portN64ToHost((u32)(x)))
+#else
+#define ANI_N64PTR(T, x) ((T *)(x))
+#endif
 
 //bss
 
@@ -256,15 +265,15 @@ void expand_ani_table_entries(s32** arg0)
     while (*var_v0 != 0) {
         if (*var_v0 != 1) {
             *var_v0 = (s32)((s32)*var_v0 + (s32)(&ptr_animation_table->data));
-            ((struct anim_entry *)*var_v0)->unk08 += (s32)&ptr_animation_table->data;
-            ((struct anim_entry *)*var_v0)->unk10 += (s32)&ptr_animation_table->data;
+            ANI_N64PTR(struct anim_entry, *var_v0)->unk08 += (s32)&ptr_animation_table->data;
+            ANI_N64PTR(struct anim_entry, *var_v0)->unk10 += (s32)&ptr_animation_table->data;
         }
         var_v0++;
     }
 
     for (var_v0 = (s32 *)arg0; *var_v0 != 0; var_v0++) {
         if (*var_v0 != 1) {
-            *(s32 *)*var_v0 += (s32)&_animation_entriesSegmentRomStart;
+            *ANI_N64PTR(s32, *var_v0) += (s32)&_animation_entriesSegmentRomStart;
         }
     }
 }
