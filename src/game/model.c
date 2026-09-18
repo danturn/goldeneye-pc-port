@@ -85,6 +85,11 @@ Model *modelmgrInstantiateModel(ModelFileHeader *header)
             /* PC port (D53.2): this buffer is used as a struct Model via the
              * same type-pun as g_ModelSlots; on PC that struct is 0xE8 bytes,
              * not the N64 0x20 slot size. */
+            {
+                static int fb = 0;
+                osSyncPrintf("modelmgr: STAGE model fallback #%d (numRecords=%d)\n",
+                             ++fb, (int)header->numRecords);
+            }
             model = mempAllocBytesInBank(sizeof(struct Model), MEMPOOL_STAGE);
 #else
             model = mempAllocBytesInBank(0x20, MEMPOOL_STAGE);

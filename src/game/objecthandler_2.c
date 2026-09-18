@@ -91,7 +91,7 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
 
         name = (u8 *) (((s32) (((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff))) - filedata);
 
-        fileSetSize(filenum, (u8 *) filedata, (((s32) name + 0xf) & (~0xf)), dst == 0);
+        fileSetSize(filenum, PORT_N64PTR(u8, filedata), (((s32) name + 0xf) & (~0xf)), dst == 0);
     }
 }
 

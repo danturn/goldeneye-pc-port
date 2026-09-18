@@ -227,6 +227,12 @@ void *mempAllocBytesInBank(u32 bytes, u8 poolnum)
 
         nulled_mempLoopAllMemBanks();
 
+#if defined(PORT)
+        osSyncPrintf("memp OOM: bank=%d bytes=0x%X left=0x%X pos=%p end=%p\n",
+                     (int)poolnum, (unsigned)bytes,
+                     (unsigned)(uintptr_t)(pool->end - pool->pos),
+                     (void *)pool->pos, (void *)pool->end);
+#endif
         while (1);
     }
 
@@ -263,6 +269,10 @@ MEMP_ADD_ENTRY_RESULT mempAddEntryOfSizeToBank(void *allocation, s32 newsize, u8
 
     if (allocation != pool->prevpos)
     {
+#if defined(PORT)
+        osSyncPrintf("mempAddEntry: NOT_LAST bank=%d alloc=%p prevpos=%p\n",
+                     (int)poolnum, allocation, (void *)pool->prevpos);
+#endif
         return MEMP_ADD_ENTRY_NOT_LAST_ALLOCATION;
     }
 
