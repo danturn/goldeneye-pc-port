@@ -3081,7 +3081,7 @@ void bgBuildRoomVtxBounds(s32 roomID)
 
             numvertices = ((gdl[cmdindex].dma.par >> 4) & 0xf) + 1;
 
-            vtx = (Vtx *)(SEGMENT_OFFSET(gdl[cmdindex].dma.addr) + (u32)vertices);
+            vtx = (Vtx *)BG_PTR(SEGMENT_OFFSET(gdl[cmdindex].dma.addr) + (u32)vertices);
 
 #if defined(PORT)
             /* TEMP D69 safety net: the room primary/secondary DL binaries
