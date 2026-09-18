@@ -1101,7 +1101,15 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
 {
     struct SetupIntroSwirl *base;
     struct SetupIntroSwirl *loopbase;
+#if defined(PORT)
+    /* D189/D298: written pointbuf[0..11] via `&pointbuf[i*3]` then dst[3..5]
+     * (i = -1..2), but declared [10] -- a 2-float stack overrun that on arm64
+     * corrupts the saved frame pointer (Fp=0x374d56eac1a00000 at the fault).
+     * N64/MinGW absorb it; give it room on the port. */
+    f32 pointbuf[12];
+#else
     f32 pointbuf[10];
+#endif
     struct SetupIntroSwirl *swirl;
     f32 frac;
     f32 *dst;
