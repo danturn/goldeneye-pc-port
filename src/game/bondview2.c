@@ -856,7 +856,7 @@ void bondviewSetCameraMode(s32 arg0)
             solo_char_load();
 
             // HACK: ptr_animation_table->data regalloc is backwards
-            sp38 = (struct ModelAnimation *)((s32)stage_intro_anim_table[g_IntroAnimationIndex].anonymous_0 + (s32)&ptr_animation_table->data);
+            sp38 = PORT_N64PTR(struct ModelAnimation, (s32)stage_intro_anim_table[g_IntroAnimationIndex].anonymous_0 + (s32)&ptr_animation_table->data);
             sp78 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_2;
             ftemp_1 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_1;
             ftemp_3 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_3;
@@ -1192,7 +1192,7 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
         lookat->y = g_CurrentPlayer->field_3C8;
         lookat->z = g_CurrentPlayer->field_3CC;
 
-        swirl = (void *)(((u32) g_IntroSwirl) + (u32) base);
+        swirl = (void *)(((uintptr_t) g_IntroSwirl) + (uintptr_t) base); /* D298/M2: full-width */
 
         if (!(swirl->bitflags & 4))
         {

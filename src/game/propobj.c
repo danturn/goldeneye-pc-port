@@ -7,6 +7,11 @@
   ---------------------------------------------------------------------*/
 
 #include <ultra64.h>
+#if defined(PORT)
+#include "port_addr.h"
+#else
+#define PORT_N64PTR(T, x) ((T *)(x))
+#endif
 #include <math.h>
 #ifdef PORT
 #include <stdio.h>  /* D202/M-65 diag probe only (doorSndProbe); remove with it */
@@ -5725,7 +5730,7 @@ s32 objTick(struct PropRecord *prop)
 #endif
 				temp_s0_6 = render_pad2F4->model;
 
-				if (temp_s0_6->anim == (ModelAnimation *)animation_table_ptrs2[1]) /* D32/D33 */
+				if (temp_s0_6->anim == PORT_N64PTR(ModelAnimation, animation_table_ptrs2[1])) /* D32/D33 */
 				{
 					modelSetAnimTranslationScale(temp_s0_6, 10.438f);
 					setsubroty(render_pad2F4->model, M_PI_F);
