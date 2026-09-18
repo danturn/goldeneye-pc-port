@@ -1080,7 +1080,24 @@ pointer — need work.
   symbol equate), D295 (the decomp's `include/` stubs shadow libc++'s wrapper
   headers), D296 (`__x86_64__` used as the "64-bit PC" gate → `PLATFORM_64BIT`),
   D297 (macOS platform branches: `shm_open`, Darwin `ucontext`, `_NSGetExecutablePath`),
-  D298 (the window + chokepoints + mappings).
+  D298 (the window + chokepoints + mappings), D299, D300.
+- **Never bound an N64 address with an absolute number.** A guard like
+  `if (p < 0x10000 || p >= 0x400000000ULL) return NULL;` is written against the
+  *unshifted* layout: it is correct on Windows/Linux (DRAM at `0x7000_0000`,
+  below 16 GiB) and silently rejects **every** real pointer on arm64 (DRAM at
+  `~0x1000_707b_5740`). D299 was exactly this in `sndPlaySfx()` — all in-level
+  SFX were silent, while music (a separate player) still worked. Use
+  `portAddrIsInWindow()` (`port_addr.h`) instead.
+- **`(u32)ptr` assigned back to a pointer is a truncation, not a no-op.**
+  `u32 *obj = (u32)g_CurrentSetup.propDefs;` (D300) round-trips on N64 but
+  leaves an unbased N64 address on the 64-bit port, faulting on first deref.
+  The port-correct form is a pointer-to-pointer cast (`(u32 *)…`), keeping the
+  pointer's own arithmetic. Grep for `ptr_var = (u32)expr`; D300 was the only
+  instance.
+- **A stage-unload bug needs input to surface.** Both sweeps that missed D300
+  ran with no controller input, so the level never ended and
+  `lvlUnloadStageTextData()` never ran. Drive `GE_INPUTSCRIPT` (START/A ends a
+  level) when the affected path is teardown rather than steady-state.
 - Grep heuristic: build with clang and collect
   `-Wint-to-pointer-cast` / `-Wint-to-void-pointer-cast` / `-Wint-conversion`
   (u32→pointer: actionable) and `-Wpointer-to-int-cast` (only *image* pointers

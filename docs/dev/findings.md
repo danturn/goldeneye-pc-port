@@ -566,6 +566,9 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D296 | **macOS/arm64 (M0.2): `__x86_64__` was used as the "64-bit PC" gate — on arm64 it silently selected the N64 branch (34 undefined `_ANIM_DATA_*`, objecthandler `.bss` overrun, audio heap sizing)** — full `## D296` entry at file tail | FIXED — 22 sites in 14 `src/`+`assets/` files and `port/include/pc_protos.h` now use `PLATFORM_64BIT` (defined by CMake on every 64-bit PC target, undefined on N64, so the N64 branch is unchanged). |
 | D297 | **macOS/arm64 (M0.7/M0.8): first native boot needs platform branches — no `memfd_create`, no glibc `ucontext.gregs`, no `/proc`, no fixed image base** — full `## D297` entry at file tail | FIXED — `shm_open` double-map (`dram.c`); Darwin `ucontext` registers + `_XOPEN_SOURCE` (`crash.c`, incl. `crashDumpThreads`); `_dyld_get_image_header`/`_NSGetExecutablePath` (`system.c`). **Binary links and runs: reaches ROM load.** |
 | D298 | **macOS/arm64 (M1): the port realises the N64 32-bit address space as host addresses; native arm64 cannot map the low 4 GiB, so the space is shifted up by `PORT_ADDR_BASE` (16 TiB)** — full `## D298` entry at file tail | FIXED (port layer) — `port/include/port_addr.h` + `port/src/port_addr.c` (`portAddrInit`, `portN64ToHost`/`portHostToN64`, `PORT_N64PTR`); all chokepoints routed through them; DRAM/cart/stacks mapped at `B+…`; `seg_addr` re-based. ROM-free self-test ALL PASS. **Level boot + game-code cast sites still owed (M2, needs a ROM).** |
+| D299 | **macOS/arm64: in-level SFX completely silent — `sndPlaySfx()`'s pre-window address guard (`sp >= 0x400000000ULL`, 16 GiB) rejected every real `ALSound*`, because with `PORT_ADDR_BASE` the sound lives at ~`0x1000_707b_5740`** — full `## D299` entry at file tail | FIXED — new `portAddrIsInWindow()` in `port_addr.h`, guard tests the real window. Verified: `[EVT]` 0→68, `[VOICE+]` 0→14 on `-level_37`; 21/21 control sweep with SFX on every level. |
+| D300 | **macOS/arm64: crash at stage unload — `cleanupObjects()` did `u32 *obj = (u32)g_CurrentSetup.propDefs`, truncating a host pointer to 32 bits (unbased `0x7017_c70f` deref)** — full `## D300` entry at file tail | FIXED (`cleanup_objects.c`, D3x ABI/layout class) — cast pointer-to-pointer. Cuba x3 crash-free; control sweep 21/21. |
+
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -10196,3 +10199,25 @@ The equate makes `X` a real global symbol at `Y`'s address (verified: `nm` shows
 - Mappings moved into the window: DRAM `shm_open` double-map at `B+0x70000000`/`B+0x80000000`; cart at `B+0x10000000` (macOS uses `MAP_FIXED` inside the reservation); game-thread stacks carved from `[B+0xA0000000, B+0xC0000000)` with a `PROT_NONE` guard page (replacing `MAP_32BIT`, keeping `(u32)stackptr` truncations exact). The committed `.darwin.s` absolute symbols are generated with the same `--base`, and `portAddrInit` asserts `cfb_16 == PORT_ADDR_BASE + 0x70000000`.
 **Verified (ROM-free).** `portAddrInit` runs a self-test of the window round-trips (DRAM V1/V2, cart), the absolute-symbol base, and the image-relative encoding — all PASS on `build-pc/ge007.aarch64`; the window reserves at `0x100000000000`.
 **Still owed.** A level boot (M1.7) and the game-code cast census (M2) both need a ROM in `data/`; the M0 build has none, so the residue of raw `u32 -> pointer` sites in game code is untested. `PORT_N64PTR` exists for those rewrites and is an identity at `PORT_ADDR_BASE == 0`, so Windows/Linux are unaffected by every change here.
+
+## D299 — macOS/arm64: in-level sound effects were silent — a pre-window address guard rejected every real sound
+**Symptom (user report, arm64 macOS build).** Music played, but there were no sound effects at all — no gunshots, no footsteps, no door sounds.
+**Root cause.** `sndPlaySfx()` (`src/snd.c`) validated the resolved `ALSound*` with a hardcoded numeric bound that predates the shifted-window address model (D298):
+```c
+uintptr_t sp = (uintptr_t)sound;
+if (sp < 0x10000 || sp >= 0x400000000ULL) return NULL;   /* 16 GiB */
+```
+The comment above it ("ALSound lives in game DRAM (~0x7000_0000..) or the cart image (0x1_4000_0000..)") describes the *unshifted* layout. On x86_64 the N64 window starts at host 0, so DRAM really is at `0x7000_0000` — below the 16 GiB ceiling — and the guard passed. On arm64 `PORT_ADDR_BASE` is `0x100000000000`, so a valid `ALSound*` is `~0x1000_707b_5740`, far **above** the ceiling: every sound returned `NULL`. Music was unaffected because it is driven by a separate player, which is exactly the reported "music but no SFX" split.
+**Fix.** Added `portAddrIsInWindow(const void *)` to `port/include/port_addr.h` (tests against the real `PORT_ADDR_BASE`/`PORT_ADDR_WINDOW` range) and used it for the guard, instead of absolute numeric bounds that silently break whenever the window moves. Identity-equivalent on Windows/Linux.
+**Verified** (`-level_37`, scripted fire, `GE_AUDIOTRACE=1`): `[EVT]` 0 → 68 (the SFX event handler is now reached), `[VOICE+]` 0 → 14 (voices allocated and started), `[VOICE-]` 0 → 12, `[WAVELOOP]`/`[ENVELOPE]`/`[VOICES]` 15 each. Then 21/21 on the full-control sweep with SFX voices on every level.
+**Lesson.** Any absolute numeric bound on an N64 address is a latent arm64 bug; use the `port_addr.h` predicates.
+
+## D300 — macOS/arm64: level-unload crash — `propDefs` truncated from a host pointer to 32 bits
+**Symptom.** Crash at stage unload (`bossMainloop` → `bossRunTitleStage` → `lvlUnloadStageTextData`), faulting on `0x7017_c70f` — an unbased N64 DRAM address. Only reachable once a level actually ends, so it needed input (START/A) to surface; the no-input sweep never unloaded and missed it.
+**Root cause.** `cleanupObjects()` (`src/game/cleanup_objects.c:26`) did
+```c
+u32 *obj = (u32)g_CurrentSetup.propDefs;
+```
+The decomp's cast converts the pointer to a 32-bit integer and back into a `u32 *`. That is a no-op where pointers are 32-bit (N64), but on the 64-bit port it truncates the host pointer to its low 32 bits, leaving an unbased N64 address that faults on the first `CLEANUP_PDTYPE` deref. `g_CurrentSetup.propDefs` is a real host pointer — `prop.c:1283` stores `local_stage + propDefs`.
+**Fix.** Cast pointer-to-pointer: `u32 *obj = (u32 *)g_CurrentSetup.propDefs;`. `u32 *` is retained so `sizepropdef()`'s 4-byte-unit increment (`obj + sizepropdef(obj)`) is unchanged. This is the D3x ABI/layout class (pointer-width reconciliation), semantics-preserving; documented here per AGENTS.md rule 2.
+**Verified.** Cuba x3 crash-free with the full-control script; control sweep 21/21. A grep for the same `ptr = (u32)expr` int-to-pointer pattern found no other instances.

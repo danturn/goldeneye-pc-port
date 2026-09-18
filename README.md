@@ -75,8 +75,8 @@ listed plainly there.
 **v0.2.2 - playable, with known rough edges.** The full single-player
 campaign is completable end to end (all 21 missions, Agent difficulty,
 playtested), at a steady 60 fps; all 21 solo missions load, render and run
-crash-free, verified on Windows, Linux and real Steam Deck hardware. Native
-Intel macOS builds are supported. Feedback is very welcome.
+crash-free, verified on Windows, Linux and real Steam Deck hardware, and on
+macOS (both Intel and native Apple Silicon). Feedback is very welcome.
 
 **Working:** boot sequence and front end (menu → mission select → briefing →
 start), front-end menu navigation on the left stick to match the F10 overlay
@@ -87,7 +87,8 @@ dual-stick controller layout; file-backed saves; faithful N64 progression by def
 (F10 → *All unlocked* opens every level, 007 mode and the full cheat menu); F10 in-game
 options overlay (resolution, frame cap, MSAA, filtering, FOV, sensitivity,
 quit to desktop);
-Windows, Linux, and Intel macOS.
+Windows, Linux, and macOS (Intel and Apple Silicon; on Apple Silicon a
+signed, double-clickable `.app` is produced by `tools_pc/bundle-mac.sh`).
 
 **Known issues:**
 
