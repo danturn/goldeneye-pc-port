@@ -905,8 +905,9 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
 
             /* D194(b): gameplay-look-only dt normalization -- see the
              * MOUSE_DT_REF comment above. Computed unconditionally (so the
-             * clock stays warm across mode switches) but only ever applied
-             * below, inside the aimHeld/hipfire branches. */
+             * clock stays warm across mode switches) but only applied to the
+             * VELOCITY paths below: the legacy aim stick and hipfire. NOT to
+             * the GEPD position accumulator (aimGepdCompute) -- see D307. */
             double lookDtScale = 1.0;
             {
                 Uint64 now = SDL_GetPerformanceCounter();
@@ -1009,8 +1010,26 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                 /* D194 GEPD-mirror aim: direct crosshair/camera writes, no
                  * look stick (see aimGepdCompute). Keyboard turn (sx/sy set
                  * above) still works. Otherwise fall through to the legacy
-                 * velocity stick below. */
-                if (!aimGepdCompute(edx * lookDtScale, dyLook * lookDtScale)) {
+                 * velocity stick below.
+                 *
+                 * D307: pass the RAW px, not edx * lookDtScale. The D194(b)
+                 * dt-normalisation (MOUSE_DT_REF / dtActual) is correct for
+                 * the velocity paths below -- it turns "px accumulated this
+                 * poll" into "px per nominal 1/60 s", a RATE the game then
+                 * integrates over its own ticks. But aimGepdCompute feeds a
+                 * POSITION accumulator (s_gepdCrossX += dx * sens), which is
+                 * already the integral: its correct input is the displacement
+                 * the hand actually made. Rate-normalising it makes the
+                 * crosshair advance a constant amount per FRAME instead of
+                 * per unit of TIME, so under uneven frame pacing the same
+                 * smooth hand motion lands as steps of varying size --
+                 * exactly the "reticule jumps around" report. The clamp range
+                 * (0.25..4.0) means consecutive frames could differ by 16x.
+                 * Invisible at a locked 60 fps (scale == 1), obvious when
+                 * pacing is jittery. GEPD's own formula uses the raw delta.
+                 * M-122 swapped the accumulator in and left the scaling from
+                 * the stick era in place. */
+                if (!aimGepdCompute(edx, dyLook)) {
                 double aimEdx = edx * lookDtScale, aimDyLook = dyLook * lookDtScale;
                 double aimSens = (mouseAimSpeed / 100.0) * (mouseSensitivity / 100.0);
                 double gamma = aimCurveGamma / 100.0;
@@ -1397,7 +1416,9 @@ static int aimGepdCompute(double dxPx, double dyLook)
     struct player *p = g_CurrentPlayer;
 
     /* Needs the grabbed-cursor relative deltas (capture mode, locked in a
-     * stage) and a live player. dxPx/dyLook are this poll's dt-scaled px. */
+     * stage) and a live player. dxPx/dyLook are this poll's RAW px -- not
+     * dt-scaled (D307): this is a position accumulator, so its input must be
+     * the actual displacement, not a rate. */
     if (!aimAbsolute || !mouseGrabbed || p == NULL)
         return 0;
 
