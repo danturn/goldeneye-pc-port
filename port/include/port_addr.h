@@ -71,6 +71,17 @@ extern "C" {
 extern uintptr_t g_portImageBase;
 extern int g_portUseImageRel;
 
+#ifdef PORT_ADDR_STRICT
+/* Debug gate (-DPORT_ADDR_STRICT=1). Validates that a u32 being turned into a
+ * host pointer actually names one of the N64 regions the port maps. The whole
+ * D299/D300/D301/D302 bug family shares one signature -- a truncated or
+ * never-rebased address reaching portN64ToHost -- and it is almost always
+ * diagnosed from a fault somewhere far away, long after the bad value was
+ * created. This reports it AT THE CONVERSION, with a backtrace naming the
+ * caller. Compiled out entirely by default; costs one call when enabled. */
+void portAddrStrictCheck(uint32_t a);
+#endif
+
 /* Reserve the window (macOS only) and record the image base. Must run before
  * any of the port's fixed mappings and before large allocations. */
 void portAddrInit(void);
@@ -95,6 +106,9 @@ static inline void *portN64ToHost(uint32_t a)
     if (a == 0) {
         return NULL;
     }
+#ifdef PORT_ADDR_STRICT
+    portAddrStrictCheck(a);
+#endif
     if (g_portUseImageRel && a >= 0x40000000u && a < 0x70000000u) {
         return (void *)(g_portImageBase + (uintptr_t)(a - 0x40000000u));
     }

@@ -1094,6 +1094,26 @@ pointer — need work.
   The port-correct form is a pointer-to-pointer cast (`(u32 *)…`), keeping the
   pointer's own arithmetic. Grep for `ptr_var = (u32)expr`; D300 was the only
   instance.
+- **Sweep by function PAIR, not by grep hit.** Four of the six bugs in the D302
+  census pass were cases where one member of a near-duplicate function pair had
+  been converted and its twin had not (`model.c` `sub_GAME_7F06DEC0` vs
+  `sub_GAME_7F06E540`; `bondview_r.c`'s solo spawn vs `bondview2.c`'s MP
+  respawn, on two separate counts; `bg.c:3399` vs `bg.c:5213` *in the same
+  file*). GE's decomp is full of solo/MP and primary/secondary twins that were
+  decompiled independently and differ only in whitespace. **After landing any
+  fix in this family, grep the repo for the distinctive fragment of the line you
+  just changed and confirm every other occurrence is already fixed.** Cheap, and
+  it would have found all four for free.
+- **A warning census finds the PRODUCER side, not the CONSUMER side.** Building
+  with `-Wint-to-pointer-cast -Wpointer-to-int-cast -Wint-conversion` flags
+  pointers implicitly truncated *into* int parameters/locals — and in `front.c`
+  + `options.c` all 206 such warnings were already-correct round trips. It does
+  **not** flag the dangerous direction when the cast is explicit: `(T *)(uintptr_t)x`
+  (how D301 was written) is silent, and D299 (a numeric bound on an address) has
+  no cast at all. Use the census to audit the invariant "every value reaching a
+  `PORT_N64PTR` is either from `portHostToN64()` or provably in-window", but do
+  not mistake a clean census for a clean codebase — the consumer side needs a
+  type-driven audit, or `PORT_ADDR_STRICT` (D305) at runtime.
 - **A stage-unload bug needs input to surface.** Both sweeps that missed D300
   ran with no controller input, so the level never ended and
   `lvlUnloadStageTextData()` never ran. Drive `GE_INPUTSCRIPT` (START/A ends a

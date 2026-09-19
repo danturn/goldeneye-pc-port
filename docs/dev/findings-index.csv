@@ -171,3 +171,6 @@ D298,FIXED,"macOS/arm64 (M1): the port realises the N64 32-bit address space as 
 D299,FIXED,macOS/arm64: in-level SFX completely silent —,"FIXED — new portAddrIsInWindow() in port_addr.h, guard tests the real window."
 D300,FIXED,macOS/arm64: crash at stage unload —,"FIXED (cleanup_objects.c, D3x ABI/layout class) —"
 D301,FIXED,macOS/arm64: crash on guard gunfire —,FIXED (port_addr.h + chr.c) —
+D302,FIXED,"macOS/arm64: six more pointer truncations, found by a static -Wint-conversion census rather than by crashing.","FIXED (model.c x4, bondview2.c x11, bg.c) —"
+D303,FIXED,"macOS/arm64: texReadUncompressed() aligned its destination through u32 ((u32 *)(((u32)dst + 0xf) & ~0xf) x3), truncating a host pointer and then writing throug…","FIXED defensively (image.c), latent not live."
+D304,OPEN,"Intermittent renderer crash, level-agnostic, observed once on Dam:","OPEN — observed once, not investigated."
