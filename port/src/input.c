@@ -330,6 +330,11 @@ static int aimAbsolute      = 1;    /* D194: 1 = GEPD-style aim while RMB is hel
                                       * rotates the view 1:1 in screen angle; 0 =
                                       * legacy velocity stick from mouse delta. */
 
+/* D307 diagnostic: incremented by caclulate_gun_crosshair_position_rotation
+ * (gunfire.c) so a capture can report how many damped crosshair updates ran
+ * between two of our writes. Remove with the rest of the D307 probes. */
+int g_d307_damps = 0;
+
 /* D194 GEPD-aim state. Touched ONLY in inputComputePad (game thread), the
  * same confinement as every other static here. The per-poll grabbed delta
  * drives the view, so there is no free-running angle accumulator for
@@ -1478,13 +1483,19 @@ static int aimGepdCompute(double dxPx, double dyLook)
          * overwrite happens first, so that rescale lands on OUR value and the
          * drawn position jumps. ctl= is controldef (KISSY while aiming, HONEY
          * otherwise); a flip would change which damp is used. */
+        {
+            extern int g_d307_damps;
+            static int lastDamps;
+            int dampsSince = g_d307_damps - lastDamps;
+            lastDamps = g_d307_damps;
         sysLogPrintf(LOG_NOTE,
-            "GE_INPUTLOG gepdaim d=(%.1f,%.1f) cross=(%.2f,%.2f) game=(%.2f,%.2f) aa=(%.2f,%.2f) st=%.3f sv=%.3f ct=%d cam=(%.1f,%.1f) damp=%.4f ctl=%d",
+            "GE_INPUTLOG gepdaim d=(%.1f,%.1f) cross=(%.2f,%.2f) game=(%.2f,%.2f) aa=(%.2f,%.2f) st=%.3f sv=%.3f ct=%d damps=%d cam=(%.1f,%.1f) damp=%.4f ctl=%d",
             dxPx, dyLook, s_gepdCrossX, s_gepdCrossY, resX, resY,
             (double)p->autoaimx, (double)p->autoaimy,
             (double)p->speedtheta, (double)p->speedverta,
-            g_ClockTimer, (double)p->vv_theta, (double)p->vv_verta,
+            g_ClockTimer, dampsSince, (double)p->vv_theta, (double)p->vv_verta,
             (double)p->guncrossdamp, (int)p->controldef);
+        }
     }
     return 1;
 }

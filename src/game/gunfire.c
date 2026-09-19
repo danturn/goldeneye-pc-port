@@ -4849,6 +4849,12 @@ void gunSetTracerTarget(coord3d* pos)
 
 void caclulate_gun_crosshair_position_rotation(f32 turn_x, f32 turn_y, f32 guncrossdamp, f32 gunaimdamp)
 {
+#ifdef PORT
+    /* D307 diagnostic: count damps so a capture can report the damp:write
+     * ratio per frame (aimGepdCompute writes once per poll; this runs once per
+     * sim tick). Remove with the rest of the D307 probes. */
+    { extern int g_d307_damps; g_d307_damps++; }
+#endif
     s32 i;
     f32 screen_width;
     f32 screen_height;
