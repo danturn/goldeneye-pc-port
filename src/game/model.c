@@ -1921,18 +1921,18 @@ void process_03_unknown(ModelRenderData *renderData, Model *model, ModelNode *no
     jointIndex = rodata->JointID;
     skeleton = model->obj->Skeleton;
 
-    angle = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, (u8 *)model->unk34);
+    angle = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, PORT_N64PTR(u8, model->unk34));
 
     if (model->unk2c != 0.0f) {
-        tmp = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, (u8 *)model->unk38);
+        tmp = sub_GAME_7F06E540(jointIndex, model->gunhand, skeleton, model->anim, PORT_N64PTR(u8, model->unk38));
         angle = sub_GAME_7F06D0CC(angle, tmp, model->unk2c);
     }
 
     if (model->unk84 != 0.0f) {
-        tmp = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, (u8 *)model->unk64);
+        tmp = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, PORT_N64PTR(u8, model->unk64));
 
         if (model->unk5c != 0.0f) {
-            tmp2 = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, (u8 *)model->unk68);
+            tmp2 = sub_GAME_7F06E540(jointIndex, model->unk25, skeleton, model->anim2, PORT_N64PTR(u8, model->unk68));
             tmp = sub_GAME_7F06D0CC(tmp, tmp2, model->unk5c);
         }
 

@@ -8049,7 +8049,7 @@ void bondviewMovePlayerUpdateViewport(s8 stick_x, s8 stick_y, u16 buttons)
 
     if ((cameraBufferToggle != 0) && (viGetFrameBuf2() == (u8*)(cfb_16[1])))
     {
-        viSetFrameBuf2((u8 *) resolution);
+        viSetFrameBuf2(PORT_N64PTR(u8, resolution));
     }
 
 #ifdef VERSION_EU
@@ -8759,7 +8759,17 @@ void mp_respawn_handler(void)
 {
     coord3d start_pos = ZeroCoordSpawnPos;
     f32 start_look_angle;
+#ifdef PORT
+    /* D302: PadRecord.stan is a StandTile* host pointer. An s32 local
+     * truncates it, and every consumer below (bondviewYPositionRelated,
+     * change_player_pos_to_target, prop->stan) rebuilds it unbased and
+     * dereferences it. Local only -- no struct/ABI impact -- and the s32 pad
+     * below keeps the N64 stack layout identical. The solo twin
+     * (bondview_r.c:102) already declares this StandTile*. */
+    StandTile *start_stan;
+#else
     s32 start_stan;
+#endif
     s32 pad;
     f32 stan_height;
     s32 var_v0;
@@ -8851,7 +8861,7 @@ void mp_respawn_handler(void)
             switch (intro_record->type) 
             {
                 case 0: // INTROTYPE_SPAWN
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSpawn));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroSpawn));
                     break;
                 case 1: // INTROTYPE_ITEM
                     if (check_ramrom_flags() == ((struct SetupIntroAmmo*)intro_record)->is_demo_playback) {
@@ -8861,28 +8871,28 @@ void mp_respawn_handler(void)
                             bondinvAddInvItem(((struct SetupIntroItem*)intro_record)->item_right);
                         }
                     }
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroItem));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroItem));
                     break;
                 case 2: // INTROTYPE_AMMO
                     if (check_ramrom_flags() == ((struct SetupIntroAmmo*)intro_record)->is_demo_playback) {
                         give_cur_player_ammo(((struct SetupIntroAmmo*)intro_record)->ammo_type, ((struct SetupIntroAmmo*)intro_record)->ammo_amount);
                     }
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAmmo));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroAmmo));
                     break;
                 case 3: // INTROTYPE_SWIRL
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSwirl));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroSwirl));
                     break;
                 case 4: // INTROTYPE_ANIM
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAnim));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroAnim));
                     break;
                 case 5: // INTROTYPE_CUFF
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCuff));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroCuff));
                     break;
                 case 6: // INTROTYPE_CAMERA
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCamera));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroCamera));
                     break;
                 default: // INTROTYPE_WATCH, INTROTYPE_CREDITS
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroEmpty));
+                    intro_record = (struct SetupIntroEmpty*)((uintptr_t)intro_record + sizeof(struct SetupIntroEmpty));
                     break;
             }
     #ifdef DEBUG
@@ -10651,7 +10661,7 @@ join_768:
             if (ppointers[index]->bodyModel->anim2 == NULL)
             {
                 startframe = (0.0f <= frame) ? (frame) : (0.0f);
-                modelSetAnimation(ppointers[index]->bodyModel, (ModelAnimation *) anim, 0, startframe, angle, 16.0f);
+                modelSetAnimation(ppointers[index]->bodyModel, PORT_N64PTR(ModelAnimation, anim), 0, startframe, angle, 16.0f);
                 ppointers[index]->players_cur_animation = anim;
                 ppointers[index]->field_1288 = angle;
  
