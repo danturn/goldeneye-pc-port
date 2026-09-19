@@ -1439,9 +1439,42 @@ static int aimGepdCompute(double dxPx, double dyLook)
     double resY = (double) p->crosshair_y_pos;
 
     /* Crosshair + gun/arm pose (GEPD formulas, RATIOFACTOR=1 for our 4:3
-     * viewport; failsafe weapon offsets 0.15/0 as in goldeneye.c). */
-    p->crosshair_x_pos = (f32) s_gepdCrossX;
-    p->crosshair_y_pos = (f32) s_gepdCrossY;
+     * viewport; failsafe weapon offsets 0.15/0 as in goldeneye.c).
+     *
+     * D307: pre-compensate for the game's damping. caclulate_gun_crosshair_
+     * position_rotation (gunfire.c) runs once per SIM TICK and does
+     * `crosshair_x_pos = crosshair_x_pos * guncrossdamp + turn`, so the value
+     * it displays is our write multiplied by damp^k, where k is the number of
+     * ticks that ran between two of our writes. This write happens once per
+     * input POLL, so k varies -- measured from two live captures (839 + 427 aim
+     * frames): k=1 on 66%, k=2 on 18%, k=0 on 17% of frames. The drawn offset
+     * is that times (1-damp), so at damp 0.8 the reticule stepped 20% whenever
+     * k changed -- the "reticule jumps around" report.
+     *
+     * Dividing by damp^k here makes the post-damp value what we intended, so
+     * the drawn position stops depending on k. k is taken as g_ClockTimer (the
+     * same value the game uses for its tick count); k=0 (no tick between two
+     * polls) is clamped to 1, and the tick count is itself clamped upstream
+     * (FRAMETIMING_PORT_MAX_CATCHUP).
+     *
+     * Validated offline against both captures before landing: drawn-position
+     * step mean 0.0008 / p95 0.004, identical to the ideal true-k case and
+     * 5-11x smoother than no compensation. See findings D307. */
+    {
+        extern s32 g_ClockTimer;
+        double damp = (double) p->guncrossdamp;
+        int k = (int) g_ClockTimer;
+        if (k < 1) k = 1;
+        if (k > 8) k = 8;
+        double comp = pow(damp, (double) k);
+        if (comp > 1e-4) {
+            p->crosshair_x_pos = (f32) (s_gepdCrossX / comp);
+            p->crosshair_y_pos = (f32) (s_gepdCrossY / comp);
+        } else {
+            p->crosshair_x_pos = (f32) s_gepdCrossX;
+            p->crosshair_y_pos = (f32) s_gepdCrossY;
+        }
+    }
     p->gun_azimuth_angle   = (f32) (s_gepdCrossX * (1.11f + 0.15f * 1.5f) + fovratio - 1.0f);
     p->gun_azimuth_turning = (f32) (s_gepdCrossY * 1.11f + fovratio - 1.0f);
 

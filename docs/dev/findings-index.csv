@@ -176,4 +176,4 @@ D303,FIXED,"macOS/arm64: texReadUncompressed() aligned its destination through u
 D304,OPEN,"Intermittent renderer crash, level-agnostic, observed once on Dam:","OPEN — observed once, not investigated."
 D305,FIXED,PORT_ADDR_STRICT: a debug gate that catches the whole D299-D304 family at the conversion rather than at the fault.,FIXED (new CMake option + port_addr.h/port_addr.c).
 D306,FIXED,MSAA=8 produced a completely BLACK screen —,FIXED (port/fast3d/gfx_opengl.cpp) —
-D307,OPEN,Reticule jitter in aim mode (RMB) —,REVERTED (1d587c64). OPEN.
+D307,FIXED,Reticule jitter in aim mode (RMB) —,"FIXED (port/src/input.c, aimGepdCompute) —"
