@@ -174,3 +174,6 @@ D301,FIXED,macOS/arm64: crash on guard gunfire —,FIXED (port_addr.h + chr.c) �
 D302,FIXED,"macOS/arm64: six more pointer truncations, found by a static -Wint-conversion census rather than by crashing.","FIXED (model.c x4, bondview2.c x11, bg.c) —"
 D303,FIXED,"macOS/arm64: texReadUncompressed() aligned its destination through u32 ((u32 *)(((u32)dst + 0xf) & ~0xf) x3), truncating a host pointer and then writing throug…","FIXED defensively (image.c), latent not live."
 D304,OPEN,"Intermittent renderer crash, level-agnostic, observed once on Dam:","OPEN — observed once, not investigated."
+D305,FIXED,PORT_ADDR_STRICT: a debug gate that catches the whole D299-D304 family at the conversion rather than at the fault.,FIXED (new CMake option + port_addr.h/port_addr.c).
+D306,FIXED,MSAA=8 produced a completely BLACK screen —,FIXED (port/fast3d/gfx_opengl.cpp) —
+D307,OPEN,Reticule jitter in aim mode (RMB) —,REVERTED (1d587c64). OPEN.
