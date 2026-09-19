@@ -1471,12 +1471,20 @@ static int aimGepdCompute(double dxPx, double dyLook)
          * displayed crosshair shrinks by damp^ct with ct varying tick to
          * tick (frame-pacing catch-up), game= will show fluctuating shrink
          * at d=(0,0) -- the multi-tick spazz hypothesis. */
+        /* D307: `damp=`/`ctl=` added. With the mouse still, the only things that
+         * can move the DRAWN crosshair are the turn term (0 in aim mode, the
+         * port emits no stick) or a CHANGE in guncrossdamp -- the game rescales
+         * crosshair_x/y_pos by (1-old)/(1-new) whenever it changes, and our
+         * overwrite happens first, so that rescale lands on OUR value and the
+         * drawn position jumps. ctl= is controldef (KISSY while aiming, HONEY
+         * otherwise); a flip would change which damp is used. */
         sysLogPrintf(LOG_NOTE,
-            "GE_INPUTLOG gepdaim d=(%.1f,%.1f) cross=(%.2f,%.2f) game=(%.2f,%.2f) aa=(%.2f,%.2f) st=%.3f sv=%.3f ct=%d cam=(%.1f,%.1f)",
+            "GE_INPUTLOG gepdaim d=(%.1f,%.1f) cross=(%.2f,%.2f) game=(%.2f,%.2f) aa=(%.2f,%.2f) st=%.3f sv=%.3f ct=%d cam=(%.1f,%.1f) damp=%.4f ctl=%d",
             dxPx, dyLook, s_gepdCrossX, s_gepdCrossY, resX, resY,
             (double)p->autoaimx, (double)p->autoaimy,
             (double)p->speedtheta, (double)p->speedverta,
-            g_ClockTimer, (double)p->vv_theta, (double)p->vv_verta);
+            g_ClockTimer, (double)p->vv_theta, (double)p->vv_verta,
+            (double)p->guncrossdamp, (int)p->controldef);
     }
     return 1;
 }
