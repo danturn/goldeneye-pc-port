@@ -79,9 +79,22 @@ void portAddrInit(void);
 }
 #endif
 
-/* u32 N64/physical address -> live host pointer. */
+/* u32 N64/physical address -> live host pointer.
+ *
+ * N64 address 0 maps to NULL, NOT to PORT_ADDR_BASE. Offset 0 is never a
+ * mapped address (the window's lowest live region is the cart at
+ * 0x1000_0000), so base+0 lands in the reserved PROT_NONE area and faults.
+ * More importantly, game code routinely signals failure by returning an N64
+ * address of 0 and then testing the converted pointer for NULL --
+ * `p = PORT_N64PTR(T, f()); if (p != NULL) *p = ...` (e.g.
+ * chrCreateBloodStain(), objDeform()). With base+0 that test passes and the
+ * very next store faults (D301). Returning NULL restores the decomp's
+ * intended semantics. */
 static inline void *portN64ToHost(uint32_t a)
 {
+    if (a == 0) {
+        return NULL;
+    }
     if (g_portUseImageRel && a >= 0x40000000u && a < 0x70000000u) {
         return (void *)(g_portImageBase + (uintptr_t)(a - 0x40000000u));
     }
