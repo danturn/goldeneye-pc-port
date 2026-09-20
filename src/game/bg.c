@@ -5274,7 +5274,20 @@ void bgRoomCalcBB(s32 room) // canonical name
     limits.maxY = -0x7fff;
     limits.maxZ = -0x7fff;
 
+#ifdef PORT
+    /* D302: the induction variable is a full host pointer, so truncating the
+     * bound to (s32) makes the comparison false on the very first iteration
+     * once the window is based at PORT_ADDR_BASE -- the loop body never runs,
+     * `limits` keeps its sentinel init, and every room ends up with an
+     * INVERTED bounding box (min = pos + 0x7fff, max = pos - 0x7fff) below.
+     * Silent: no crash, just wrong culling/visibility for every room of every
+     * level. Byte arithmetic must be preserved (usize_point_index_binary is a
+     * byte count), so widen the cast rather than doing pointer arithmetic.
+     * Mirrors the same fix already applied at bg.c:3399. */
+    for (; vertices < (Vtx *) ((uintptr_t) g_BgRoomInfo[room].vertices + g_BgRoomInfo[room].usize_point_index_binary); vertices++)
+#else
     for (; vertices < (Vtx *) ((s32) g_BgRoomInfo[room].vertices + g_BgRoomInfo[room].usize_point_index_binary); vertices++)
+#endif
     {
         for (j = 0; j < 3; j++)
         {

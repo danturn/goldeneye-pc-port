@@ -2096,7 +2096,15 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
     for (i = 0; i < objheader->numMatrices; i++)
     {
+        #ifdef PORT
+        /* D308: (u32)render_pos truncates the host pointer (D300 class) and the
+         * sum is passed as a Mtxf* -> unbased 0x700d_xxxx, SIGSEGV in
+         * matrix_4x4_copy. &render_pos[i] is the same address at full width --
+         * the next line already uses it. Crashed the watch's Control page. */
+        matrix_4x4_copy(&modelstack.render_pos[i], &sp41c);
+        #else
         matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+        #endif
         matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
     }
 
@@ -2331,7 +2339,15 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
         for (i = 0; i < objheader->numMatrices; i++)
         {
+            #ifdef PORT
+            /* D308: (u32)render_pos truncates the host pointer (D300 class) and the
+             * sum is passed as a Mtxf* -> unbased 0x700d_xxxx, SIGSEGV in
+             * matrix_4x4_copy. &render_pos[i] is the same address at full width --
+             * the next line already uses it. Crashed the watch's Control page. */
+            matrix_4x4_copy(&modelstack.render_pos[i], &sp41c);
+            #else
             matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+            #endif
             matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
         }
 

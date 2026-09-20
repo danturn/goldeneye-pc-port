@@ -1739,9 +1739,22 @@ void texReadAlphaBits(u8 *image,s32 count)
  */
 s32 texReadUncompressed(u8 *dst, s32 width, s32 height, s32 format)
 {
+#ifdef PORT
+	/* D303: aligning a host pointer through u32 truncates it -- on arm64 dst is
+	 * ~0x1000_70xx_xxxx and these would become unbased 0x70xx_xxxx, then be
+	 * written through. Align at full pointer width instead. Identical result
+	 * where pointers are 32-bit. NOTE: currently unreachable on the PC port --
+	 * textures come from the pre-converted pccg sidecars, and a GE_D303 probe
+	 * over a full level boot recorded zero calls -- so this is latent, fixed
+	 * defensively rather than in response to an observed fault. */
+	u32 *dst32 = (u32 *)(((uintptr_t)dst + 0xf) & ~(uintptr_t)0xf);
+	u16 *dst16 = (u16 *)(((uintptr_t)dst + 7) & ~(uintptr_t)7);
+	u8 *dst8 = (u8 *)(((uintptr_t)dst + 7) & ~(uintptr_t)7);
+#else
 	u32 *dst32 = (u32 *)(((u32)dst + 0xf) & ~0xf);
 	u16 *dst16 = (u16 *)(((u32)dst + 7) & ~7);
 	u8 *dst8 = (u8 *)(((u32)dst + 7) & ~7);
+#endif
 	s32 x;
 	s32 y;
 

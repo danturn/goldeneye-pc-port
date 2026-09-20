@@ -187,6 +187,32 @@ runtime. `ge007.ini` is written under `data/` on first launch.
 On macOS the binary is `./build-pc/ge007.aarch64` (Apple Silicon) or
 `./build-pc/ge007.x86_64` (Intel).
 
+### Debugging address bugs (`PORT_ADDR_STRICT`)
+
+The port realises the N64 address space at a host base (`PORT_ADDR_BASE`,
+non-zero only on arm64 macOS). The recurring failure mode is a 32-bit value
+that is *not* a valid N64 address reaching `portN64ToHost()` — a truncated host
+pointer, or one that was never re-based. The resulting fault usually happens
+far from the cause, and sometimes there is no fault at all, just silent
+corruption.
+
+```sh
+cmake -S . -B build-strict -DROMID=ntsc-final -DPORT_ADDR_STRICT=ON
+cmake --build build-strict -j
+```
+
+Every conversion is then validated against the mapped regions and offenders are
+reported at the conversion site with a backtrace naming the caller. It is
+**off by default and compiled out entirely**, so normal builds pay nothing.
+
+To prove the detector is live rather than merely silent:
+
+```sh
+GE_ADDRSTRICT_SELFTEST=1 ./build-strict/ge007.aarch64 -level_09
+```
+
+See findings D299–D305 for the bug family this exists to catch.
+
 ### Packaging a macOS app
 
 ```sh
