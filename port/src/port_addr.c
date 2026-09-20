@@ -12,10 +12,14 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "platform.h"
 #include "system.h"
 #include "port_addr.h"
+#ifdef PORT_ADDR_STRICT
+#include <execinfo.h>
+#endif
 
 #if defined(PLATFORM_MACOS) && defined(PLATFORM_ARM)
 #include <mach/mach.h>
@@ -64,6 +68,87 @@ static void portAddrSelfTest(void)
                  ok ? "ALL PASS" : "FAILURES");
 }
 
+#ifdef PORT_ADDR_STRICT
+/*
+ * Strict address validation (-DPORT_ADDR_STRICT=1, off by default).
+ *
+ * Every bug in the D299-D303 family reaches portN64ToHost() holding a value
+ * that is not a real N64 address -- either a host pointer truncated to 32 bits
+ * or an address that was never re-based. The fault then happens later, in
+ * unrelated code, which is what made these expensive to find. This checks the
+ * value against the regions the port actually maps and reports the bad ones
+ * at the point of conversion, naming the caller.
+ *
+ * Regions (see port/include/port_addr.h and port/src/dram.c):
+ *   0x10000000..0x1fffffff  cart image + pcmodels/pccg sidecars
+ *   0x40000000..0x6fffffff  image-relative encoding (exe globals)
+ *   0x70000000..0x707fffff  DRAM V1
+ *   0x80000000..0x807fffff  DRAM V2 (KSEG0 mirror of V1)
+ *   0xa0000000..0xbfffffff  game-thread stacks
+ * Segmented DL addresses (0x00000000..0x0fffffff) never name host memory and
+ * are resolved by fast3d's seg_addr(), not here -- so they are reported too.
+ */
+static int portAddrRegionOk(uint32_t a)
+{
+    if (a >= 0x10000000u && a <= 0x1fffffffu) return 1;   /* cart + sidecars */
+    if (a >= 0x40000000u && a <= 0x6fffffffu) return 1;   /* image-relative  */
+    if (a >= 0x70000000u && a <= 0x707fffffu) return 1;   /* DRAM V1         */
+    if (a >= 0x80000000u && a <= 0x807fffffu) return 1;   /* DRAM V2         */
+    if (a >= 0xa0000000u && a <= 0xbfffffffu) return 1;   /* thread stacks   */
+    return 0;
+}
+
+/* Negative self-test: GE_ADDRSTRICT_SELFTEST=1 feeds the validator a value
+ * that is deliberately not a mapped N64 address, so a run can prove the
+ * detector is actually live rather than merely silent. */
+void portAddrStrictSelfTest(void)
+{
+    if (getenv("GE_ADDRSTRICT_SELFTEST")) {
+        sysLogPrintf(LOG_INFO, "PORT_ADDR_STRICT: self-test, expect one report below");
+        portAddrStrictCheck(0x30000000u);  /* in the gap between cart and image-rel */
+    }
+}
+
+void portAddrStrictCheck(uint32_t a)
+{
+    /* Report each distinct bad value once -- a bad pointer in a per-frame path
+     * would otherwise emit thousands of identical lines and bury the first. */
+    enum { SEEN_MAX = 64 };
+    static uint32_t seen[SEEN_MAX];
+    static int seenCount;
+    int i;
+
+    if (portAddrRegionOk(a)) {
+        return;
+    }
+
+    for (i = 0; i < seenCount; i++) {
+        if (seen[i] == a) {
+            return;
+        }
+    }
+    if (seenCount < SEEN_MAX) {
+        seen[seenCount++] = a;
+    }
+
+    sysLogPrintf(LOG_ERROR,
+                 "PORT_ADDR_STRICT: 0x%08x is not a mapped N64 address "
+                 "(-> %p). Truncated host pointer, or an address that was "
+                 "never re-based (D299-D303 class).",
+                 (unsigned)a, (void *)((uintptr_t)PORT_ADDR_BASE + (uintptr_t)a));
+#if defined(PLATFORM_MACOS) || defined(__APPLE__) || defined(__linux__)
+    {
+        void *bt[24];
+        int n = backtrace(bt, (int)(sizeof(bt) / sizeof(bt[0])));
+        /* Skip frame 0 (this function); the caller is what matters. */
+        if (n > 1) {
+            backtrace_symbols_fd(bt + 1, n - 1, 2);
+        }
+    }
+#endif
+}
+#endif /* PORT_ADDR_STRICT */
+
 void portAddrInit(void)
 {
     g_portImageBase = sysImageBase();
@@ -107,4 +192,8 @@ void portAddrInit(void)
                  (unsigned long long)g_portImageBase, g_portUseImageRel);
 
     portAddrSelfTest();
+
+#ifdef PORT_ADDR_STRICT
+    portAddrStrictSelfTest();
+#endif
 }

@@ -3584,10 +3584,15 @@ after_opcode:
     }
 
 #ifdef PORT
-    /* PC port (D43/D45): CollisionRelatedNode is a raw vma (u32), not a pointer. */
-    relatednode = (ModelNode *)(uintptr_t)((ModelRoData_DisplayList_CollisionRecord *) node)->CollisionVertices[bestindex].CollisionRelatedNode;
+    /* PC port (D43/D45): CollisionRelatedNode is a raw vma (u32), not a pointer.
+     * D301: that vma is an N64 address (the port stores window pointers as
+     * 32-bit values, and PORT_ADDR_BASE is 4 GiB-aligned, so the low 32 bits
+     * ARE the N64 address), so it must be re-based like every other
+     * address-carrying field -- a bare cast leaves it as 0x7070_xxxx and the
+     * &relatednode->Data deref below faults. Test the re-based pointer. */
+    relatednode = PORT_N64PTR(ModelNode, ((ModelRoData_DisplayList_CollisionRecord *) node)->CollisionVertices[bestindex].CollisionRelatedNode);
 
-    if (((ModelRoData_DisplayList_CollisionRecord *) node)->CollisionVertices[bestindex].CollisionRelatedNode != 0)
+    if (relatednode != NULL)
 #else
     relatednode = (ModelNode *) ((ModelRoData_DisplayList_CollisionRecord *) node)->CollisionVertices[bestindex].CollisionRelatedNode;
 
