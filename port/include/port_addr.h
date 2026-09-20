@@ -36,15 +36,22 @@
 #include <stdint.h>
 #include "platform.h"
 
+#ifndef PORT_ADDR_BASE
 #if defined(PLATFORM_MACOS) && defined(PLATFORM_ARM)
 /* 16 TiB: reserved cleanly on Apple Silicon, far above libmalloc's regions and
  * the mmap hint area, and well below fast3d_ptr_ok()'s 128 TiB bound. The
- * committed port/src/*.darwin.s files are generated with the SAME base
- * (scripts/gen_romassets.py --darwin --base 0x100000000000); portAddrInit()
- * checks the two agree at startup. */
+ * generated Mach-O symbol files are produced with the SAME base (CMake's
+ * PORT_ADDR_BASE cache var, fed to scripts/gen_macho_syms.py --base);
+ * portAddrInit() checks the two agree at startup via cfb_16.
+ *
+ * Overridable from CMake (-DPORT_ADDR_BASE=...) for tooling that needs the
+ * window somewhere else -- e.g. an AddressSanitizer build, whose shadow
+ * region overlaps 16 TiB (it covers 0x027e00024000..0x10700001ffff, so a
+ * sanitizer build uses a LowMem base like 0x4000000000). */
 #define PORT_ADDR_BASE 0x100000000000ULL
 #else
 #define PORT_ADDR_BASE 0x0ULL
+#endif
 #endif
 
 /* Size of the N64 address space. */
@@ -95,6 +102,16 @@ static inline uint32_t portHostToN64(const void *p)
         return (uint32_t)(0x40000000u + (v - g_portImageBase));
     }
     return (uint32_t)v;
+}
+
+/* Is a host pointer inside the N64 address window (DRAM / cart / stacks)?
+ * Use this instead of hardcoded numeric bounds: the window is shifted by
+ * PORT_ADDR_BASE on arm64, so an absolute bound that is correct on x86_64
+ * silently rejects every real pointer there. */
+static inline int portAddrIsInWindow(const void *p)
+{
+    uintptr_t v = (uintptr_t)p;
+    return v - (uintptr_t)PORT_ADDR_BASE < (uintptr_t)PORT_ADDR_WINDOW;
 }
 
 /* Cast-site helper for game code (the D3x ABI/layout class): reads a 32-bit
