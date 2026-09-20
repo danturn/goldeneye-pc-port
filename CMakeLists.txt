@@ -363,12 +363,22 @@ elseif(UNIX AND NOT APPLE)
   # This is the ELF analogue of the Windows build's fixed 0x140000000 base.
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Ttext-segment=0x20000000")
 elseif(APPLE)
-  # Mach-O executables normally reserve [0, 4 GiB) as __PAGEZERO. The port
-  # needs fixed mappings at 0x10000000 (ROM), 0x70000000 (s32-safe DRAM), and
-  # 0x80000000 (KSEG0 mirror), so retain null/low-pointer protection only up
-  # while leaving ample space before the first required mapping.
-  set(CMAKE_EXE_LINKER_FLAGS
-    "${CMAKE_EXE_LINKER_FLAGS} -Wl,-pagezero_size,0x10000")
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+    # Apple Silicon: shrinking __PAGEZERO gets the process SIGKILLed at exec
+    # and PIE is mandatory, so the fixed N64 mappings (0x10000000 / 0x70000000
+    # / 0x80000000) are impossible. The whole N64 address space is instead
+    # shifted to PORT_ADDR_BASE and reserved PROT_NONE by portAddrInit()
+    # (port/include/port_addr.h, docs/dev/MACOS-ARM64-PLAN.md).
+    set(PORT_ADDR_BASE 0x100000000000)
+  else()
+    # Intel: Mach-O normally reserves [0, 4 GiB) as __PAGEZERO. The port needs
+    # fixed mappings at 0x10000000 (ROM), 0x70000000 (s32-safe DRAM), and
+    # 0x80000000 (KSEG0 mirror), so retain null/low-pointer protection only up
+    # while leaving ample space before the first required mapping.
+    set(CMAKE_EXE_LINKER_FLAGS
+      "${CMAKE_EXE_LINKER_FLAGS} -Wl,-pagezero_size,0x10000")
+    set(PORT_ADDR_BASE 0x0)
+  endif()
 endif()
 
 # port/shim first: PC-only shadow headers (bondtypes.h, bondconstants.h,
@@ -475,6 +485,7 @@ if(APPLE)
     OUTPUT "${SRC_ROMASSETS}"
     COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_SOURCE_DIR}/scripts/gen_macho_syms.py"
+            --base "${PORT_ADDR_BASE}"
             "${SRC_ROMASSETS_INPUT}" "${SRC_ROMASSETS}"
     DEPENDS "${SRC_ROMASSETS_INPUT}"
             "${CMAKE_SOURCE_DIR}/scripts/gen_macho_syms.py"
@@ -483,6 +494,7 @@ if(APPLE)
     OUTPUT "${SRC_DRAM_SYMS}"
     COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_SOURCE_DIR}/scripts/gen_macho_syms.py"
+            --base "${PORT_ADDR_BASE}"
             "${SRC_DRAM_SYMS_INPUT}" "${SRC_DRAM_SYMS}"
     DEPENDS "${SRC_DRAM_SYMS_INPUT}"
             "${CMAKE_SOURCE_DIR}/scripts/gen_macho_syms.py"

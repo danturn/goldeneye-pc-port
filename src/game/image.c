@@ -414,7 +414,7 @@ s32 texAlignIndices(u8 *src, s32 width, s32 height, s32 format, u8 *dst)
             src++;
         }
 
-        outptr = (u8 *)(((u32)outptr + 7) & ~7);
+        outptr = (u8 *)(((uintptr_t)outptr + 7) & ~(uintptr_t)7);
     }
 
     return outptr - dst;
@@ -2462,7 +2462,7 @@ void texLoadFromDisplayList(Gfx *gdl, struct texpool *arg1)
         if (bytes[0] == G_SETTIMG && bytes[4] == 0xab && bytes[5] == 0xcd)
 #endif
         {
-            texLoad((u32 *)((s32)bytes + 4), arg1);
+            texLoad((u32 *)(bytes + 4), arg1);
         }
 
         bytes += 8;

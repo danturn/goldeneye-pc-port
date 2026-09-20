@@ -1,4 +1,9 @@
 #include <ultra64.h>
+#if defined(PORT)
+#include "port_addr.h"
+#else
+#define PORT_N64PTR(T, x) ((T *)(x))
+#endif
 #ifdef PORT
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,8 +92,15 @@
 
 
 #if defined(VERSION_US)
+    /* D298/M2: the font-table globals are s32 holding truncated pointers
+     * (D88 class); re-base on use. Identity at PORT_ADDR_BASE == 0. */
+#if defined(PORT)
+    #define BONDVIEW_2ND_FONTTABLE(_param) PORT_N64PTR(void, copy_2ndfonttable)
+    #define BONDVIEW_1ST_FONTTABLE(_param) PORT_N64PTR(void, copy_1stfonttable)
+#else
     #define BONDVIEW_2ND_FONTTABLE(_param) copy_2ndfonttable
     #define BONDVIEW_1ST_FONTTABLE(_param) copy_1stfonttable
+#endif
 #elif defined(VERSION_JP) || defined(VERSION_EU)
     #define BONDVIEW_2ND_FONTTABLE(_param) dword_CODE_bss_jp80079CEC[_param]
     #define BONDVIEW_1ST_FONTTABLE(_param) dword_CODE_bss_jp80079Cd8[_param]
@@ -717,7 +729,7 @@ void solo_char_load(void)
                 pitemheader = NULL;
             }
 
-            something_with_generating_object(self, prop, item, 0, (WeaponObjRecord *)helddst, (ItemModelFileRecord *)pitemheader);
+            something_with_generating_object(self, prop, item, 0, PORT_N64PTR(WeaponObjRecord, helddst), (ItemModelFileRecord *)pitemheader);
         }
 
         chrlvMergeKneelToStand(self, 0.0f);
@@ -975,7 +987,7 @@ void bondviewSetCameraMode(s32 arg0)
             solo_char_load();
 
             // HACK: ptr_animation_table->data regalloc is backwards
-            sp38 = (struct ModelAnimation *)((s32)stage_intro_anim_table[g_IntroAnimationIndex].anonymous_0 + (s32)&ptr_animation_table->data);
+            sp38 = PORT_N64PTR(struct ModelAnimation, (s32)stage_intro_anim_table[g_IntroAnimationIndex].anonymous_0 + (s32)&ptr_animation_table->data);
             sp78 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_2;
             ftemp_1 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_1;
             ftemp_3 = stage_intro_anim_table[g_IntroAnimationIndex].anonymous_3;
@@ -1220,7 +1232,15 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
 {
     struct SetupIntroSwirl *base;
     struct SetupIntroSwirl *loopbase;
+#if defined(PORT)
+    /* D189/D298: written pointbuf[0..11] via `&pointbuf[i*3]` then dst[3..5]
+     * (i = -1..2), but declared [10] -- a 2-float stack overrun that on arm64
+     * corrupts the saved frame pointer (Fp=0x374d56eac1a00000 at the fault).
+     * N64/MinGW absorb it; give it room on the port. */
+    f32 pointbuf[12];
+#else
     f32 pointbuf[10];
+#endif
     struct SetupIntroSwirl *swirl;
     f32 frac;
     f32 *dst;
@@ -1311,7 +1331,7 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
         lookat->y = g_CurrentPlayer->field_3C8;
         lookat->z = g_CurrentPlayer->field_3CC;
 
-        swirl = (void *)(((u32) g_IntroSwirl) + (u32) base);
+        swirl = (void *)(((uintptr_t) g_IntroSwirl) + (uintptr_t) base); /* D298/M2: full-width */
 
         if (!(swirl->bitflags & 4))
         {
@@ -1365,13 +1385,13 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
 #if defined(VERSION_US)
                 setFontTables(ptrFontZurichBoldChars, ptrFontZurichBold);
 #ifdef PORT
-                hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang1c.lang_ptr);
+                hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang1c.lang_ptr));
 #else
                 hudmsgBottomShow(ptr_random06cam_entry->lang1c.lang_ptr);
 #endif
 #else
 #ifdef PORT
-                hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang1c.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
+                hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang1c.lang_ptr), ptrFontZurichBoldChars, ptrFontZurichBold);
 #else
                 hudmsgBottomShow(ptr_random06cam_entry->lang1c.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
 #endif
@@ -1384,13 +1404,13 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
                 {
 #if defined(VERSION_US)
 #ifdef PORT
-                    hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang20.lang_ptr);
+                    hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang20.lang_ptr));
 #else
                     hudmsgBottomShow(ptr_random06cam_entry->lang20.lang_ptr);
 #endif
 #else
 #ifdef PORT
-                    hudmsgBottomShow((char *)(uintptr_t)ptr_random06cam_entry->lang20.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
+                    hudmsgBottomShow(PORT_N64PTR(char, ptr_random06cam_entry->lang20.lang_ptr), ptrFontZurichBoldChars, ptrFontZurichBold);
 #else
                     hudmsgBottomShow(ptr_random06cam_entry->lang20.lang_ptr, ptrFontZurichBoldChars, ptrFontZurichBold);
 #endif
@@ -7969,6 +7989,7 @@ void bondviewFrozenMoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
         return;
     }
 
+    room_pointer_tile = (struct StandTile *)0;
     bondviewFrozenCameraTick(buttons, oldbuttons, &property_pos, &property_pos2, &property_offset, &room_pointer_tile, &stan_walk_start);
     currentPlayerSetCameraMode(1);
     bondviewSetCurrentPlayerPosition(&property_pos, &property_pos2, &property_offset, room_pointer_tile, &stan_walk_start);
@@ -8418,12 +8439,12 @@ void bondviewUpdateCameraMatrices(coord3d* cam_pos, coord3d* cam_look_dir, coord
         clpos.x, clpos.y, clpos.z,
         cam_up->x, cam_up->y, cam_up->z);
 
-    matrix_4x4_set_lookat((Mtxf*) g_CurrentPlayer->field_64,
+    matrix_4x4_set_lookat(PORT_N64PTR(Mtxf, g_CurrentPlayer->field_64),
         cam_pos->x, cam_pos->y, cam_pos->z,
         cam_look_dir->x, cam_look_dir->y, cam_look_dir->z,
         cam_up->x, cam_up->y, cam_up->z);
 
-    matrix_4x4_set_basis_and_position((Mtxf*) g_CurrentPlayer->field_68,
+    matrix_4x4_set_basis_and_position(PORT_N64PTR(Mtxf, g_CurrentPlayer->field_68),
         cam_pos->x, cam_pos->y, cam_pos->z,
         cam_look_dir->x, cam_look_dir->y, cam_look_dir->z,
         cam_up->x, cam_up->y, cam_up->z);
@@ -8454,13 +8475,13 @@ void bondviewUpdateCameraMatrices(coord3d* cam_pos, coord3d* cam_look_dir, coord
     scale = bgGetLevelVisibilityScale();
 
     matrix_scalar_multiply(scale, spC4.m[0]);
-    guMtxF2L((f32 (*)[4]) &spC4, (Mtx* ) g_CurrentPlayer->field_5C);
-    sub_GAME_7F059334((s32* ) g_CurrentPlayer->field_5C, (s32* ) g_CurrentPlayer->field_60);
+    guMtxF2L((f32 (*)[4]) &spC4, PORT_N64PTR(Mtx, g_CurrentPlayer->field_5C));
+    sub_GAME_7F059334(PORT_N64PTR(s32, g_CurrentPlayer->field_5C), PORT_N64PTR(s32, g_CurrentPlayer->field_60));
 
-    currentPlayerSetMatrix10C8((Mtx* ) g_CurrentPlayer->field_5C);
-    currentPlayerSetMatrix10C4((Mtx* ) g_CurrentPlayer->field_60);
-    currentPlayerSetMatrix10CC((Mtxf* ) g_CurrentPlayer->field_64);
-    currentPlayerSetViewToWorldMtxf((Mtxf* ) g_CurrentPlayer->field_68);
+    currentPlayerSetMatrix10C8(PORT_N64PTR(Mtx, g_CurrentPlayer->field_5C));
+    currentPlayerSetMatrix10C4(PORT_N64PTR(Mtx, g_CurrentPlayer->field_60));
+    currentPlayerSetMatrix10CC(PORT_N64PTR(Mtxf, g_CurrentPlayer->field_64));
+    currentPlayerSetViewToWorldMtxf(PORT_N64PTR(Mtxf, g_CurrentPlayer->field_68));
 
     sub_GAME_7F078464((s32) lookat);
     bondviewUpdateFrustumPlanes();
@@ -10210,7 +10231,13 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
             }
 
             view_vert = view_top - view_top_offset;
+#ifdef PORT
+            /* D298/M2: the (s32) casts are an N64 match hack; on the port they
+             * truncate stack pointers. Pass them at full width. */
+            arg0 = draw_blackbox_to_screen(arg0, &view_left, &view_vert, &view_horiz, &view_top);
+#else
             arg0 = draw_blackbox_to_screen(arg0, (s32) &view_left, (s32) &view_vert, (s32) &view_horiz, (s32) &view_top);
+#endif
             arg0 = combiner_bayer_lod_perspective(textRenderOutlined(arg0, &view_left, &view_vert, stringbuffer_lowerleft[status_bar_text_buffer_index], BONDVIEW_2ND_FONTTABLE(status_bar_text_buffer_index), BONDVIEW_1ST_FONTTABLE(status_bar_text_buffer_index), -1, 0x646464FFU, (s16) (s32) viGetX(), (s16) viGetY(), 0, 0));
         }
     }
@@ -11223,7 +11250,7 @@ void sub_GAME_7F08BEEC(Mtxf *matrices, s32 count)
 
     for (i = 0, j = 0; i < count; i++, j += sizeof(Mtxf))
     {
-        matrix_4x4_multiply_homogeneous(currentPlayerGetViewToWorldMtxf(), (Mtxf *)((u32)matrices + j), &sp40);
+        matrix_4x4_multiply_homogeneous(currentPlayerGetViewToWorldMtxf(), (Mtxf *)((uintptr_t)matrices + j), &sp40); /* D298/M2 */
 
         sp40.m[3][0] -= g_CurrentPlayer->current_model_pos.f[0];
         sp40.m[3][1] -= g_CurrentPlayer->current_model_pos.f[1];
