@@ -579,9 +579,20 @@ Record as a `Dxx`.
 | Research | done | §1 F1–F18, measured 2026-09-18 |
 | M0 | **superseded by #88** | the clang build/toolchain work is replaced by PR #88's GCC-based macOS layer; only D296 + `gen_macho_syms --base` survive (§0b) |
 | M1 | **done** | shifted-window address model (D298); self-test ALL PASS on the #88 base |
-| M2 | **in progress** | game-code re-basing sweep; boot reaches the level stage load |
-| M3 | partly inherited | #88 supplies the AppKit main-thread guard; the two Core-profile GL fixes and the level sweep remain |
-| M4 | not started | packaging / CI / docs |
+| M2 | **done** | game-code re-basing sweep complete; **21/21 solo levels boot, render and run crash-free**, including with full controller input |
+| M3 | **done (core)** | #88's AppKit main-thread guard; `tools_pc/level_sweep_mac.sh` (crash + rendered-pixel check); the two Core-profile GL nits are cosmetic and parked in `docs/dev/GRAPHICS-BACKLOG.md` |
+| M4 | **done (core)** | `tools_pc/bundle-mac.sh` → signed, double-clickable `GoldenEye.app` (+ zip/sha256); `docs/building.md` macOS section + `tools_pc/README.md`. Outstanding: CI for macOS, and a live run of the `.app` from Finder |
+
+**Verified state (2026-09-18).** `build-pc/ge007.aarch64` (Homebrew GCC 16.2)
+opens a window, renders, plays music **and sound effects**, and runs every solo
+level crash-free:
+
+- `tools_pc/level_sweep_mac.sh` — 21/21, all with non-clear pixels
+  (76–92%).
+- Full-control sweep (`GE_INPUTSCRIPT`: every button + 8-way stick, 26 s per
+  level) — 21/21, with SFX voices allocating on every level.
+- Findings D294–D300; D299 (silent SFX) and D300 (stage-unload truncation)
+  were both arm64-specific and are fixed.
 
 ### Prerequisites to run (easy to miss)
 

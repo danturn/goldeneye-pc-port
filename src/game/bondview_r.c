@@ -347,7 +347,7 @@ void bondviewLoadSetupIntroSection(void)
                     intro_credits = (struct SetupIntroCredits*)intro_record;
 
                     // hack: bad address math
-                    credits = (CreditsEntry*)((s32)g_ptrStageSetupFile + (s32)intro_credits->unk04);
+                    credits = PORT_N64PTR(CreditsEntry, (s32)g_ptrStageSetupFile + (s32)intro_credits->unk04);
                     credits_pointer = credits;
 
                     // what is the point of this?
