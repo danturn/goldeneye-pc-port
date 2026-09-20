@@ -459,8 +459,13 @@ u8 * langGet(s32 slotID)
 #endif
     u32 textslot_offset = textbank_ptr[slotID & 0x03FF]; /* load the textbank ptr table then get the slot's offset */
 
+#if defined(PORT)
+    /* D298/M2: keep the bank base at full pointer width. */
+    uintptr_t output_slot = (uintptr_t)textbank_ptr + textslot_offset; /* base + slot offset */
+#else
     u32 output_slot = textslot_offset; /* add the text slot offset to the base ptr to get the ptr to text file's slot */
     output_slot += (u32)textbank_ptr;
+#endif
     #ifdef DEBUG
     return (textslot_offset != 0) ? (u8 *)output_slot : "Sorry, string not loaded.";
     #endif

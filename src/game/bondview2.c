@@ -4586,7 +4586,7 @@ void bondviewMoveAnimationTick(f32 speed, f32 speedforwards, f32 speedsideways)
             // HACK: ptr_animation_table dereference addition is backwards.
             // this should be:
             // ptr_animation_table->data[g_bondviewBondDeathAnimations[((u32) randomGetNext() % (u32) g_bondviewBondDeathAnimationsCount)]]
-            bheadStartDeathAnimation((struct ModelAnimation *) ((s32)g_bondviewBondDeathAnimations[((u32) randomGetNext() % (u32) g_bondviewBondDeathAnimationsCount)] + (s32)&ptr_animation_table->data[0]), randomGetNext() & 1, 0.0f, 1.0f);
+            bheadStartDeathAnimation(PORT_N64PTR(struct ModelAnimation, (s32)g_bondviewBondDeathAnimations[((u32) randomGetNext() % (u32) g_bondviewBondDeathAnimationsCount)] + (s32)&ptr_animation_table->data[0]), randomGetNext() & 1, 0.0f, 1.0f);
             g_CurrentPlayer->startnewbonddie = FALSE;
         }
 

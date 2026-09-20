@@ -3566,7 +3566,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                 if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin), (s32 *) (&bboxMax)))
                 {
-                    if (intersectRayTriangle((Vertex *)((s32)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * 24) + ((uintptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
+                    if (intersectRayTriangle((Vertex *)((uintptr_t)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((uintptr_t)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((uintptr_t)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * 24) + ((uintptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
                     {
                         tcmd = gdl;
                         dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -3749,7 +3749,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                         if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin2), (s32 *) (&bboxMax2)))
                         {
-                            if (intersectRayTriangle((Vertex *)((s32)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * 24) + ((uintptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
+                            if (intersectRayTriangle((Vertex *)((uintptr_t)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((uintptr_t)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((uintptr_t)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * 24) + ((uintptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
                             {
                                 tcmd = gdl;
                                 dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);

@@ -896,6 +896,16 @@ struct anim_group_info *ptr_doubles_firing_animation_groups[] = {
 
 struct weapon_firing_animation_table crouched_rifle_firing_animation_group1[] = {
     { PTR_ANIM_fire_kneel_right_leg, 27.0, 0, 0, 0, -1.0, 35.0, 75.0, -1.0, -1.0, 31.0, 75.0, 0.87266463, -0.69813174, 0.90757126, -0.69813174, 1.5, 1.5 },
+#if defined(PORT)
+    /* D298: every other *_firing_animation_groupN[] is zero-terminated;
+     * initResolveAnimGroupTable() walks to that 0, so without one here it runs
+     * into the next global (crouched_rifle_firing_animation_groupA) and
+     * over-counts `len`. On N64 the 72-byte stride happens to stop it; on PC
+     * the 80-byte stride runs several globals deep, so `len` allows a
+     * `next_anim` past the array and the guard-attack path reads a bogus
+     * animation. N64 build unchanged. */
+    {0, 0.0, 0, 0, 0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
+#endif
 };
 
 struct weapon_firing_animation_table crouched_rifle_firing_animation_groupA[] = {
