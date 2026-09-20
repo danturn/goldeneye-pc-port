@@ -561,6 +561,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D258 | **PAL/JP asset conversion is broken at the source-data level — `scripts/filelist.e.csv` and `filelist.j.csv` carry naming defects, so `gen_romassets.py e/j` (and…** — full `## D258` entry at file tail | OPEN — repair path verified, not applied (out of v0.2.0 scope). |
 | D285 | **Steam Deck SIGSEGV during D255 live-testing = SEPARATE bug: the `sndHandleEvent` preempt-scan walks the active-sound list unlocked (M-140; fixed M-141).** — full `## D285` entry at file tail | **FIXED (M-141, `src/snd.c`)** — `osSetIntMask` lock added around the preempt-scan, matching `sndSetupSound`'s existing unconditional (no `#ifdef PORT`) pattern in the same file; build green, `-level_09`/`-level_20` unregressed (1400+ frames, no crash, no D152 lock-stuck warnings). Not yet gdb/live-confirmed against a real reproduced crash — see M-141 body. Do not conflate with D255 — different thread, different subsystem. |
 | D293 | **QoL ask: no discoverable way to quit the game from the UI (M-141, Steam Deck user playtest — "couldn't see a way to exit the game. Maybe build this into the…** — full `## D293` entry at file tail | FIXED (M-141) — "Quit to desktop" row added to the F10 overlay; build-verified Win+Linux, not yet live-confirmed.… |
+| D294 | **Third-person Bond model floats ~495 units above ground in every level's intro/cutscene (D173, M-142).** `solo_char_load()` (`src/game/bondview2.c`) builds the player body `Model` and its RW-data pool back-to-back in `weaponbuf0`; the cursor advance `ALIGN64_V3(cursor + 0xfb)` is the N64 `sizeof(Model)+0x3f` trick (`ALIGN64_V3` rounds *down*, so `0xfb` → `0xC0`). PC `sizeof(struct Model)=0xE8` (pointer-grown), so the pool started at `model+0xC0` — **inside** the struct, overlapping its last `0x28` bytes including `anim_translation_scale`@`0xE0`. `init_GUARDdata_with_set_values` → `setsubroty()` then wrote the spawn yaw into the Header record's `unk14`/`unk30`/`unk20`, aliasing `anim_translation_scale` → root-motion scale stomped `1.04` → `4.7` (probe: `xlscale` jumps the instant `setsubroty` runs), scaling the anim-root Y ~4.5×, model root at Y=388 vs ground −107. The same alias swallowed the model's rotation fields (the "Bond spins in circles" report). **Fix:** `cursor = ALIGN64_V3(cursor + sizeof(Model) + 0x3f)` under `#ifdef PORT` (identical to `0xfb` on N64 since `sizeof≈0xBC`). | **FIXED (M-142)** — build green; live captures across Dam/Facility/Runway/Bunker1/Frigate show Bond grounded; `xlscale` stays `1.0403`, root Y drops 388→2.5. Full entry + media in the PR. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -10149,3 +10150,33 @@ do {
 ## D293 — QoL ask (M-141, Steam Deck user playtest): no discoverable way to quit the game from the UI on a controller-only setup
 **Context.** Deck/controller-only setups had only window-close/Alt+F4 to quit; no in-UI affordance.
 **FIXED.** Added a `ROW_ACTION` row kind (not config-backed, same pattern as the existing `__Resolution` row) to the F10 options overlay ("Quit to desktop") that triggers the identical `configSave()`+`exit(0)` path `SDL_QUIT` already uses. Build-verified on Windows and Linux; `verify.sh dam` PASS, no regression.
+
+## D294 — Third-person Bond model floats above the ground in cutscenes (D173): RW-data pool overlaps the pointer-grown PC `Model` struct
+
+**Symptom (D173, open since M-27).** The player-representing figure shown in level-start intros and scripted cutscenes renders ~495 world units above the ground ("Bond floating in the sky"), and in some cutscenes spins in place. First-person play is unaffected (the body model isn't drawn), and the actual player/camera state is correct — a pure render-side model defect. Reproduced on `-level_33` (Dam) intro: model root `Header.pos.y = 388`, ground `-107`.
+
+**Root cause (ABI/layout class, cf. D53.2/D57/D100/D140).** `solo_char_load()` (`src/game/bondview2.c:542`) builds the body `Model` and its RW-data pool contiguously in `weaponbuf0`:
+
+```c
+model  = (Model *)(weaponbuf0 + cursor);
+cursor = ALIGN64_V3(cursor + 0xfb);      /* N64: sizeof(Model)+0x3f, rounds down -> 0xC0 */
+...
+animdata = (u32 *)(weaponbuf0 + cursor); /* RW pool */
+animInit(model, bodyheader, animdata);
+```
+
+`ALIGN64_V3` is `(v|0x3f)^0x3f` — it rounds **down**. On N64 `sizeof(struct Model) ≈ 0xBC`, so `0xfb` yields a `0xC0` advance and the pool sits just past the struct. On PC `sizeof(struct Model) = 0xE8` (three pointers grew), so the pool starts at `model+0xC0`, **inside** the Model — overlapping the struct's last `0x28` bytes, which include `anim_translation_scale` at `0xE0`. The Header RW record lives in that pool, so `init_GUARDdata_with_set_values` → `setsubroty()` (and `setsuboffset`) writing `rwdata->unk14`/`unk30`/`unk20` land on `anim_translation_scale` (and neighbours) instead. Probes confirmed: `datas - model = 0xC0`, and `xlscale` jumps `1.0403 → 4.7` the instant `setsubroty` runs during `solo_char_load`.
+
+**Effect.** `modelSetAnimFrame2WithChrStuff` scales the animation's root translation by `model->scale * model->anim_translation_scale` (`model.c:3145`); the stomped scale inflated the anim-root Y ~4.5× (`unk34.y = 495` vs the authored `109`), lifting the whole body. The same alias overwrote the model's rotation fields, which is the "Bond spins in circles" report (end-of-Cradle).
+
+**Fix** (`src/game/bondview2.c`, `#ifdef PORT`):
+
+```c
+cursor = ALIGN64_V3(cursor + sizeof(Model) + 0x3f);
+```
+
+Behaviour-identical on N64 (`sizeof(Model) ≈ 0xBC` → same `0xC0`); on PC it places the pool at `model+0x100`, past the `0xE8` struct.
+
+**Verification (M-142).** Build green. Probe: `xlscale` stays `1.0403` through `setsubroty`; model root Y `388 → 2.5` (ground `-107`); `[D173SL]` delta `0xC0 → 0x100`. Live frame captures of the intros for Dam, Facility, Runway, Bunker1 and Frigate all show Bond standing/walking on the ground. Media attached to the PR.
+
+**Not covered.** The Cuba end-credits cast roster is a separate path (`front.c` `constructor_menu18_displaycast` → `makeonebody` → `modelmgrInstantiateModelWithAnim`, which allocates its RW pool separately), so it is not affected by this overlap; the "JB above Natalya" credits report, if still present, is a distinct cause.

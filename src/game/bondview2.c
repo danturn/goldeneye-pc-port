@@ -519,7 +519,20 @@ void solo_char_load(void)
                 load_object_fill_header(headheader, (u8 *)c_item_entries[head].filename, weaponbuf0 + cursor, size0 - cursor, &pool);
                 cursor = ALIGN64_V3(get_pc_buffer_remaining_value((u8 *)c_item_entries[head].filename) + cursor + 0x3f);
                 model  = (Model *)(weaponbuf0 + cursor);
+#ifdef PORT
+                /* D294/D173: `0xfb` is the N64 `sizeof(Model)+0x3f` advance —
+                 * ALIGN64_V3 rounds DOWN, so it moves the cursor 0xC0 and the
+                 * RW pool below lands just past the struct. PC sizeof(Model)
+                 * is 0xE8 (pointer-grown), so the pool started INSIDE it,
+                 * aliasing anim_translation_scale@0xE0 and the Header
+                 * unk14/unk30/unk20 fields that setsuboffset/setsubroty write;
+                 * setsubroty then stomped the root-motion scale (1.04 → 4.7)
+                 * and floated the body ~495 units up in cutscenes. Advance by
+                 * the real size. Identical to 0xfb on N64 (sizeof ~0xBC). */
+                cursor = ALIGN64_V3(cursor + sizeof(Model) + 0x3f);
+#else
                 cursor = ALIGN64_V3(cursor + 0xfb);
+#endif
                 modelCalculateRwDataLen(bodyheader);
                 modelCalculateRwDataLen(headheader);
 

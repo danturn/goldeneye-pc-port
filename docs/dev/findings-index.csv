@@ -163,3 +163,4 @@ D265,?,"D236 investigation (port-layer, port/fast3d/gfx_pc.cpp):",PARKED — rev
 D258,OPEN,PAL/JP asset conversion is broken at the source-data level —,"OPEN — repair path verified, not applied (out of v0.2.0 scope)."
 D285,FIXED,Steam Deck SIGSEGV during D255 live-testing = SEPARATE bug:,"FIXED (M-141, src/snd.c) —"
 D293,FIXED,"QoL ask: no discoverable way to quit the game from the UI (M-141, Steam Deck user playtest —","FIXED (M-141) — ""Quit to desktop"" row added to the F10 overlay; build-verified Win+Linux, not yet live-confirmed.…"
+D294,FIXED,"Third-person Bond model floats ~495 units above ground in every level's intro/cutscene (D173, M-142).","FIXED (M-142) — build green; live captures across Dam/Facility/Runway/Bunker1/Frigate show Bond grounded; xlscale stays 1.0403, root Y drops 388→2.5."
