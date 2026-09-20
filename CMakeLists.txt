@@ -73,6 +73,12 @@ else()
   set(PORT_ADDR_BASE 0x0 CACHE STRING "Host base of the N64 address window")
 endif()
 
+# Debug gate: validate every u32 -> host-pointer conversion against the regions
+# the port actually maps, and report offenders at the conversion site with a
+# backtrace. Off by default (zero cost); enable with -DPORT_ADDR_STRICT=ON.
+# Catches the D299-D303 truncated/never-rebased-pointer family early.
+option(PORT_ADDR_STRICT "Validate N64->host address conversions at runtime" OFF)
+
 include(TargetArch)
 include(FindPkgConfig)
 
@@ -259,6 +265,10 @@ add_definitions(
   -DPORT_ADDR_BASE=${PORT_ADDR_BASE}
   ${REGION_DEFS}
 )
+if(PORT_ADDR_STRICT)
+  add_definitions(-DPORT_ADDR_STRICT=1)
+  message(STATUS "PORT_ADDR_STRICT enabled: N64->host conversions are validated at runtime")
+endif()
 if(TARGET_IS_64BIT)
   add_definitions(-DPLATFORM_64BIT=1)
 endif()

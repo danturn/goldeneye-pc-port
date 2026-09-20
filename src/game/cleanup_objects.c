@@ -23,6 +23,7 @@
 
 void cleanupObjects(s32 stage)
 {
+#ifdef PORT
     /* D300: the decomp's `(u32)g_CurrentSetup.propDefs` converts the pointer
      * to a 32-bit integer and back into a `u32 *` -- a no-op where pointers
      * are 32-bit (N64), but on the 64-bit port it TRUNCATES the host pointer
@@ -32,6 +33,9 @@ void cleanupObjects(s32 stage)
      * pointer-to-pointer and keep `u32 *` for sizepropdef()'s 4-byte-unit
      * increment. Same class as D3x; semantics unchanged. */
     u32 *obj = (u32 *)g_CurrentSetup.propDefs;
+#else
+    u32 *obj = (u32)g_CurrentSetup.propDefs;
+#endif
 
     if (obj)
     {
