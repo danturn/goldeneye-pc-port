@@ -3,7 +3,7 @@
 Every `getenv("GE_…")` in the tree. The table prose is hand-curated;
 **`tools_pc/gen_env_probes.py`** re-greps the live sites and reports drift
 (NEW / GONE vars + a fresh file:line map) — run it before trusting the
-File:line cells. Last reconciled 2026-09-21 (GE_D235 added, D235 fix wired; GE_D288 refined per M-155 follow-up). All are **env-gated**: unset = zero behavior
+File:line cells. Last reconciled 2026-09-21 (GE_D235 added, D235 fix wired; GE_D288 refined per M-155 follow-up; GE_D75V added for the Nintendo-logo vertex-slot investigation, M-195). All are **env-gated**: unset = zero behavior
 change, so they are safe to leave in a release build (they only cost a
 `getenv` on the guarded path). "Dead" below means *the finding it was built
 for is closed* — the probe is strip-candidate scaffolding, not that it does
@@ -72,6 +72,7 @@ Two classes:
 | `GE_D245_FIXEDSHIFT` | `src/game/sky.c:946` (`#ifdef PORT`) | D245 test override: pins the water tc shift `k` to the given integer (0..SKY_TC_MAX_SHIFT) instead of the computed per-vertex value, to A/B the allowShift=TRUE behavior. Off by default (unset = current behavior). | **live, test-only** (D245 OPEN) |
 | `GE_D252` | `port/fast3d/gfx_pc.cpp:733` (`import_texture`, cached `s_d252`) | D252 rainbow-particle diag: one-shot per (address,size) import log of the tile state (tmem/fmt/siz/addr/size/line) for small textures so a suspect particle tile can be checked against its source bytes by hand. Remove once D252 is resolved. | **live** (D252 OPEN — non-reproducible) |
 | `GE_D235` | `src/boss.c` (per-stage `while (!done)` block, after `memaReset`; `#ifdef PORT`) | D235 evidence probe: logs how many GL-texture-cache entries the per-stage `videoResetTextureCache()` call purges at each level load. A cold boot into a level should log 0; a death/restart (or any transition from a level that uploaded textures) logs >0 — direct evidence of the stale-entry mechanism. The clear itself is **not** gated on this var (it's the fix, see below); the var only controls the log line. | **live** (D235) |
+| `GE_D75V` | `port/fast3d/gfx_pc.cpp` (`gfx_sp_vertex`, end of the copy/transform loop; cached env check) | D75 (Nintendo logo) per-batch vertex probe: for each `G_VTX` batch in frames `lo..hi`, logs frame#, source pointer, n_vertices, original dest_index, raw ob[0..2] of the first vertex, min/max of the transformed x/y/z/w across the batch, and the MP translation row. Used to prove the transform is correct (M-195) and that every batch encodes v0=0 (slot-overwrite hypothesis). Value form `"lo-hi"` (e.g. `300-900` = the logo screen); unset = off. | **live** (D75) |
 
 ## Dxx diagnostic probes — finding closed unless noted
 

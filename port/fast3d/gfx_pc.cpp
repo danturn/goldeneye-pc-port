@@ -1442,7 +1442,10 @@ static inline bool fast3d_ptr_ok(const void *p) {
     return v >= 0x10000 && v < 0x0000800000000000ULL;
 }
 
+extern "C" u32 videoGetFrameCount(void); /* port/src/video.c (D75 probe) */
+
 static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
+    const size_t d75_di0 = dest_index; /* D75 probe: loop below mutates dest_index */
     SUPPORT_CHECK(n_vertices <= MAX_VERTICES);
 
     if (!fast3d_ptr_ok(vertices) || dest_index + n_vertices > MAX_VERTICES) {
@@ -1699,6 +1702,47 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
 
         d->color.a = vcn->a; // can be required for SHADE_ALPHA even if fog is enabled
     }
+
+#ifdef PORT
+    /* TEMP D75 (M-19x): per-batch transformed-vertex range probe. Static
+     * analysis of the nintendologo path exhausted itself clean (all 23 op=4
+     * nodes visited every frame, GDLs byte-faithful to N64, every opcode
+     * handled, G_VTX counts sum exactly to nv, G_TRI4 decode matches the
+     * gSP4Triangles macro) -- so log what the pipeline actually computes:
+     * for frames in [lo,hi] (env GE_D75V="lo-hi"), one line per G_VTX batch
+     * with the resolved vertex ptr, raw first-vertex ob[], transformed
+     * x/y/z/w ranges and the MP translation row. The logo's batches are
+     * identifiable offline by vtx ptr == BaseAddr(0x70157a98)+file offset.
+     * Remove once D75 is root-caused. */
+    {
+        static int d75v_lo = -1, d75v_hi = 0;
+        if (d75v_lo < 0) {
+            const char* v = getenv("GE_D75V");
+            d75v_lo = 1; d75v_hi = 0x7fffffff;
+            if (!v || sscanf(v, "%d-%d", &d75v_lo, &d75v_hi) != 2)
+                d75v_lo = -1;
+        }
+        if (d75v_lo >= 0 && (int)videoGetFrameCount() >= d75v_lo &&
+            (int)videoGetFrameCount() <= d75v_hi) {
+            float mnx = 1e30f, mxx = -1e30f, mny = 1e30f, mxy = -1e30f,
+                  mnz = 1e30f, mxz = -1e30f, mnw = 1e30f, mxw = -1e30f;
+            for (size_t i = 0; i < n_vertices; i++) {
+                const struct LoadedVertex* d2 = &rsp.loaded_vertices[d75_di0 + i];
+                if (d2->x < mnx) mnx = d2->x; if (d2->x > mxx) mxx = d2->x;
+                if (d2->y < mny) mny = d2->y; if (d2->y > mxy) mxy = d2->y;
+                if (d2->z < mnz) mnz = d2->z; if (d2->z > mxz) mxz = d2->z;
+                if (d2->w < mnw) mnw = d2->w; if (d2->w > mxw) mxw = d2->w;
+            }
+            const Vtx* v0 = &vertices[0];
+            sysLogPrintf(LOG_NOTE,
+                "D75V: f=%u vtx=%p n=%zu di=%zu raw0=(%d,%d,%d) x[%.0f,%.0f] y[%.0f,%.0f] z[%.0f,%.0f] w[%.0f,%.0f] MPt=(%.1f,%.1f,%.1f)",
+                videoGetFrameCount(), (const void*)vertices, n_vertices, d75_di0,
+                (int)v0->v.ob[0], (int)v0->v.ob[1], (int)v0->v.ob[2],
+                mnx, mxx, mny, mxy, mnz, mxz, mnw, mxw,
+                rsp.MP_matrix[3][0], rsp.MP_matrix[3][1], rsp.MP_matrix[3][2]);
+        }
+    }
+#endif
 }
 
 static void gfx_sp_modify_vertex(uint16_t vtx_idx, uint8_t where, uint32_t val) {

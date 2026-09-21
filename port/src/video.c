@@ -732,6 +732,7 @@ void videoUpdateNativeResolution(s32 w, s32 h)
     gfx_current_native_aspect = (float)w / (float)h;
 }
 
+u32 videoGetFrameCount(void)   { return frames; }
 s32 videoGetNativeWidth(void)  { return gfx_current_native_viewport.width; }
 s32 videoGetNativeHeight(void) { return gfx_current_native_viewport.height; }
 

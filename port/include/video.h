@@ -40,6 +40,7 @@ void videoPumpEvents(void);
 /* The game's native video mode (NTSC 640x480, PAL 640x400). fast3d scales
  * N64 screen coordinates into window pixels using this. */
 void videoUpdateNativeResolution(s32 w, s32 h);
+u32  videoGetFrameCount(void);
 s32  videoGetNativeWidth(void);
 s32  videoGetNativeHeight(void);
 
