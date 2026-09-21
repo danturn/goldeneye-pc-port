@@ -280,6 +280,34 @@ void audioSetNextBuffer(const s16 *buf, u32 len)
             lastReportUs = now;
         }
     }
+    /* D322 (issue #87): long-session audio degradation -- voice-pool health
+     * monitor, sibling of the GE_D204 pipeline monitor above. One line per 5 s
+     * of wall clock with the three pool layers a multi-hour campaign can
+     * exhaust: the 8-voice SFX soft cap (sfx), the 64-slot event queue (evtq),
+     * and the 24 physical synth voices shared by SFX + music (pv). A sfx count
+     * that ratchets up level over level, or pv alloc that never returns to
+     * baseline after quiet sections, is the voice-leak signature; q pinning at
+     * queueLimit with drop climbing is the overproduction/queue signature.
+     * Cheap (one locked list walk per 5 s) -- safe for a full playtest. */
+    if (getenv("GE_D322")) {
+        static u64 d322StartUs = 0, d322NextUs = 0;
+        extern void sndD322PoolSummary(s32 *, s32 *, s32 *, s32 *, s32 *, s32 *);
+        u64 now = sysGetMicroseconds();
+        if (!d322StartUs) { d322StartUs = now; d322NextUs = now + 5000000ull; }
+        if (now >= d322NextUs) {
+            s32 sfx, sfxMax, ev, pf, pl, pa;
+            sndD322PoolSummary(&sfx, &sfxMax, &ev, &pf, &pl, &pa);
+            sysLogPrintf(LOG_NOTE,
+                "D322 pool t=%llus sfx=%d/%d evtq=%d/64 pv free/lame/alloc=%d/%d/%d q=%d/%d drop=%u",
+                (unsigned long long)((now - d322StartUs) / 1000000ull),
+                (int)sfx, (int)sfxMax, (int)ev,
+                (int)pf, (int)pl, (int)pa,
+                (int)audioGetSamplesBuffered(), queueLimit,
+                (unsigned)dropCount);
+            d322NextUs = now + 5000000ull;
+        }
+    }
+
     if (dev && buf && len) {
         if (audioGetSamplesBuffered() < queueLimit) {
             SDL_QueueAudio(dev, buf, len);

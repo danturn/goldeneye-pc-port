@@ -1513,3 +1513,51 @@ void sndSetSfxSlotVolume(u8 sfxIndex, u16 volume)
     osSetIntMask(mask);
 #endif
 }
+
+#ifdef PORT
+/* D322 (issue #87, long-session audio degradation): campaign-safe voice-pool
+ * telemetry. Called at most once per 5 s from port/src/audio.c under
+ * GE_D322=1. Reports the three pool layers a long session can exhaust:
+ *
+ *   sfx  -- g_sndAllocatedVoicesCount vs maxSounds (the 8-voice SFX soft cap
+ *           that gates sndHandleEvent's PLAY_EVT; pinned-at-max means every
+ *           new SFX takes the preempt/drop path = "audio comes and goes").
+ *   evtq -- ALEventQueue occupancy (64 slots; a full queue silently drops
+ *           posts in alEvtqPostEvent, M-71).
+ *   pv   -- physical synth voices (24) shared by SFX AND music: free / lame
+ *           (ready-to-free) / allocated. If allocated climbs level over level
+ *           and never comes back, music note-ons starve or steal each other
+ *           = "can't hear the OST".
+ *
+ * All three lists are walked under the same osSetIntMask lock the D285 fix
+ * uses for the preemption scan (amMain mutates them concurrently). */
+void sndD322PoolSummary(s32 *sfxCount, s32 *sfxMax, s32 *evtqUsed,
+                        s32 *pvFree, s32 *pvLame, s32 *pvAlloc)
+{
+    /* NB: ALSndPlayer.drvr is a POINTER to the client driver (libaudio.h),
+     * not an embedded ALSynth -- &g_sndPlayerPtr->drvr walks garbage and
+     * faults (caught on the first smoke run of this probe). NULL before
+     * sndInit has run; report -1s rather than skip the whole line. */
+    ALSynth *syn = g_sndPlayerPtr->drvr;
+    ALLink *l;
+    OSIntMask mask = osSetIntMask(OS_IM_NONE);
+
+    *sfxCount = g_sndAllocatedVoicesCount;
+    *sfxMax   = g_sndPlayerPtr->maxSounds;
+
+    *evtqUsed = 0;
+    for (l = g_sndPlayerPtr->evtq.allocList.next; l != NULL; l = l->next)
+        (*evtqUsed)++;
+
+    if (syn != NULL) {
+        *pvFree = *pvLame = *pvAlloc = 0;
+        for (l = syn->pFreeList.next;  l != NULL; l = l->next) (*pvFree)++;
+        for (l = syn->pLameList.next;  l != NULL; l = l->next) (*pvLame)++;
+        for (l = syn->pAllocList.next; l != NULL; l = l->next) (*pvAlloc)++;
+    } else {
+        *pvFree = *pvLame = *pvAlloc = -1;
+    }
+
+    osSetIntMask(mask);
+}
+#endif /* PORT */
