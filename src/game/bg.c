@@ -651,7 +651,9 @@ Gfx *sub_GAME_7F0B3C8C(Gfx *gdl)
                 /* TEMP D104: room render-pass geometry-visibility probe. */
                 {
                     static s32 d104c = 0;
-                    if (getenv("GE_D104") && (d104c++ % 600) == 0 && d104c < 12000) {
+                    static int d104on = -1; /* D302-class cache: this runs per room pass, per frame */
+                    if (d104on < 0) d104on = getenv("GE_D104") != NULL;
+                    if (d104on && (d104c++ % 600) == 0 && d104c < 12000) {
                         s32 rr;
                         osSyncPrintf("D104 tick=%d curRoom=%d roomsDrawn=%d budget=%d :",
                             d104c, (s32)g_CurrentPlayer->curRoomIndex,
@@ -2952,7 +2954,9 @@ Gfx *bgRenderRoomPrimary(Gfx *gdl, s32 room_index)
 
 #if defined(PORT)
             /* TEMP D63: log primary GDL at render time (env GE_D63=1) */
-            if (getenv("GE_D63")) {
+            static int d63on_p = -1; /* D302-class cache: per room, per frame */
+            if (d63on_p < 0) d63on_p = getenv("GE_D63") != NULL;
+            if (d63on_p) {
                 u32 *w = (u32 *)g_BgRoomInfo[room_index].ptr_expanded_mapping_info;
                 osSyncPrintf("D63 bgRenderRoomPrimary room=%d ptr=%p usize=%d w0..3=(%08x,%08x,%08x,%08x)\n",
                              room_index, (void *)g_BgRoomInfo[room_index].ptr_expanded_mapping_info,
@@ -2997,7 +3001,9 @@ Gfx *bgRenderRoomSecondary(Gfx *gdl, s32 room_index)
 
 #if defined(PORT)
             /* TEMP D63: log secondary GDL at render time (env GE_D63=1) */
-            if (getenv("GE_D63")) {
+            static int d63on_s = -1; /* D302-class cache: per room, per frame */
+            if (d63on_s < 0) d63on_s = getenv("GE_D63") != NULL;
+            if (d63on_s) {
                 u32 *w = (u32 *)g_BgRoomInfo[room_index].ptr_secondary_expanded_mapping_info;
                 osSyncPrintf("D63 bgRenderRoomSecondary room=%d ptr=%p usize=%d w0..3=(%08x,%08x,%08x,%08x)\n",
                              room_index, (void *)g_BgRoomInfo[room_index].ptr_secondary_expanded_mapping_info,
@@ -3509,7 +3515,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                 idx[2] = (((u8 *) gdl)[7] / 10) - vtxoff;
 #endif
 #ifdef PORT
-                if (getenv("GE_D154"))
+                static int d154on = -1; /* D302-class cache: inner GDL walk, fires per bullet hit */
+                if (d154on < 0) d154on = getenv("GE_D154") != NULL;
+                if (d154on)
                     osSyncPrintf("D154   TRI1 w1=%08x idx=%d,%d,%d\n",
                                  (unsigned)(u32)gdl->words.w1, (int)idx[0], (int)idx[1], (int)idx[2]);
 #endif
@@ -3694,7 +3702,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                         }
 #endif
 #ifdef PORT
-                        if (getenv("GE_D154"))
+                        static int d154on4 = -1; /* D302-class cache: inner GDL walk, fires per bullet hit */
+                        if (d154on4 < 0) d154on4 = getenv("GE_D154") != NULL;
+                        if (d154on4)
                             osSyncPrintf("D154   TRI4 s2=%d w0=%08x w1=%08x idx2=%d,%d,%d\n",
                                          (int)s2, (unsigned)(u32)gdl->words.w0, (unsigned)(u32)gdl->words.w1,
                                          (int)idx2[0], (int)idx2[1], (int)idx2[2]);

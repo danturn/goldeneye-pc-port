@@ -1761,23 +1761,32 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
             return;
         }
 
-        /* D288 diag (M-152, frame-gated M-155): the silo intro's
-         * screen-filling stray triangle (bounded to level_20 frames
-         * ~562-741) isn't explained by this function's existing D233/D106
-         * guards on static review -- log any triangle whose clip-space NDC
-         * bbox covers an unreasonable chunk of the screen, or whose bbox
-         * math goes non-finite, together with each vertex's w and
-         * any_behind_camera, to catch it at draw time. M-155: the first
-         * ungated run fired 116k times in ~1500-2000 frames -- bbox_frac
-         * >0.15 alone is a common occurrence for ordinary near-camera
-         * geometry, not a distinguishing signature. Gated to the reported
-         * frame window (num_dls, same pattern as GE_D236RM below) and the
+        /* D288 diag (M-152, frame-gated M-155, any_behind-restricted
+         * M-155-follow-up): the silo intro's screen-filling stray triangle
+         * (bounded to level_20 frames ~562-741) isn't explained by this
+         * function's existing D233/D106 guards on static review -- log any
+         * triangle whose clip-space NDC bbox covers an unreasonable chunk
+         * of the screen, together with each vertex's w and the render-mode
+         * word (oml), to catch it at draw time. M-155: the first ungated
+         * run fired 116k times in ~1500-2000 frames -- bbox_frac >0.15
+         * alone is a common occurrence for ordinary near-camera geometry,
+         * not a distinguishing signature. Gated to the reported frame
+         * window (num_dls, same pattern as GE_D236RM below) and the
          * threshold raised well above the ~0.15 "normal" baseline M-155
-         * established, so a hit here is actually rare. Remove once D288 is
-         * root-caused. */
+         * established, so a hit here is actually rare. M-155 follow-up:
+         * for any_behind_camera==1 triangles the x/w perspective divide is
+         * meaningless (w near zero or negative -> arbitrarily large
+         * "bbox_frac" for perfectly ordinary geometry), which is exactly
+         * why the code above defers those to GL's own clipper -- so the
+         * probe now skips them entirely; a hit here has comfortably
+         * positive w's and is a genuine large-NDC-bbox triangle. oml is
+         * logged so the culprit's material/model can be identified against
+         * the level's asset tables (the flat RGB(83,62,44) color grep
+         * found nothing in the .c sources -- binary model blobs). Remove
+         * once D288 is root-caused. */
         static int ge_d288 = -1;
         if (ge_d288 < 0) ge_d288 = getenv("GE_D288") != NULL;
-        if (ge_d288) {
+        if (ge_d288 && !any_behind_camera) {
             extern uint32_t num_dls;
             if (num_dls >= 550 && num_dls <= 755) {
                 float minx = std::fmin(std::fmin(v1->x / v1->w, v2->x / v2->w), v3->x / v3->w);
@@ -1786,8 +1795,9 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
                 float maxy = std::fmax(std::fmax(v1->y / v1->w, v2->y / v2->w), v3->y / v3->w);
                 float bbox_frac = (maxx - minx) * (maxy - miny) / 4.0f; // NDC quad is [-1,1]^2
                 if (!std::isfinite(bbox_frac) || bbox_frac > 0.5f) {
-                    fprintf(stderr, "D288: dl=%u tri w=(%.6f,%.6f,%.6f) bbox_frac=%.3f any_behind=%d color=(%d,%d,%d)\n",
-                            num_dls, v1->w, v2->w, v3->w, bbox_frac, (int)any_behind_camera,
+                    fprintf(stderr, "D288: dl=%u tri w=(%.6f,%.6f,%.6f) bbox_frac=%.3f oml=0x%08x color=(%d,%d,%d)\n",
+                            num_dls, v1->w, v2->w, v3->w, bbox_frac,
+                            (unsigned)rdp.other_mode_l,
                             v1->color.r, v1->color.g, v1->color.b);
                 }
             }

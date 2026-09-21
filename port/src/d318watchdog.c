@@ -93,6 +93,10 @@
 /* chrai.c defines these but chrai.h does not declare them. */
 extern s32 chraiGetAIListID(AIRecord *AIList, bool *isGlobalAIList);
 
+/* src/bondaicommands.h:467 -- kept local so this port file doesn't pull in
+ * the AI-command header just for one bit constant. */
+#define D320_TARGET_AIM_ONLY 0x0020 /* "Aim at target instead of firing"   */
+
 /* chraction.c internal (not in chraction.h): the fresh-attack entry point.
  * Signature from the definition; call form mirrors chrlvTickAttack's own
  * re-init at chraction.c:7401. */
@@ -433,6 +437,125 @@ void d318TimelineTick(void)
                      (int)g_GlobalTimer,
                      (unsigned)(u32)(g_randomSeed >> 32), (unsigned)(u32)g_randomSeed,
                      (unsigned)objectiveregisters1, (unsigned)h, (int)g_ActiveChrsCount);
+    }
+
+    /* D320: generic D318-class pin DETECTION for the sweep's flagged lists
+     * (Facility ai_19, Control ai_9, Depot ai_12 -- see findings D320).
+     * Detection only: it logs, it never intervenes; the recovery watchdog
+     * above stays hardcoded to ai_22 by design until a second list actually
+     * freezes in play (D320's explicit instruction).
+     *
+     * Signature: a chr in ACT_ATTACK whose attacktype is LIVE FIRE (no
+     * TARGET_AIM_ONLY bit -- it is supposed to be shooting) and whose
+     * modelGetAnimFrame is byte-stable for 600 consecutive ticks (10 s). A
+     * guard that should be firing but whose animation never advances is the
+     * exact D318 frozen shape on any list. The two legitimate long-stable
+     * states are excluded or self-clearing: monologue pre-aims keep the
+     * AIM_ONLY bit (excluded), and a working fire cycle re-inits through
+     * chrlvTickAttackCommon's "endframe <= frame" block, so its frame does
+     * not stay byte-stable for 10 s. One line at first detection, then one
+     * per further 600 stable ticks while it persists; a frozen run keeps
+     * printing, an escaped run stops after the single line (or none). */
+    {
+        typedef struct { s16 chrnum; u32 framebits; s32 stable; s32 nextlog; }
+                D320Pin;
+        static D320Pin s_pins[8];
+        static int     s_npins = 0;
+        s32 i, j;
+
+        for (i = 0; i < g_ActiveChrsCount; i++)
+        {
+            ChrRecord *c = &g_ActiveChrs[i];
+            union { f32 f; u32 u; } fr;
+            D320Pin   *p = NULL;
+
+            if (c->actiontype != ACT_ATTACK || c->model == NULL)
+            {
+                continue;
+            }
+            if ((s32)c->act_attack.attacktype & D320_TARGET_AIM_ONLY)
+            {
+                continue; /* legitimate hold pose (monologue pre-aim) */
+            }
+
+            fr.f = modelGetAnimFrame(c->model);
+            for (j = 0; j < s_npins; j++)
+            {
+                if (s_pins[j].chrnum == c->chrnum)
+                {
+                    p = &s_pins[j];
+                    break;
+                }
+            }
+            if (!p)
+            {
+                if (s_npins < 8)
+                {
+                    p = &s_pins[s_npins++];
+                }
+                else
+                {
+                    continue; /* table full: drop the newest, keep tracking */
+                }
+                p->chrnum    = c->chrnum;
+                p->framebits = fr.u;
+                p->stable    = 0;
+                p->nextlog   = 600;
+            }
+
+            if (p->framebits == fr.u)
+            {
+                p->stable++;
+            }
+            else
+            {
+                p->framebits = fr.u;
+                p->stable    = 0;
+                p->nextlog   = 600;
+            }
+
+            if (p->stable >= p->nextlog)
+            {
+                bool g = FALSE;
+                s32 aid = c->ailist ? chraiGetAIListID(c->ailist, &g) : -1;
+
+                osSyncPrintf("D320T: t=%d PIN? c%d aiid=0x%04x%s off=%d atk=0x%x ent=%d "
+                             "mot=%d unk54=%u frame=%.2f stable=%d ticks (D318-class pin candidate)\n",
+                             (int)g_GlobalTimer, (int)c->chrnum,
+                             (unsigned)aid, g ? "G" : "", (int)c->aioffset,
+                             (unsigned)c->act_attack.attacktype,
+                             (int)c->act_attack.entityid,
+                             (s32)c->act_attack.type_of_motion,
+                             (unsigned)c->act_attack.unk54,
+                             (double)fr.f, p->stable);
+                p->nextlog = p->stable + 600;
+            }
+        }
+
+        /* Drop entries for chrs that left the tracked state so a later
+         * re-entry starts a fresh confirmation window. */
+        for (i = 0; i < s_npins; i++)
+        {
+            bool alive = FALSE;
+
+            for (j = 0; j < g_ActiveChrsCount; j++)
+            {
+                ChrRecord *c = &g_ActiveChrs[j];
+
+                if (c->chrnum == s_pins[i].chrnum && c->actiontype == ACT_ATTACK
+                    && c->model != NULL
+                    && !((s32)c->act_attack.attacktype & D320_TARGET_AIM_ONLY))
+                {
+                    alive = TRUE;
+                    break;
+                }
+            }
+            if (!alive)
+            {
+                s_pins[i] = s_pins[--s_npins];
+                i--;
+            }
+        }
     }
 }
 
