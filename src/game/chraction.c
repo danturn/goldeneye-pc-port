@@ -9994,35 +9994,6 @@ bool chrHasFlags2ById(ChrRecord *self, s32 chrNum, u8 flags2)
 */
 void chrSetStageFlags(ChrRecord *self, s32 arg1)
 {
-#ifdef PORT
-    /* D318-followup (diagnosis only, GE_OBJT=1): attribute writes to the LOW
-     * bits of objectiveregisters1 (the Facility execution derail triggers:
-     * 0x04 gas/combat, 0x20 surrender/monologue, 0x40 flee -- none of which
-     * the level setup script ever sets; only character-action scripts do).
-     * Logs the writing chr + its AI position so the writer's script state is
-     * correlatable against a simultaneous D318T capture. Read-only, capped,
-     * no behavior change; N64 build unaffected. */
-    extern char *getenv(const char *);
-    extern s32 chraiGetAIListID(AIRecord *AIList, bool *isGlobalAIList); /* chrai.c */
-    static int s_objt = -1;
-    static int s_objtn = 0;
-    int objtlog;
-    s32 aid;
-    bool aig;
-
-    if (s_objt < 0) { s_objt = getenv("GE_OBJT") != NULL; }
-    objtlog = s_objt && (arg1 & 0x0000FFFF) && (s_objtn < 500);
-    if (objtlog)
-    {
-        aid = self->ailist ? chraiGetAIListID(self->ailist, &aig) : -1;
-        osSyncPrintf("OBJT: t=%d SET mask=0x%08x by chr %d (act=%d off=%d aiid=0x%04x%s ailist=%p) reg=0x%08x\n",
-                     (int)g_GlobalTimer, (unsigned)arg1, (int)self->chrnum,
-                     (int)self->actiontype, (int)self->aioffset, (unsigned)aid,
-                     aig ? "G" : "", (void *)self->ailist,
-                     (unsigned)objectiveregisters1);
-        s_objtn++;
-    }
-#endif
     objectiveregisters1 |= arg1;
 }
 
@@ -10032,28 +10003,6 @@ void chrSetStageFlags(ChrRecord *self, s32 arg1)
 */
 void chrUnsetStageFlags(ChrRecord *self, u32 flags)
 {
-#ifdef PORT
-    extern char *getenv(const char *);
-    extern s32 chraiGetAIListID(AIRecord *AIList, bool *isGlobalAIList); /* chrai.c */
-    static int s_objtu = -1;
-    static int s_objtun = 0;
-    int objtulog;
-    s32 aid;
-    bool aig;
-
-    if (s_objtu < 0) { s_objtu = getenv("GE_OBJT") != NULL; }
-    objtulog = s_objtu && (flags & 0x0000FFFF) && (s_objtun < 500);
-    if (objtulog)
-    {
-        aid = self->ailist ? chraiGetAIListID(self->ailist, &aig) : -1;
-        osSyncPrintf("OBJT: t=%d UNS mask=0x%08x by chr %d (act=%d off=%d aiid=0x%04x%s ailist=%p) reg=0x%08x\n",
-                     (int)g_GlobalTimer, (unsigned)flags, (int)self->chrnum,
-                     (int)self->actiontype, (int)self->aioffset, (unsigned)aid,
-                     aig ? "G" : "", (void *)self->ailist,
-                     (unsigned)objectiveregisters1);
-        s_objtun++;
-    }
-#endif
     objectiveregisters1 = ~flags & objectiveregisters1; //shorthand does not match
 }
 

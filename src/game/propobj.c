@@ -9427,24 +9427,6 @@ apply_damage:
     {
         if (objGetDestroyedLevel(obj) == 1)
         {
-#ifdef PORT
-            /* D318-followup (diagnosis only, GE_OBJT=1): timestamp each
-             * GAS_RELEASING prop destruction so the tank-blow tick is
-             * correlatable against the OBJT stage-flag writes. Read-only,
-             * capped, no behavior change; N64 build unaffected. */
-            extern char *getenv(const char *);
-            static int s_gas = -1;
-            static int s_gasn = 0;
-
-            if (s_gas < 0) { s_gas = getenv("GE_OBJT") != NULL; }
-            if (s_gas && (s_gasn < 200))
-            {
-                osSyncPrintf("OBJT: t=%d GAS prop destroyed at (%.0f,%.0f,%.0f) [gas effect armed]\n",
-                             (int)g_GlobalTimer, (double)obj->runtime_pos.x,
-                             (double)obj->runtime_pos.y, (double)obj->runtime_pos.z);
-                s_gasn++;
-            }
-#endif
             init_trigger_toxic_gas_effect(&obj->runtime_pos);
         }
     }
