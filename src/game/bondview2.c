@@ -92,7 +92,7 @@
 
 
 #if defined(VERSION_US)
-    /* D298/M2: the font-table globals are s32 holding truncated pointers
+    /* D327/M2: the font-table globals are s32 holding truncated pointers
      * (D88 class); re-base on use. Identity at PORT_ADDR_BASE == 0. */
 #if defined(PORT)
     #define BONDVIEW_2ND_FONTTABLE(_param) PORT_N64PTR(void, copy_2ndfonttable)
@@ -1233,7 +1233,7 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
     struct SetupIntroSwirl *base;
     struct SetupIntroSwirl *loopbase;
 #if defined(PORT)
-    /* D189/D298: written pointbuf[0..11] via `&pointbuf[i*3]` then dst[3..5]
+    /* D189/D327: written pointbuf[0..11] via `&pointbuf[i*3]` then dst[3..5]
      * (i = -1..2), but declared [10] -- a 2-float stack overrun that on arm64
      * corrupts the saved frame pointer (Fp=0x374d56eac1a00000 at the fault).
      * N64/MinGW absorb it; give it room on the port. */
@@ -1331,7 +1331,7 @@ void bondviewCalcIntroSwirlCamera(s32 index, f32 time, coord3d *pos, coord3d *lo
         lookat->y = g_CurrentPlayer->field_3C8;
         lookat->z = g_CurrentPlayer->field_3CC;
 
-        swirl = (void *)(((uintptr_t) g_IntroSwirl) + (uintptr_t) base); /* D298/M2: full-width */
+        swirl = (void *)(((uintptr_t) g_IntroSwirl) + (uintptr_t) base); /* D327/M2: full-width */
 
         if (!(swirl->bitflags & 4))
         {
@@ -8941,7 +8941,7 @@ void mp_respawn_handler(void)
     coord3d start_pos = ZeroCoordSpawnPos;
     f32 start_look_angle;
 #ifdef PORT
-    /* D302: PadRecord.stan is a StandTile* host pointer. An s32 local
+    /* D331: PadRecord.stan is a StandTile* host pointer. An s32 local
      * truncates it, and every consumer below (bondviewYPositionRelated,
      * change_player_pos_to_target, prop->stan) rebuilds it unbased and
      * dereferences it. Local only -- no struct/ABI impact -- and the s32 pad
@@ -10242,7 +10242,7 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
 
             view_vert = view_top - view_top_offset;
 #ifdef PORT
-            /* D298/M2: the (s32) casts are an N64 match hack; on the port they
+            /* D327/M2: the (s32) casts are an N64 match hack; on the port they
              * truncate stack pointers. Pass them at full width. */
             arg0 = draw_blackbox_to_screen(arg0, &view_left, &view_vert, &view_horiz, &view_top);
 #else
@@ -11260,7 +11260,7 @@ void sub_GAME_7F08BEEC(Mtxf *matrices, s32 count)
 
     for (i = 0, j = 0; i < count; i++, j += sizeof(Mtxf))
     {
-        matrix_4x4_multiply_homogeneous(currentPlayerGetViewToWorldMtxf(), (Mtxf *)((uintptr_t)matrices + j), &sp40); /* D298/M2 */
+        matrix_4x4_multiply_homogeneous(currentPlayerGetViewToWorldMtxf(), (Mtxf *)((uintptr_t)matrices + j), &sp40); /* D327/M2 */
 
         sp40.m[3][0] -= g_CurrentPlayer->current_model_pos.f[0];
         sp40.m[3][1] -= g_CurrentPlayer->current_model_pos.f[1];

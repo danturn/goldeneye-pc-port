@@ -381,7 +381,7 @@ void bondviewLoadSetupIntroSection(void)
         {
             rand_camera_index--;
 #ifdef PORT
-            /* D88/D298: prev is a u32 holding the truncated host pointer; re-base. */
+            /* D88/D327: prev is a u32 holding the truncated host pointer; re-base. */
             ptr_random06cam_entry = PORT_N64PTR(struct SetupIntroCamera, ptr_random06cam_entry->prev);
 #else
             ptr_random06cam_entry = ptr_random06cam_entry->prev;

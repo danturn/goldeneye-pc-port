@@ -6,7 +6,7 @@
 #include "math.h"
 #include "math_floor.h"
 
-/* D298/M2: these tables store animation addresses as N64 values (s32/union
+/* D327/M2: these tables store animation addresses as N64 values (s32/union
  * offset) that are then cast to pointers. Re-base when the pointer is formed;
  * identity at PORT_ADDR_BASE == 0. */
 #if defined(PORT)

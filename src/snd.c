@@ -1107,7 +1107,7 @@ ALSoundState *sndPlaySfx(struct ALBankAlt_s *soundBank, s16 soundIndex, ALSoundS
          * (0x1_4000_0000..); anything else (e.g. 0x0000_5622_0001_0001) is a
          * byte-scrambled / OOB read. */
         {
-            /* D299 (macOS arm64): this guard predates the shifted-window
+            /* D328 (macOS arm64): this guard predates the shifted-window
              * address model (port/include/port_addr.h). With PORT_ADDR_BASE
              * != 0 a valid ALSound* is ~0x1000_707b_5740 -- far ABOVE the old
              * 16 GiB (0x400000000) ceiling -- so the hardcoded bound rejected

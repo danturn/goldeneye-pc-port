@@ -2097,7 +2097,7 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
     for (i = 0; i < objheader->numMatrices; i++)
     {
         #ifdef PORT
-        /* D308: (u32)render_pos truncates the host pointer (D300 class) and the
+        /* D308: (u32)render_pos truncates the host pointer (D329 class) and the
          * sum is passed as a Mtxf* -> unbased 0x700d_xxxx, SIGSEGV in
          * matrix_4x4_copy. &render_pos[i] is the same address at full width --
          * the next line already uses it. Crashed the watch's Control page. */
@@ -2340,7 +2340,7 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
         for (i = 0; i < objheader->numMatrices; i++)
         {
             #ifdef PORT
-            /* D308: (u32)render_pos truncates the host pointer (D300 class) and the
+            /* D308: (u32)render_pos truncates the host pointer (D329 class) and the
              * sum is passed as a Mtxf* -> unbased 0x700d_xxxx, SIGSEGV in
              * matrix_4x4_copy. &render_pos[i] is the same address at full width --
              * the next line already uses it. Crashed the watch's Control page. */

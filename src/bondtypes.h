@@ -748,7 +748,7 @@ typedef union
              * modelPromoteNodeOffsetsToPointers rebases it via PROMOTE32, which is
              * `var = (u32)((u32)var + diff)` — note that unlike PROMOTE it keeps the
              * field a 32-bit N64 ADDRESS, it does NOT produce a host pointer.
-             * D301: consumers must therefore re-base it (PORT_N64PTR), never cast it
+             * D330: consumers must therefore re-base it (PORT_N64PTR), never cast it
              * straight to a pointer — a bare cast leaves 0x7070_xxxx and faults on
              * arm64, where the window is based at PORT_ADDR_BASE.
              * N64 layout unchanged (4B either way). */

@@ -72,7 +72,7 @@ static void portAddrSelfTest(void)
 /*
  * Strict address validation (-DPORT_ADDR_STRICT=1, off by default).
  *
- * Every bug in the D299-D303 family reaches portN64ToHost() holding a value
+ * Every bug in the D328-D332 family reaches portN64ToHost() holding a value
  * that is not a real N64 address -- either a host pointer truncated to 32 bits
  * or an address that was never re-based. The fault then happens later, in
  * unrelated code, which is what made these expensive to find. This checks the
@@ -134,7 +134,7 @@ void portAddrStrictCheck(uint32_t a)
     sysLogPrintf(LOG_ERROR,
                  "PORT_ADDR_STRICT: 0x%08x is not a mapped N64 address "
                  "(-> %p). Truncated host pointer, or an address that was "
-                 "never re-based (D299-D303 class).",
+                 "never re-based (D328-D332 class).",
                  (unsigned)a, (void *)((uintptr_t)PORT_ADDR_BASE + (uintptr_t)a));
 #if defined(PLATFORM_MACOS) || defined(__APPLE__) || defined(__linux__)
     {

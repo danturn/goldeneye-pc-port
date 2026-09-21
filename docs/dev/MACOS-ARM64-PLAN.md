@@ -54,21 +54,21 @@ arm64 work was rebased onto it rather than maintained in parallel. Branch:
 **Adopted from #88 — this deletes the corresponding work in §3 M0:**
 - Homebrew GNU GCC (`gcc-16`) + libstdc++. Removes every clang workaround:
   no `-fms-extensions`/`-Wno-microsoft-anon-tag`, no libc++ wrapper header
-  shims (the old D295), no `-D_FORTIFY_SOURCE=0`.
+  shims (the old D324), no `-D_FORTIFY_SOURCE=0`.
 - `scripts/gen_macho_syms.py` — build-tree Mach-O symbol generation; the
   committed `*.darwin.s` duplicates are gone.
 - `scripts/strip_weak_pragmas.py` + `port/src/macho_weak_aliases.s` — the
   `#pragma weak` handling, so **`src/` carries no macOS edit for it** (the old
-  D294 in-source `#if defined(PORT) && defined(__APPLE__)` equates are gone).
+  D323 in-source `#if defined(PORT) && defined(__APPLE__)` equates are gone).
 - POSIX `shm_open` DRAM backing, Darwin crash handling, and the AppKit
   main-thread event-pump guard in `gfx_sdl2.cpp` (that last one was §3 M3.1).
 
 **Kept from this plan — the arm64 delta:**
-- §2's shifted-window address model (M1 / D298). `-pagezero_size 0x10000`,
+- §2's shifted-window address model (M1 / D327). `-pagezero_size 0x10000`,
   the core of #88's Intel approach, is fatal on arm64 (shrinking `__PAGEZERO`
   gets the process SIGKILLed), so CMake now sets it for x86_64 only and arm64
   uses `PORT_ADDR_BASE`.
-- D296 (`__x86_64__` → `PLATFORM_64BIT`). Without it #88's tree does not even
+- D325 (`__x86_64__` → `PLATFORM_64BIT`). Without it #88's tree does not even
   *link* on arm64 — 23 undefined `_ANIM_DATA_*`.
 - `gen_macho_syms.py --base` (bakes `PORT_ADDR_BASE` into the absolute
   symbols; `--base 0` output is byte-identical to #88's transform).
@@ -577,8 +577,8 @@ Record as a `Dxx`.
 | Phase | State | Notes |
 |---|---|---|
 | Research | done | §1 F1–F18, measured 2026-09-18 |
-| M0 | **superseded by #88** | the clang build/toolchain work is replaced by PR #88's GCC-based macOS layer; only D296 + `gen_macho_syms --base` survive (§0b) |
-| M1 | **done** | shifted-window address model (D298); self-test ALL PASS on the #88 base |
+| M0 | **superseded by #88** | the clang build/toolchain work is replaced by PR #88's GCC-based macOS layer; only D325 + `gen_macho_syms --base` survive (§0b) |
+| M1 | **done** | shifted-window address model (D327); self-test ALL PASS on the #88 base |
 | M2 | **done** | game-code re-basing sweep complete; **21/21 solo levels boot, render and run crash-free**, including with full controller input |
 | M3 | **done (core)** | #88's AppKit main-thread guard; `tools_pc/level_sweep_mac.sh` (crash + rendered-pixel check); the two Core-profile GL nits are cosmetic and parked in `docs/dev/GRAPHICS-BACKLOG.md` |
 | M4 | **done (core)** | `tools_pc/bundle-mac.sh` → signed, double-clickable `GoldenEye.app` (+ zip/sha256); `docs/building.md` macOS section + `tools_pc/README.md`. Outstanding: CI for macOS, and a live run of the `.app` from Finder |
@@ -591,7 +591,7 @@ level crash-free:
   (76–92%).
 - Full-control sweep (`GE_INPUTSCRIPT`: every button + 8-way stick, 26 s per
   level) — 21/21, with SFX voices allocating on every level.
-- Findings D294–D300; D299 (silent SFX) and D300 (stage-unload truncation)
+- Findings D323–D329; D328 (silent SFX) and D329 (stage-unload truncation)
   were both arm64-specific and are fixed.
 
 ### Prerequisites to run (easy to miss)

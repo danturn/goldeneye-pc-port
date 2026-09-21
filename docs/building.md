@@ -211,7 +211,7 @@ To prove the detector is live rather than merely silent:
 GE_ADDRSTRICT_SELFTEST=1 ./build-strict/ge007.aarch64 -level_09
 ```
 
-See findings D299–D305 for the bug family this exists to catch.
+See findings D328–D334 for the bug family this exists to catch.
 
 ### Packaging a macOS app
 

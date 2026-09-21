@@ -105,7 +105,7 @@ u8 (*tlbmanageGetTlbAllocatedBlock(void))[TLB_BLOCK_SIZE]
      * everything that isn't the fixed PERMANENT bank). Stays well clear of
      * animations_frame_buffer.
      *
-     * D298 (macOS/arm64): the same reclaim is not quite enough there — the
+     * D327 (macOS/arm64): the same reclaim is not quite enough there — the
      * first level load exhausts STAGE by ~0x30 bytes at a model rwdata alloc
      * (mempAllocBytesInBank spins). Push the ceiling to the last 0x10000
      * before animations_frame_buffer, adding ~960 KiB to STAGE. Same

@@ -74,7 +74,7 @@ extern int g_portUseImageRel;
 #ifdef PORT_ADDR_STRICT
 /* Debug gate (-DPORT_ADDR_STRICT=1). Validates that a u32 being turned into a
  * host pointer actually names one of the N64 regions the port maps. The whole
- * D299/D300/D301/D302 bug family shares one signature -- a truncated or
+ * D328/D329/D330/D331 bug family shares one signature -- a truncated or
  * never-rebased address reaching portN64ToHost -- and it is almost always
  * diagnosed from a fault somewhere far away, long after the bad value was
  * created. This reports it AT THE CONVERSION, with a backtrace naming the
@@ -99,7 +99,7 @@ void portAddrInit(void);
  * address of 0 and then testing the converted pointer for NULL --
  * `p = PORT_N64PTR(T, f()); if (p != NULL) *p = ...` (e.g.
  * chrCreateBloodStain(), objDeform()). With base+0 that test passes and the
- * very next store faults (D301). Returning NULL restores the decomp's
+ * very next store faults (D330). Returning NULL restores the decomp's
  * intended semantics. */
 static inline void *portN64ToHost(uint32_t a)
 {

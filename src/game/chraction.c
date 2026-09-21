@@ -45,7 +45,7 @@
 #define PUN_ATTACK_ITEM(punchr, field) ((s32)(punchr)->field.attack_item)
 #endif
 
-/* D298/M2: `(s32)&ANIM_DATA_x + (s32)&ptr_animation_table->data` is an N64
+/* D327/M2: `(s32)&ANIM_DATA_x + (s32)&ptr_animation_table->data` is an N64
  * address, and animation_table_ptrs1[] slots hold N64 addresses; re-base where
  * such a value becomes a pointer. Identity at PORT_ADDR_BASE == 0. */
 #if defined(PORT)
@@ -4996,7 +4996,7 @@ bool if_actor_able_set_on_path(ChrRecord *self, s32 pathid)
 {
     if (pathid && chrIsNotDeadOrShot(self))
     {
-        /* D298/M2: callers pass a window PathRecord* truncated through this
+        /* D327/M2: callers pass a window PathRecord* truncated through this
          * s32 param (chrai.c / aicommands.def); re-base on the read. */
         set_actor_on_path(self, PORT_N64PTR(struct patrol_path, pathid));
         return TRUE;

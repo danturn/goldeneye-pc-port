@@ -24,7 +24,7 @@
 void cleanupObjects(s32 stage)
 {
 #ifdef PORT
-    /* D300: the decomp's `(u32)g_CurrentSetup.propDefs` converts the pointer
+    /* D329: the decomp's `(u32)g_CurrentSetup.propDefs` converts the pointer
      * to a 32-bit integer and back into a `u32 *` -- a no-op where pointers
      * are 32-bit (N64), but on the 64-bit port it TRUNCATES the host pointer
      * to its low 32 bits, leaving an unbased N64 address (0x7017_c70f on

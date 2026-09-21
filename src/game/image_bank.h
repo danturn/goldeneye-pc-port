@@ -26,7 +26,7 @@ extern u8* img_curpos;
 extern s32 img_bitcount;
 extern s32 *pGlobalimagetable;
 #if defined(PORT)
-/* D298/M2: holds a host-based RDRAM offset (pGlobalimagetable - 0x02000000)
+/* D327/M2: holds a host-based RDRAM offset (pGlobalimagetable - 0x02000000)
  * so `globalbank_rdram_offset + GIMG_OFF(sym)` is a live host pointer in the
  * DRAM window. s32 on N64 (see image_bank.c). */
 extern uintptr_t globalbank_rdram_offset;

@@ -76,7 +76,7 @@ endif()
 # Debug gate: validate every u32 -> host-pointer conversion against the regions
 # the port actually maps, and report offenders at the conversion site with a
 # backtrace. Off by default (zero cost); enable with -DPORT_ADDR_STRICT=ON.
-# Catches the D299-D303 truncated/never-rebased-pointer family early.
+# Catches the D328-D332 truncated/never-rebased-pointer family early.
 option(PORT_ADDR_STRICT "Validate N64->host address conversions at runtime" OFF)
 
 include(TargetArch)

@@ -369,7 +369,7 @@ void texSelect(Gfx **gdlptr, struct sImageTableEntry *tconfig, u32 arg2, s32 arg
             texLoad((s32 *)tconfig, NULL);
         }
 
-        aa = PORT_N64PTR(u16, tconfig->index); /* D298/M2: index holds the pool address */
+        aa = PORT_N64PTR(u16, tconfig->index); /* D327/M2: index holds the pool address */
         tex = texFindInPool((aa)[-4], NULL);
 
         if (tconfig->level == 0)

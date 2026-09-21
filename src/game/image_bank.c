@@ -21,7 +21,7 @@ s32 img_bitcount;
 s32 dword_CODE_bss_8008D0AC;
 //8008D0B0;
 #if defined(PORT)
-uintptr_t globalbank_rdram_offset; /* D298/M2: host-based, see image_bank.h */
+uintptr_t globalbank_rdram_offset; /* D327/M2: host-based, see image_bank.h */
 #else
 s32 globalbank_rdram_offset;
 #endif
@@ -98,7 +98,7 @@ extern u8* _GlobalimagetableSegmentRomStart;
 
 void texSetBitstring(s32 pos) {
 #if defined(PORT)
-    /* D298/M2: callers pass a host pointer through this s32 parameter, which
+    /* D327/M2: callers pass a host pointer through this s32 parameter, which
      * truncates it. Because PORT_ADDR_BASE is 4 GiB-aligned the low 32 bits
      * are the N64/window offset, so re-base them. Identity at base 0. */
     img_curpos = (u8 *)portN64ToHost((u32)pos);
@@ -269,7 +269,7 @@ void texReset(void)
 #endif
 
 #if defined(PORT)
-    /* D298/M2: store a HOST-based offset. GIMG_OFF(sym) adds 0x02000000, so
+    /* D327/M2: store a HOST-based offset. GIMG_OFF(sym) adds 0x02000000, so
      * `globalbank_rdram_offset + GIMG_OFF(sym)` is then a live host pointer.
      * `- 0x02000000` is the 64-bit equivalent of the original 32-bit
      * `+ 0xFE000000` wraparound (which relied on mod-2^32 cancellation). */

@@ -3,7 +3,7 @@
 #include "memp.h"
 #include "game/language.h"
 #if defined(PORT)
-#include "port_addr.h" /* portN64ToHost: DRAM window base (M2/D298) */
+#include "port_addr.h" /* portN64ToHost: DRAM window base (M2/D327) */
 #endif
 
 /**
@@ -47,7 +47,7 @@ void mempCheckMemflagTokens(s32 poolAreaStart, s32 poolAreaSize)
     //set pool 0 to what boss wants (room_model_buffer)
     //pool 0 = TotalPoolArea
 #if defined(PORT)
-    /* D298/M2: the pool lives in the N64 DRAM window, which on macOS is
+    /* D327/M2: the pool lives in the N64 DRAM window, which on macOS is
      * shifted up by PORT_ADDR_BASE. boss.c passes N64 addresses (the pool
      * must stay s32 for mempCheckMemflagTokens' arithmetic), so convert to
      * host pointers here — the MemoryPool fields are u8*. Identity at
@@ -153,7 +153,7 @@ void mempSetBankStarts(s32 poolSizes[MEMPOOL_COUNT+1])
     for (i = MEMPOOL_TOTAL; i < MEMPOOL_COUNT - 1; i++)
     {
 #if defined(PORT)
-        /* D298/M2: pool fields are u8* host pointers in the DRAM window. */
+        /* D327/M2: pool fields are u8* host pointers in the DRAM window. */
         g_mempPools[i + 1].start = (u8 *)(mempStart + bankstarts[i]);
         g_mempPools[i + 1].pos   = 0;
         g_mempPools[i + 1].end   = (u8 *)(mempStart + bankstarts[i + 1]);
