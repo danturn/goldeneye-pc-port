@@ -353,6 +353,9 @@ static const char* acmux_to_string(uint32_t acmux) {
     return tbl[acmux];
 }
 
+/* forward decl for the env-gated D75D probe (defined further down) */
+static bool d75d_env_active(void);
+
 static void gfx_generate_cc(struct ColorCombiner* comb, const ColorCombinerKey& key) {
     bool is_2cyc = (key.options & (uint64_t)SHADER_OPT_2CYC) != 0;
 
@@ -480,6 +483,17 @@ static void gfx_generate_cc(struct ColorCombiner* comb, const ColorCombinerKey& 
                 }
                 shader_id0 |= (uint64_t)val << (i * 32 + j * 4);
             }
+        }
+    }
+    /* TEMP D75D: one-shot decode of the logo model's combine mode (env-gated via d75d_lo) */
+    {
+        static int d75d_cc_once = 0;
+        if (!d75d_cc_once && d75d_env_active() && key.combine_mode == 0x009ffe4f19ffe4f1ULL) {
+            d75d_cc_once = 1;
+            fprintf(stderr, "D75DCC: comb=0x%016llx is_2cyc=%d c0=(rgb a=%u b=%u c=%u d=%u)(al a=%u b=%u c=%u d=%u) utex0=%d\n",
+                (unsigned long long)key.combine_mode, (int)is_2cyc,
+                c[0][0][0], c[0][0][1], c[0][0][2], c[0][0][3],
+                c[0][1][0], c[0][1][1], c[0][1][2], c[0][1][3], (int)used_textures[0]);
         }
     }
     {
@@ -1444,6 +1458,138 @@ static inline bool fast3d_ptr_ok(const void *p) {
 
 extern "C" u32 videoGetFrameCount(void); /* port/src/video.c (D75 probe) */
 
+/* D75 DL-sequence dump (M-196, GE_D75D="lo-hi"): the M-195 slot-overwrite
+ * hypothesis says every G_VTX batch encodes dest_index=0, so a multi-batch
+ * node's later batches clobber earlier ones and only the last survives. That
+ * is ONLY harmful if a node's triangles are drawn AFTER a later node's G_VTX
+ * has overwritten their slots -- i.e. only if the DL is structured batched
+ * (all vertices for all nodes, then all triangles) rather than streamed
+ * (each node: its vertices then its triangles). gfx_sp_tri1 copies vertex data
+ * into buf_vbo eagerly at triangle time, so streaming order makes cross-node
+ * overwrites harmless exactly like the N64 RDP. This probe records, per frame,
+ * a compact V/T token stream (V=G_VTX batch, T=triangle) plus max-triangle-
+ *index vs cumulative-vertices-loaded, to decide which structure GE's front-end
+ * model DLs actually use. Zero cost unless GE_D75D is set. Remove once D75 is
+ * root-caused. */
+static int d75d_lo = -1, d75d_hi = 0x7FFFFFFF;
+static int d75d_init_done = 0;
+static uint32_t d75d_frame = 0xFFFFFFFFu;
+static char d75d_seq[4096];
+static int d75d_seqlen = 0;
+static uint32_t d75d_maxtri = 0, d75d_vtxloaded = 0, d75d_batchhi = 0, d75d_nv = 0, d75d_nt = 0;
+static uint32_t d75d_rej_triv = 0, d75d_rej_cull = 0, d75d_emitted = 0;
+static uint32_t d75d_emit_on = 0, d75d_emit_off = 0; // emitted tris: NDC bbox intersects [-1,1]^2 vs not
+static float d75d_ndc_minx=1e9f,d75d_ndc_maxx=-1e9f,d75d_ndc_miny=1e9f,d75d_ndc_maxy=-1e9f;
+static uint32_t d75d_emit_invis = 0; // emitted tris with SHADER_OPT_INVISIBLE (G_BL_0+G_BL_CLR_MEM)
+static int d75d_cmin=999, d75d_cmax=-1; // min/max over all vertex color channels of emitted tris
+static uint32_t d75d_oml = 0xFFFFFFFFu; static int d75d_oml_set = 0;
+static float d75d_zmin=1e9f,d75d_zmax=-1e9f; static uint32_t d75d_znan=0; static int d75d_use_tex=-1;
+static uint64_t d75d_comb=0; static int d75d_prim[4]={-1,-1,-1,-1}; static int d75d_env[4]={-1,-1,-1,-1};
+static int d75d_comb_utex=-1; // comb->used_textures[0] (combiner's own claim)
+
+static void d75d_init(void) {
+    if (d75d_init_done) return;
+    d75d_init_done = 1;
+    const char* e = getenv("GE_D75D");
+    if (e && *e) {
+        d75d_lo = atoi(e);
+        const char* dash = strchr(e, '-');
+        if (dash) d75d_hi = atoi(dash + 1);
+    }
+}
+static bool d75d_env_active(void) { d75d_init(); return d75d_lo >= 0; }
+static void d75d_flush(uint32_t f) {
+    if (f == 0xFFFFFFFFu || d75d_seqlen == 0) return;
+    fprintf(stderr,
+        "D75D: f=%u nv=%u nt=%u maxtri=%u vtxloaded=%u batchhi=%u rej_triv=%u rej_cull=%u emitted=%u emit_on=%u emit_off=%u ndc_x=[%.3f,%.3f] ndc_y=[%.3f,%.3f] invis=%u col=[%d,%d] oml=0x%08x omset=%d z=[%.4f,%.4f] znan=%u utex=%d cutex=%d comb=0x%016llx prim=(%d,%d,%d,%d) env=(%d,%d,%d,%d) seq=%.8s%s\n",
+        f, d75d_nv, d75d_nt, d75d_maxtri, d75d_vtxloaded, d75d_batchhi,
+        d75d_rej_triv, d75d_rej_cull, d75d_emitted, d75d_emit_on, d75d_emit_off,
+        d75d_ndc_minx, d75d_ndc_maxx, d75d_ndc_miny, d75d_ndc_maxy,
+        d75d_emit_invis, d75d_cmin, d75d_cmax, (unsigned)d75d_oml, d75d_oml_set,
+        d75d_zmin, d75d_zmax, d75d_znan, d75d_use_tex, d75d_comb_utex,
+        (unsigned long long)d75d_comb, d75d_prim[0],d75d_prim[1],d75d_prim[2],d75d_prim[3],
+        d75d_env[0],d75d_env[1],d75d_env[2],d75d_env[3],
+        d75d_seq, (d75d_seqlen >= 4096) ? "...[trunc]" : "");
+    d75d_seqlen = 0; d75d_maxtri = 0; d75d_vtxloaded = 0; d75d_batchhi = 0; d75d_nv = 0; d75d_nt = 0;
+    d75d_rej_triv = 0; d75d_rej_cull = 0; d75d_emitted = 0; d75d_emit_on = 0; d75d_emit_off = 0;
+    d75d_ndc_minx=1e9f;d75d_ndc_maxx=-1e9f;d75d_ndc_miny=1e9f;d75d_ndc_maxy=-1e9f;
+    d75d_emit_invis = 0; d75d_cmin=999; d75d_cmax=-1; d75d_oml=0xFFFFFFFFu; d75d_oml_set=0;
+    d75d_zmin=1e9f;d75d_zmax=-1e9f;d75d_znan=0;d75d_use_tex=-1;
+    d75d_comb=0; for(int i=0;i<4;i++){d75d_prim[i]=-1;d75d_env[i]=-1;} d75d_comb_utex=-1;
+}
+static void d75d_frame_check(uint32_t f) {
+    if (f != d75d_frame) { d75d_flush(f); d75d_frame = f; }
+}
+static void d75d_note_vtx(uint32_t f, uint32_t count, uint32_t dest) {
+    d75d_init();
+    if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
+    d75d_frame_check(f);
+    d75d_nv++;
+    d75d_vtxloaded += count;
+    if (dest + count > d75d_batchhi) d75d_batchhi = dest + count;
+    if (d75d_seqlen < 4096) d75d_seq[d75d_seqlen++] = 'V';
+}
+static void d75d_note_tri(uint32_t f, uint32_t maxidx) {
+    d75d_init();
+    if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
+    d75d_frame_check(f);
+    d75d_nt++;
+    if (maxidx > d75d_maxtri) d75d_maxtri = maxidx;
+    if (d75d_seqlen < 4096) d75d_seq[d75d_seqlen++] = 'T';
+}
+static void d75d_note_rej(uint32_t f, int which) {
+    d75d_init();
+    if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
+    d75d_frame_check(f);
+    if (which == 0) d75d_rej_triv++; else d75d_rej_cull++;
+}
+static void d75d_note_emit(uint32_t f, struct LoadedVertex* const* v_arr) {
+    d75d_init();
+    if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
+    d75d_frame_check(f);
+    d75d_emitted++;
+    // NDC bbox of this triangle (x/w, y/w); count on-screen vs off
+    float mnx=1e9f,mxx=-1e9f,mny=1e9f,mxy=-1e9f;
+    for (int i = 0; i < 3; i++) {
+        float w = v_arr[i]->w;
+        if (w == 0.f) continue;
+        float nx = v_arr[i]->x / w, ny = v_arr[i]->y / w;
+        if (nx<mnx)mnx=nx; if(nx>mxx)mxx=nx; if(ny<mny)mny=ny; if(ny>mxy)mxy=ny;
+    }
+    if (mxx < -1e8f) return; // all w==0, degenerate
+    if (mxx >= -1.05f && mnx <= 1.05f && mxy >= -1.05f && mny <= 1.05f) d75d_emit_on++; else d75d_emit_off++;
+    if (mnx<d75d_ndc_minx)d75d_ndc_minx=mnx; if(mxx>d75d_ndc_maxx)d75d_ndc_maxx=mxx;
+    if (mny<d75d_ndc_miny)d75d_ndc_miny=mny; if(mxy>d75d_ndc_maxy)d75d_ndc_maxy=mxy;
+    // invisible flag + oml + vertex color range
+    if ((rdp.other_mode_l & (3u << 24)) == ((uint32_t)G_BL_0 << 24) &&
+        (rdp.other_mode_l & (3u << 20)) == ((uint32_t)G_BL_CLR_MEM << 20)) d75d_emit_invis++;
+    if (!d75d_oml_set) { d75d_oml = rdp.other_mode_l; d75d_oml_set = 1; }
+    for (int i = 0; i < 3; i++) {
+        int cr=v_arr[i]->color.r, cg=v_arr[i]->color.g, cb=v_arr[i]->color.b;
+        if (cr<d75d_cmin)d75d_cmin=cr; if (cr>d75d_cmax)d75d_cmax=cr;
+        if (cg<d75d_cmin)d75d_cmin=cg; if (cg>d75d_cmax)d75d_cmax=cg;
+        if (cb<d75d_cmin)d75d_cmin=cb; if (cb>d75d_cmax)d75d_cmax=cb;
+    }
+}
+// called at emit with the texunit-0 bound flag
+static void d75d_note_emit_z(uint32_t f, struct LoadedVertex* const* v_arr, int has_tex, int comb_utex) {
+    d75d_init();
+    if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
+    d75d_frame_check(f);
+    for (int i = 0; i < 3; i++) {
+        float w = v_arr[i]->w;
+        if (w == 0.f) { d75d_znan++; continue; }
+        float nz = v_arr[i]->z / w;
+        if (!std::isfinite(nz)) { d75d_znan++; continue; }
+        if (nz<d75d_zmin)d75d_zmin=nz; if(nz>d75d_zmax)d75d_zmax=nz;
+    }
+    if (d75d_use_tex < 0) d75d_use_tex = has_tex;
+    if (d75d_comb_utex < 0) d75d_comb_utex = comb_utex;
+    d75d_comb = rdp.combine_mode;
+    d75d_prim[0]=rdp.prim_color.r; d75d_prim[1]=rdp.prim_color.g; d75d_prim[2]=rdp.prim_color.b; d75d_prim[3]=rdp.prim_color.a;
+    d75d_env[0]=rdp.env_color.r; d75d_env[1]=rdp.env_color.g; d75d_env[2]=rdp.env_color.b; d75d_env[3]=rdp.env_color.a;
+}
+
 static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     const size_t d75_di0 = dest_index; /* D75 probe: loop below mutates dest_index */
     SUPPORT_CHECK(n_vertices <= MAX_VERTICES);
@@ -1780,6 +1926,13 @@ static inline int gfx_lod_tile_offset(const int i) {
 }
 
 static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
+    /* D75D: only real model triangles (all indices < MAX_VERTICES); the
+     * fullscreen-quad helpers use indices MAX_VERTICES+0..3 and would skew maxtri. */
+    if (vtx1_idx < MAX_VERTICES && vtx2_idx < MAX_VERTICES && vtx3_idx < MAX_VERTICES) {
+        uint32_t d75d_mx = vtx1_idx > vtx2_idx ? (vtx1_idx > vtx3_idx ? vtx1_idx : vtx3_idx)
+                                               : (vtx2_idx > vtx3_idx ? vtx2_idx : vtx3_idx);
+        d75d_note_tri(videoGetFrameCount(), d75d_mx);
+    }
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
@@ -1807,6 +1960,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         bool any_behind_camera = (v1->w < 0) || (v2->w < 0) || (v3->w < 0);
         if (!any_behind_camera && (v1->clip_rej & v2->clip_rej & v3->clip_rej)) {
             // The whole triangle lies outside the visible area
+            d75d_note_rej(videoGetFrameCount(), 0);
             return;
         }
 
@@ -1994,16 +2148,19 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         switch (rsp.geometry_mode & G_CULL_BOTH) {
             case G_CULL_FRONT:
                 if (cross <= 0) {
+                    d75d_note_rej(videoGetFrameCount(), 1);
                     return;
                 }
                 break;
             case G_CULL_BACK:
                 if (cross >= 0) {
+                    d75d_note_rej(videoGetFrameCount(), 1);
                     return;
                 }
                 break;
             case G_CULL_BOTH:
                 // Why is this even an option?
+                d75d_note_rej(videoGetFrameCount(), 1);
                 return;
         }
     }
@@ -2384,6 +2541,8 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
 
     struct GfxClipParameters clip_parameters = gfx_rapi->get_clip_parameters();
 
+    d75d_note_emit(videoGetFrameCount(), v_arr); // survived all rejection gates -> reaches GL
+    d75d_note_emit_z(videoGetFrameCount(), v_arr, (used_textures[0] || used_textures[1]) ? 1 : 0, comb->used_textures[0] ? 1 : 0);
     for (int i = 0; i < 3; i++) {
         float z = v_arr[i]->z, w = v_arr[i]->w;
         if (clip_parameters.z_is_from_0_to_1) {
@@ -3451,6 +3610,7 @@ static void gfx_run_dl(Gfx* cmd) {
                  * review alone. Remove once D236 pass 16 concludes. */
                 g_d236_last_vtx_seg = (uint8_t)(cmd->words.w1 >> 24);
                 gfx_sp_vertex(C0(0, 16) / sizeof(Vtx), C0(16, 4), (const Vtx*)seg_addr(cmd->words.w1));
+                d75d_note_vtx(videoGetFrameCount(), C0(0, 16) / sizeof(Vtx), C0(16, 4));
                 break;
             case G_DL: {
                 if (C0(16, 1) == 0) {
