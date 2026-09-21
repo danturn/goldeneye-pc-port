@@ -56,6 +56,7 @@ void gfx_set_safe_area_crop(int on);       /* crop the N64 TV-overscan safe-area
  * (see port/src/optionsoverlay.c, D316). */
 void gfx_get_ui_screen_rect(int32_t *outX, int32_t *outY, int32_t *outW, int32_t *outH);
 void gfx_texture_cache_clear(void);
+int gfx_texture_cache_count(void); /* D235 */
 void gfx_texture_cache_delete(const uint8_t *orig_addr);
 void gfx_texture_cache_delete_range(const uint8_t *start, const uint8_t *end);
 int gfx_create_framebuffer(uint32_t width, uint32_t height, int upscale, int autoresize);

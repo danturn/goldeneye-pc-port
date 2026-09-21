@@ -563,6 +563,11 @@ void gfx_texture_cache_clear() {
     memset(rendering_state.textures, 0, sizeof(rendering_state.textures));
 }
 
+/* D235: entry count for the stage-transition probe (boss.c). */
+extern "C" int gfx_texture_cache_count(void) {
+    return (int)gfx_texture_cache.map.size();
+}
+
 static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
     TextureCacheMap::iterator it = gfx_texture_cache.map.find(key);
     TextureCacheNode** n = &rendering_state.textures[i];

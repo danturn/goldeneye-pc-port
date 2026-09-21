@@ -2717,8 +2717,26 @@ void modelCopyAnimForMerge(Model *model, f32 timemerge)
 }
 
 
+#ifdef PORT
+/* D311 (M-194): the upstream poison source is still unknown -- GDB caught
+ * oldspeed=-1.75e18 / newspeed=-3.2e7 but not which call first wrote a
+ * garbage speed. Every write of model->speed funnels through
+ * modelSetAnimSpeed (startframe<=0 path) or modelSetAnimation2, so flag any
+ * anomalous value entering OR already resident at those two choke points.
+ * Fires only on |v|>1e4 or NaN -- silent in healthy play; the line pins the
+ * exact transition that poisons the model. Same unconditional-on-fire
+ * pattern as the D156 guards (which log when they fire, no env var). */
+static int d311Anomalous(f32 v) { return (v != v) || (v > 10000.0f) || (v < -10000.0f); }
+#endif
+
 void modelSetAnimation2(Model *model, ModelAnimation *anim, s32 flip, f32 frame, f32 speed, f32 arg5)
 {
+#ifdef PORT
+    if (model != NULL && d311Anomalous(speed)) {
+        osSyncPrintf("D311: setanimation2 ANOMALY in=%.6g resident=%.6g frame=%.6g model=%p\n",
+                     (double)speed, (double)model->speed, (double)frame, (void *)model);
+    }
+#endif
     s32 hadNoAnim = !model->anim;
     s32 padding;
     s32 type;
@@ -2953,6 +2971,13 @@ void sub_GAME_7F06FE44(Model *model, s32 arg1) {
 
 void modelSetAnimSpeed(Model *model, f32 anim_speed, f32 startframe) {
 #ifdef PORT
+    if (model != NULL && (d311Anomalous(anim_speed) || d311Anomalous(model->speed))) {
+        osSyncPrintf("D311: setanimspeed ANOMALY in=%.6g resident=%.6g startframe=%.6g "
+                     "oldspeed=%.6g newspeed=%.6g timespeed=%.6g model=%p\n",
+                     (double)anim_speed, (double)model->speed, (double)startframe,
+                     (double)model->oldspeed, (double)model->newspeed,
+                     (double)model->timespeed, (void *)model);
+    }
     /* D243 M-180: log all modelSetAnimSpeed calls during scripted camera modes
      * to identify if unusual speed values are being set during cutscenes.
      * Env-gated on GE_D243M (already cached elsewhere). */

@@ -469,6 +469,34 @@ void bossMainloop(void)
 
         memaReset(mempAllocBytesInBank(g_CurentMaMallocValue, MEMPOOL_STAGE), g_CurentMaMallocValue);
         reset_play_data_ptrs();
+#ifdef PORT
+        /* D235 (wrong textures after dying/restarting a level): the port-side
+         * GL texture cache (port/fast3d/gfx_pc.cpp TextureCacheMap) is keyed by
+         * (source address, palette addrs, fmt, siz, size_bytes, palette_hash)
+         * with NO content check. The MEMPOOL_STAGE arena those stage-texture
+         * source addresses live in was just reset above, so every entry
+         * pointing into it is stale. On a death/restart the texpool can place
+         * a DIFFERENT image at an address that held another one during the
+         * previous run of this level -> cache hit returns the old image =
+         * "wrong textures" that only ever appear on the reload path, never on
+         * a cold boot. The N64 has no such cache (the RSP re-reads DRAM every
+         * frame), so clearing it here is a port-only correctness fix; the
+         * re-uploads are pixel-identical and cost one-time during the loading
+         * screen. videoResetTextureCache() existed for exactly this and had
+         * zero callers -- this is the wiring. GE_D235=1 logs how many stale
+         * entries each transition actually purged (evidence for the finding;
+         * a cold boot into a level should log 0, a death/restart >0). */
+        {
+            static int ge_d235 = -1;
+            if (ge_d235 < 0) ge_d235 = getenv("GE_D235") != NULL;
+            extern void videoResetTextureCache(void);
+            extern int gfx_texture_cache_count(void);
+            if (ge_d235)
+                osSyncPrintf("D235: stage=%d texcache entries purged at load=%d\n",
+                             (s32)g_StageNum, gfx_texture_cache_count());
+            videoResetTextureCache();
+        }
+#endif
 
         localSelectedNumPlayers = 0;
         if (g_StageNum != LEVELID_TITLE)
