@@ -8,7 +8,7 @@
 > The full single-player campaign runs at a steady 60 fps with audio (music +
 > SFX) playing throughout, on Windows and Linux including Steam Deck, and it
 > is completable end to end: the whole campaign has been playtested through
-> all 21 missions (Agent difficulty). It's an early public cut: all 21 solo
+> all 20 missions (Agent difficulty). It's an early public cut: all 20 solo
 > missions load and run crash-free, but the known issues below are real;
 > feedback is very welcome. **This is a pre-1.0 release, not a finished
 > product** — expect rough edges and missing features until v1.0; see the

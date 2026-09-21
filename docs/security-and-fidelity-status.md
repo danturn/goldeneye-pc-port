@@ -82,7 +82,8 @@ port of the N64's PRNG, but wasn't — a shift-operation helper didn't match
 the real MIPS64 instruction semantics it was meant to mirror. This was
 independently confirmed by hand-tracing the assembly against the C port,
 tracked as finding D284, and fixed before the release (verified clean
-across a full 21-level sweep, no crashes). It affected loot placement, AI
+across a full level sweep — all 20 missions plus the ending sequence —
+no crashes). It affected loot placement, AI
 behavior variance, and replay-state determinism from the very first random
 draw, in every release before v0.3.0. Because of the fix, RNG-derived
 output — including the save-file CRC — changed, which meant existing save

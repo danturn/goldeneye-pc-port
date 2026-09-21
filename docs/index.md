@@ -19,7 +19,7 @@ as the [Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the
 same Rare "Indy" engine family, one hardware generation apart.
 
 **Status: v0.3.0.** The full single-player campaign runs at a steady 60 fps
-and is completable end to end (all 21 missions playtested); all 21 missions
+and is completable end to end (all 20 missions playtested); all 20 missions
 load and run clean on Windows, Linux and Steam Deck, and audio (music + SFX)
 plays throughout. The known rough edges — mostly cosmetic rendering defects,
 stretched-not-native widescreen, and missing features — are listed plainly

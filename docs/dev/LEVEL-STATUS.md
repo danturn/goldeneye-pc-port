@@ -1,4 +1,10 @@
-# LEVEL-STATUS — 21 solo-level load+render sweep (WS4)
+# LEVEL-STATUS — level load+render sweep (WS4) — 20 solo missions + ending sequence
+
+**Counting note:** the campaign is **20 playable missions** (`SP_LEVEL_MAX //
+20` in `bondconstants.h`; `mission_folder_setup_entries` in `front.c` has
+exactly 20 entries). The sweep's 21st boot target, "Cuba" (`-level_54`,
+`LEVELID_CUBA`), is the end-of-campaign cast/credits stage (D129), not a solo
+mission — so "21/21 PASS" below means *21 stage boots*, 20 of them missions.
 
 Method: bare `./build-pc/ge007.x86_64.exe -level_XX` (per-level `-m*` pools
 auto-injected, D121), `GE_PCDUMP="80-260:40"`, ~24 s watchdog then

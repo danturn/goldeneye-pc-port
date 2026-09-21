@@ -3,7 +3,7 @@
 Every `getenv("GE_…")` in the tree. The table prose is hand-curated;
 **`tools_pc/gen_env_probes.py`** re-greps the live sites and reports drift
 (NEW / GONE vars + a fresh file:line map) — run it before trusting the
-File:line cells. Last reconciled 2026-09-21 (GE_D235 added, D235 fix wired; GE_D288 refined per M-155 follow-up; GE_D75V added for the Nintendo-logo vertex-slot investigation, M-195). All are **env-gated**: unset = zero behavior
+File:line cells. Last reconciled 2026-09-21 (GE_D235 added, D235 fix wired; GE_D288 refined per M-155 follow-up; GE_D75V added for the Nintendo-logo vertex-slot investigation, M-195; GE_D322 pool-telemetry probe added). All are **env-gated**: unset = zero behavior
 change, so they are safe to leave in a release build (they only cost a
 `getenv` on the guarded path). "Dead" below means *the finding it was built
 for is closed* — the probe is strip-candidate scaffolding, not that it does

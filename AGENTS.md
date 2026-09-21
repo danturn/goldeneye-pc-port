@@ -51,8 +51,9 @@ Run `/linkcheck` for this sweep. Record new findings in `docs/dev/findings.md` �
 
 - **Phase 0–1.5:** done. Build system, boot chain, OS-shim layer, fast3d
   integration, first frames, full intro rendering.
-- **Phase 2 (rendering):** in progress. All 21 solo levels load + render +
-  survive an unattended window; front end (menu → mission select → briefing →
+- **Phase 2 (rendering):** in progress. All 20 solo missions (plus the
+  ending-credits sequence, `-level_54`) load + render + survive an
+  unattended window; front end (menu → mission select → briefing →
   start) is functional; file-backed EEPROM saves work. Cosmetic defects are
   parked in `docs/dev/GRAPHICS-BACKLOG.md`.
 - **Phase 3 (audio + input):** input layer done (`port/src/input.c`); polish

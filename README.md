@@ -73,9 +73,10 @@ listed plainly there.
 ## Status
 
 **v0.3.0 - playable, with known rough edges.** The full single-player
-campaign is completable end to end (all 21 missions, Agent difficulty,
-playtested), at a steady 60 fps; all 21 solo missions load, render and run
-crash-free, verified on Windows, Linux and real Steam Deck hardware. Feedback
+campaign is completable end to end (all 20 missions, Agent difficulty,
+playtested), at a steady 60 fps; all 20 solo missions — plus the
+end-of-campaign credits sequence — load, render and run crash-free, verified
+on Windows, Linux and real Steam Deck hardware. Feedback
 is very welcome.
 
 What a release actually installs (no networking, no telemetry, no ROM or
@@ -84,8 +85,8 @@ game's logic: [Security & fidelity status](docs/security-and-fidelity-status.md)
 
 **Working:** boot sequence and front end (menu → mission select → briefing →
 start), front-end menu navigation on the left stick to match the F10 overlay
-(D282); all 21 solo missions load, render and are crash-free (full campaign
-playtested end to end at Agent difficulty); steady 60 fps
+(D282); all 20 solo missions load, render and are crash-free (full campaign
+playtested end to end at Agent difficulty, including the ending sequence); steady 60 fps
 (software RSP off the presentation critical path); full audio: in-level music and SFX; keyboard + mouse (click-to-lock, proportional aim mode, a single
 simplified sensitivity control) and a modern dual-stick controller layout;
 automatic widescreen FOV scaling; Bond is fixed in cutscenes (no more

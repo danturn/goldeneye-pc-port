@@ -47,7 +47,7 @@ Objective status: `src/game/objective_status.c`
 - Notes / defects:
 ```
 
-## 21 solo levels (mission order — numbers = `-level_XX`)
+## The 20 solo missions (+ ending sequence; mission order — numbers = `-level_XX`)
 
 | # | Level | -level | Briefing asset |
 |---|---|---|---|
@@ -71,7 +71,14 @@ Objective status: `src/game/objective_status.c`
 | 18 | Cradle | 41 | UbriefcradZ |
 | 19 | Aztec | 28 | UbriefaztZ |
 | 20 | Egypt | 32 | UbriefcrypZ |
-| 21 | Cuba | 54 | (post-Egypt unlock) |
+| — | *Ending sequence* ("Cuba") | 54 | not a playable mission — cast/credits stage (D129) |
 
-(Mission table: `front.c:433`. Cuba = `LEVELID_CUBA`, not in the standard
-folder list — unlocked after Egypt.)
+(Mission table: `front.c`, `mission_folder_setup_entries` — exactly 20
+playable missions; the game's own enum says it, `SP_LEVEL_MAX // 20` in
+`bondconstants.h`). "Cuba" (`-level_54`, `LEVELID_CUBA`) is **not** a
+selectable mission: after the final mission the front end jumps straight to
+it for the extended cast display + credits scroll
+(`front.c` `selected_stage = LEVELID_CUBA` → `do_extended_cast_display(TRUE)`;
+`bondviewRenderCredits`, D129). Older docs and sweep logs count it as a 21st
+"level" — the campaign is 20 missions; "21/21" sweep results mean 21 stage
+boots, of which 20 are missions.)
