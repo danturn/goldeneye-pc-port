@@ -180,7 +180,7 @@ D299,FIXED,Game.SkipIntro crashed selecting any save slot except one —,"FIXED 
 D300,FIXED,Hipfire look feels non-uniform (issue #89):,"FIXED, user-confirmed live —"
 D301,FIXED,"fileGetIsCheatUnlocked() NULL-deref, unguarded on every call site, not just the D299/SkipIntro one (GitHub #87, two reports with an identical crash PC/fault ad…",FIXED locally on release/v0.3.0 (not pushed) —
 D302,FIXED,"Render FPS regression to ~40-45fps on release/v0.3.0 (user QA on the local v0.3.0 pre-release build, 2026-09-18) —","FIXED — 4 uncached getenv() calls added by D236 passes 10/12/14/16 directly inside gfx_sp_tri1 (port/fast3d/gfx_pc.cpp, per-triangle) cached with the same static int x = -1 pattern D250 established e…"
-D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") draw wrong —","OPEN — reported only, not yet investigated."
+D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") draw wrong —","OPEN — investigated: pipeline + weapon stats + model conversion ruled out; GE_D303 capture probe in-tree (port/fast3d/gfx_pc.cpp), blocked on a live firing repro."
 D304,FIXED,"Mouse sensitivity menu overhaul (user request, 2026-09-18):","FIXED — see full entry for both the range/parity pass and the same-day follow-up (collapsed to a single Input.MouseSensitivity menu row + fixed overlayUpdateScroll()'s unconditional bottom-anchor, th…"
 D305,FIXED,"Steam Deck SIGSEGV on the v0.3.0 pre-release build (Cavern, early in the level, Game.AllUnlocked previously enabled on the session/save) —",FIXED (defensive guard) —
 D306,OPEN,"Dam intro/truck wheels render with odd transparent-looking areas, possibly z-fighting (user QA, 2026-09-18).","OPEN — reported only, not investigated."

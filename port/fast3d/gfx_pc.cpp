@@ -1571,6 +1571,41 @@ static void d75d_note_vtx(uint32_t f, uint32_t count, uint32_t dest) {
     if (dest + count > d75d_batchhi) d75d_batchhi = dest + count;
     if (d75d_seqlen < 4096) d75d_seq[d75d_seqlen++] = 'V';
 }
+/* TEMP D303: env-gated detector for the "extra long flash straight up" quad
+ * (M-?? / docs/dev/findings.md §D303). Logs any emitted triangle whose NDC bbox
+ * is tall + thin (aspect > 3, height > 25% of frame) and mostly on-screen — the
+ * screen-space signature of the reported artifact, whatever its source. Gated
+ * on GE_D303; caps output. Remove once D303 is resolved. */
+static int d303_on = -1;
+static uint32_t d303_hits = 0;
+static void d303_note_emit(uint32_t f, struct LoadedVertex* const* v_arr) {
+    if (d303_on < 0) { const char* e = getenv("GE_D303"); d303_on = (e && e[0]) ? 1 : 0; }
+    if (!d303_on || d303_hits >= 200) return;
+    float mnx=1e9f,mxx=-1e9f,mny=1e9f,mxy=-1e9f, wsum = 0.f;
+    int ok = 0;
+    for (int i = 0; i < 3; i++) {
+        float w = v_arr[i]->w;
+        if (w <= 0.f) continue;
+        wsum += w;
+        float nx = v_arr[i]->x / w, ny = v_arr[i]->y / w;
+        if (nx<mnx)mnx=nx; if(nx>mxx)mxx=nx; if(ny<mny)mny=ny; if(ny>mxy)mxy=ny;
+        ok = 1;
+    }
+    if (!ok) return;
+    float h = mxy - mny, wd = mxx - mnx;
+    if (h < 0.45f || wd <= 0.f || h / wd < 3.0f) return;          // VERY tall + thin
+    if (mxy < 0.1f || mny > 0.9f) return;                          // must reach upper screen region
+    d303_hits++;
+    int bl = (rdp.other_mode_l >> 24) & 3u, blc = (rdp.other_mode_l >> 20) & 3u;
+    fprintf(stderr,
+        "D303: f=%u ndc=(%.3f,%.3f)-(%.3f,%.3f) h=%.3f w=%.3f asp=%.1f bl=%d blc=%d oml=0x%08x comb=0x%016llx prim=(%u,%u,%u) env=(%u,%u,%u) wavg=%.1f c0=(%d,%d,%d)\n",
+        f, mnx, mny, mxx, mxy, h, wd, (wd > 0.f ? h / wd : 99.0f), bl, blc,
+        rdp.other_mode_l, (unsigned long long)rdp.combine_mode,
+        rdp.prim_color.r, rdp.prim_color.g, rdp.prim_color.b,
+        rdp.env_color.r, rdp.env_color.g, rdp.env_color.b, wsum / 3.0f,
+        v_arr[0]->color.r, v_arr[0]->color.g, v_arr[0]->color.b);
+}
+
 static void d75d_note_tri(uint32_t f, uint32_t maxidx) {
     d75d_init();
     if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
@@ -2497,6 +2532,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     struct GfxClipParameters clip_parameters = gfx_rapi->get_clip_parameters();
 
     d75d_note_emit(videoGetFrameCount(), v_arr); // survived all rejection gates -> reaches GL
+    d303_note_emit(videoGetFrameCount(), v_arr); // TEMP D303
     d75d_note_emit_z(videoGetFrameCount(), v_arr, (used_textures[0] || used_textures[1]) ? 1 : 0, comb->used_textures[0] ? 1 : 0);
     for (int i = 0; i < 3; i++) {
         float z = v_arr[i]->z, w = v_arr[i]->w;
