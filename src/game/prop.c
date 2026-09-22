@@ -688,6 +688,40 @@ void setupCctv(s32 arg0, CCTVRecord *arg1, s32 cmdindex)
         arg1->unkC8 = arg1->unkCC;
         arg1->unkC4 = atan2f(sp44.f[0] - sp50->pos.f[0], sp44.f[2] - sp50->pos.f[2]);
         arg1->timer = 0;
+
+#ifdef PORT
+        /* D307 probe: dump every input + the derived orientation so a PC run
+         * can be compared word-for-word against a ROM decode of the same
+         * record (facing-backwards CCTV report). Env-gated, load-time only. */
+        if (getenv("GE_D307")) {
+            fprintf(stderr,
+                "D307: cctv cmd=%d obj=%d pad=%d bound=%d pos=(%.6g,%.6g,%.6g) "
+                "mtx=(%.6g,%.6g,%.6g %.6g,%.6g,%.6g %.6g,%.6g,%.6g) "
+                "sw=(%.6g,%.6g,%.6g) watch=(%.6g,%.6g,%.6g) padpos=(%.6g,%.6g,%.6g) "
+                "target=(%.6g,%.6g,%.6g) C4=%.6f CC=%.6f basis=(%.6g,%.6g,%.6g %.6g,%.6g,%.6g %.6g,%.6g,%.6g)\n",
+                cmdindex, arg1->obj, arg1->pad, !isNotBoundPad(arg1->pad),
+                arg1->prop->pos.f[0], arg1->prop->pos.f[1], arg1->prop->pos.f[2],
+                arg1->mtx.m[0][0], arg1->mtx.m[0][1], arg1->mtx.m[0][2],
+                arg1->mtx.m[1][0], arg1->mtx.m[1][1], arg1->mtx.m[1][2],
+                arg1->mtx.m[2][0], arg1->mtx.m[2][1], arg1->mtx.m[2][2],
+                temp_a2->f[0], temp_a2->f[1], temp_a2->f[2],
+                sp44.f[0], sp44.f[1], sp44.f[2],
+                sp50->pos.f[0], sp50->pos.f[1], sp50->pos.f[2],
+                sp44.f[0] - sp50->pos.f[0], sp44.f[1] - sp50->pos.f[1], sp44.f[2] - sp50->pos.f[2],
+                arg1->unkC4, arg1->unkCC,
+                sp3C->m[0][0], sp3C->m[0][1], sp3C->m[0][2],
+                sp3C->m[1][0], sp3C->m[1][1], sp3C->m[1][2],
+                sp3C->m[2][0], sp3C->m[2][1], sp3C->m[2][2]);
+            if (arg1->pad == 10018) {
+                for (int d307i = 16; d307i <= 24; d307i++) {
+                    struct PadRecord *d307p = &g_CurrentSetup.boundpads[d307i];
+                    fprintf(stderr, "D307: bpad[%d] ptr=%p pos=(%.6g,%.6g,%.6g)\n",
+                            d307i, (void *)d307p,
+                            d307p->pos.f[0], d307p->pos.f[1], d307p->pos.f[2]);
+                }
+            }
+        }
+#endif
     }
 }
 

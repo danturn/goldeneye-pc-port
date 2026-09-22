@@ -7,7 +7,7 @@ D43-D50,RESOLVED,"model-file loading → offline sidecar ""Plan B"" (d43_emit.py
 D51-D58,RESOLVED,"font pixeldata, osGetCount tick rate, model RW pools, cseq BE header, synth slots, RLE menu bg, watch raw offsets, gun-barrel DL",resolved
 D59-D68,RESOLVED,"intro render: blood-RLE clobber, DMA validate, OSMesgQueue, HEADS/BODIES sentinels, romCopy width, image_entry, Globalimagetable BE→LE",resolved
 D70-D74,RESOLVED,"intro-logo pixels: C-array bswap, UV path, sinf/cosf DVAL(), texture-import truncation",resolved
-D75,OPEN,front-end 3D model transforms (D77 audio split out below —,"OPEN (parked). M-32 triage (see §F ""D75 ADDENDUM""):"
+D75,FIXED,front-end 3D model transforms (D77 audio split out below —,"FIXED (M-197, 2026-09-21; user-confirmed live):"
 D76 · D164,FIXED,Legal screen only draws line 1 —,"FIXED — this row and the ## D164 entry below were stale; the proposed one-line #ifdef PORT fix was actually committed 8dfc578f4 (2026-08-31), well before this correction (2026-09-18)."
 D159,FIXED,"front-end wallet-Bond photo ""interlaced""/combed (RC1 / D149) —",FIXED (#ifdef PORT no-op the swap in image.c)
 D161,FIXED,Depot (-level_30) ceiling = bright-blue speckle + radial rays (B2).,FIXED (port/fast3d/gfx_pc.cpp)
@@ -132,7 +132,7 @@ D164,FIXED,"Disclaimer / legal screen only draws the first line (D76 root cause,
 D165,FIXED,"Front-end menu cursor doesn't feel like a mouse pointer (M-31, user bug B5 follow-up).","FIXED (port/src/input.c; Input.MenuPointerMode, Input.HipfirePitchSpeed added)."
 D166,FIXED,Hipfire mouse pitch is digital while yaw is analog —,FIXED (port/src/input.c).…
 D235,OPEN,Wrong textures load after dying/restarting a level —,OPEN — needs: does it repro on a *fresh* level boot (rules out reload-state) vs only after death/restart (confirms it); which surfaces; a screenshot.…
-D236,OPEN,"Surface 1: 2D billboard trees render as a wall/sheet of tree texture instead of discrete camera-facing tree sprites (M-106, user QA report).","OPEN — pass 24 (2026-09-21, static) DECODED THE TREE TEXTURE (new tools_pc/texdecode.py ports image.c's LOOKUP/HUFFLOOKUP/RLELOOKUP codecs)."
+D236,CLOSED,"Surface 1: 2D billboard trees render as a wall/sheet of tree texture instead of discrete camera-facing tree sprites (M-106, user QA report).","CLOSED (M-198, pass 26, 425237f9; probes stripped 0503d335):"
 D237,OPEN,"QoL ask (M-106, user QA):",OPEN — not designed; port-only
 D238,OPEN,"QoL ask (M-106, user QA):",OPEN — not designed; port-only (port/src/input.c + config.c)
 D239,CLOSED,"QoL ask (M-106, user QA):",CLOSED — executed in the v0.2.0 prep pass (port-only)…
@@ -184,7 +184,7 @@ D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") dra
 D304,FIXED,"Mouse sensitivity menu overhaul (user request, 2026-09-18):","FIXED — see full entry for both the range/parity pass and the same-day follow-up (collapsed to a single Input.MouseSensitivity menu row + fixed overlayUpdateScroll()'s unconditional bottom-anchor, th…"
 D305,FIXED,"Steam Deck SIGSEGV on the v0.3.0 pre-release build (Cavern, early in the level, Game.AllUnlocked previously enabled on the session/save) —",FIXED (defensive guard) —
 D306,OPEN,"Dam intro/truck wheels render with odd transparent-looking areas, possibly z-fighting (user QA, 2026-09-18).","OPEN — reported only, not investigated."
-D307,OPEN,"In-level security camera entities can be flipped facing the wrong direction (backwards) on some levels, e.g.","OPEN — reported only, not investigated."
+D307,OPEN,"In-level security camera entities can be flipped facing the wrong direction (backwards) on some levels, e.g.",OPEN (investigated 2026-09-21) —
 D308,OPEN,"Occasional z-fighting confirmed on some levels' geometry, general/broader than the D306 truck-wheel instance (user QA, 2026-09-18).","OPEN — reported/confirmed by the user, not investigated."
 D309,FIXED,Complete non-self-recovering freeze (Windows) returning from Caverns to the intro screen —,FIXED via D310 — user-playtest-confirmed 2026-09-18 (Caverns→intro clean; the spin record itself observed resuming correctly in the post-fix probe log).
 D310,FIXED,"RULE-2-SIGNOFF: chraiitemsize() mis-sizes 1-byte AI_PRINT records (NUL-scans forward), corrupting AI execution for any list containing an active PRINT —",FIXED — user-playtest-confirmed 2026-09-18 (v2:

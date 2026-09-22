@@ -98,10 +98,6 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
 
 **Known issues:**
 
-- Particle colours: a real fix landed (a corrupted-vertex-buffer bug), but
-  the rainbow effect can still occur intermittently on either platform, not
-  every time or on every level — a second cause hasn't been found yet
-  (D252).
 - Some muzzle flashes draw an extra, erroneous long flash straight up from
   the gun (seen on the M16, among others), overlaid on the normal, correctly
   drawn flash. Cosmetic only (D303).
@@ -111,7 +107,9 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
   (D306). Minor and cosmetic.
 - In-level security camera props (not the player's own view) can
   occasionally end up facing backwards on some levels, seen on Bunker
-  (D307).
+  (D307). The orientation math has been verified faithful to the N64; if you
+  see it, a report of which level and which camera is what's needed to keep
+  chasing it.
 - Rarely, Bond's model can briefly render out of place after an animation
   transition — purely visual: no effect on gameplay or saves, and it clears
   on its own or by re-entering the level (D311).
@@ -119,10 +117,6 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
   ~10 s before resuming the scripted shootout — a latent race that exists in
   the N64 original too (where it softlocks permanently); the port detects and
   auto-recovers it (D318).
-- Some front-end 3D models are off: the spinning Nintendo logo renders as two
-  white blobs and the Rareware logo's texture filtering looks wrong (D75).
-- Surface 1's 2D billboard trees render as a solid wall of tree texture
-  instead of discrete sprites (D236). Under active investigation.
 - **Widescreen is stretched, not native**: on non-4:3 windows the whole
   frame (world and HUD) is stretched horizontally to fill your display —
   about 33% wider than original at 16:9, like a 4:3 video in a TV's "stretch"
