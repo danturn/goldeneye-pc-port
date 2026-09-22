@@ -1571,6 +1571,84 @@ static void d75d_note_vtx(uint32_t f, uint32_t count, uint32_t dest) {
     if (dest + count > d75d_batchhi) d75d_batchhi = dest + count;
     if (d75d_seqlen < 4096) d75d_seq[d75d_seqlen++] = 'V';
 }
+/* TEMP D306/D308: env-gated z-fighting FLICKER detector (docs/dev/findings.md
+ * §D306/§D308). A coarse grid of screen cells remembers the depth values seen
+ * recently at each cell; when a new value arrives that is close to a
+ * recently-seen-but-different one (within GE_ZFTOL, default 2 units of 24-bit
+ * quantized NDC z), that is the screen-space signature of genuine z-fighting
+ * (the winner alternates between two near-equal depths as the camera moves).
+ * Tessellation noise (adjacent tris of one surface) does not alternate. Gated
+ * on GE_ZF; optional NDC box filter GE_ZFBOX="x0 y0 x1 y1"; caps output per
+ * run. Remove once D306/D308 are resolved. */
+static int zf_on = -1;
+static int zf_tol = 2;
+static float zfbox[4] = { -1.05f, -1.05f, 1.05f, 1.05f };
+static int zfbox_on = 0;
+#define ZF_GRIDX 96
+#define ZF_GRIDY 54
+#define ZF_HIST 6
+struct ZfCell { uint32_t hist[ZF_HIST]; uint8_t n; uint16_t osc; };
+static ZfCell zf_grid[ZF_GRIDX * ZF_GRIDY];
+static uint32_t zf_hits = 0;
+#define ZF_MIN_OSC 5   // a fight must recur this many times at the same cell
+static void zf_note_emit(uint32_t f, struct LoadedVertex* const* v_arr) {
+    if (zf_on < 0) {
+        const char* e = getenv("GE_ZF");
+        zf_on = (e && e[0]) ? 1 : 0;
+        const char* t = getenv("GE_ZFTOL");
+        if (t) zf_tol = atoi(t);
+        const char* b = getenv("GE_ZFBOX");
+        if (b && sscanf(b, "%f %f %f %f", &zfbox[0], &zfbox[1], &zfbox[2], &zfbox[3]) == 4)
+            zfbox_on = 1;
+    }
+    if (!zf_on || zf_hits >= 600) return;
+    float cx=0.f, cy=0.f, czw=0.f, wsum=0.f; int ok=0;
+    for (int i = 0; i < 3; i++) {
+        float w = v_arr[i]->w;
+        if (w <= 0.f) continue;
+        cx += (v_arr[i]->x / w) * w; cy += (v_arr[i]->y / w) * w; czw += (v_arr[i]->z / w) * w; wsum += w;
+        ok = 1;
+    }
+    if (!ok || wsum <= 0.f) return;
+    cx /= wsum; cy /= wsum; czw /= wsum;
+    if (cx < -1.0f || cx > 1.0f || cy < -1.0f || cy > 1.0f) return; // on-screen only
+    if (zfbox_on && (cx < zfbox[0] || cx > zfbox[2] || cy < zfbox[1] || cy > zfbox[3])) return;
+    uint32_t z24 = (uint32_t)(czw * 255.f); // NDC z in [-1,1] -> 24-bit [0,65535]
+    int gx = (int)((cx + 1.0f) * 0.5f * ZF_GRIDX); if (gx >= ZF_GRIDX) gx = ZF_GRIDX - 1;
+    int gy = (int)((cy + 1.0f) * 0.5f * ZF_GRIDY); if (gy >= ZF_GRIDY) gy = ZF_GRIDY - 1;
+    ZfCell* c = &zf_grid[gy * ZF_GRIDX + gx];
+    int dup = 0;
+    for (uint8_t k = 0; k < c->n; k++) if (c->hist[k] == z24) { dup = 1; break; }
+    if (!dup) {
+        // TRUE oscillation: new value close to an OLDER history entry while a
+        // different value sat between them (a b a), AND the cell's history is
+        // not a monotonic drift (tessellation gradient of one surface).
+        int anyup = 0, anydn = 0;
+        for (uint8_t k = 1; k < c->n; k++) {
+            if (c->hist[k] > c->hist[k - 1]) anyup = 1;
+            else if (c->hist[k] < c->hist[k - 1]) anydn = 1;
+        }
+        if (!(anyup && anydn)) goto zf_push;   // monotonic drift = gradient, not a fight
+        for (uint8_t k = 0; k + 1 < c->n; k++) {
+            long dz = (long)z24 - (long)c->hist[k];
+            if (dz < 0) dz = -dz;
+            if (dz > 0 && dz <= (long)zf_tol) {
+                uint16_t o = ++c->osc;
+                if (o < ZF_MIN_OSC || (o % 10) != 0 && o != ZF_MIN_OSC) goto zf_push;
+                zf_hits++;
+                fprintf(stderr,
+                        "ZF: f=%u z24=%u dprev=%ld osc=%u ndc=(%.3f,%.3f) oml=0x%08x comb=0x%016llx wavg=%.1f\n",
+                        f, z24, dz, (unsigned)o, cx, cy, rdp.other_mode_l,
+                        (unsigned long long)rdp.combine_mode, wsum / 3.0f);
+                if (zf_hits >= 600) return;
+            }
+        }
+zf_push:
+        if (c->n < ZF_HIST) c->hist[c->n++] = z24;
+        else { memmove(c->hist, c->hist + 1, sizeof(uint32_t) * (ZF_HIST - 1)); c->hist[ZF_HIST - 1] = z24; }
+    }
+}
+
 /* TEMP D303: env-gated detector for the "extra long flash straight up" quad
  * (M-?? / docs/dev/findings.md §D303). Logs any emitted triangle whose NDC bbox
  * is tall + thin (aspect > 3, height > 25% of frame) and mostly on-screen — the
@@ -2533,6 +2611,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
 
     d75d_note_emit(videoGetFrameCount(), v_arr); // survived all rejection gates -> reaches GL
     d303_note_emit(videoGetFrameCount(), v_arr); // TEMP D303
+    zf_note_emit(videoGetFrameCount(), v_arr);   // TEMP D306/D308
     d75d_note_emit_z(videoGetFrameCount(), v_arr, (used_textures[0] || used_textures[1]) ? 1 : 0, comb->used_textures[0] ? 1 : 0);
     for (int i = 0; i < 3; i++) {
         float z = v_arr[i]->z, w = v_arr[i]->w;
