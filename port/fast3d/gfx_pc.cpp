@@ -4,10 +4,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h> /* D236 pass 17 GE_D236BT backtrace probe */
-#endif
 #include <cassert>
 #include <cstdio>
 
@@ -142,80 +138,6 @@ static struct RSP {
 
     const struct NormalColor *vertex_colors; //[MAX_VERTEX_COLORS];
 } rsp;
-
-/* D236 pass 16 (TEMP): segment byte (top byte of the raw segmented address)
- * of the most recent G_VTX load, so a later triangle-time probe can report
- * which segment the tree class's vertices actually came from. See the
- * G_VTX case comment below for why. Remove once D236 pass 16 concludes. */
-static uint8_t g_d236_last_vtx_seg = 0xFF;
-/* D236 pass 17 (TEMP): full raw w1 of the most recent G_VTX, so the
- * GE_D236BT backtrace probe can report WHICH buffer the tree class's
- * triangles read from alongside the C call site that submitted them.
- * Remove once D236 pass 17 concludes. */
-static uint32_t g_d236_last_vtx_raw = 0;
-
-/* D236 pass 17b (TEMP): host stack backtrace dumper, C-linkage so the
- * allocator-side probe in src/game/chr.c can call it too. Windows-only:
- * RtlCaptureContext + RtlVirtualUnwind over the exe's own .pdata table
- * (this box's dbghelp.dll is stripped: no CaptureStackBackTrace,
- * StackWalk64 fails immediately; RtlCaptureContext must be called
- * directly -- GetProcAddress indirection zero-filled the context;
- * mingw-ld leaves DataDirectory[10] zero even when .pdata is present,
- * so find it by section name and trim the trailing zeroed entry; NULL
- * out-params crash RtlVirtualUnwind). Frames print as RVAs -- resolve
- * offline with addr2line against this exact exe. Remove once D236
- * pass 17 concludes. */
-#ifdef _WIN32
-extern "C" void port_d236bt_dump(const char* tag) {
-    CONTEXT ctx;
-    RtlCaptureContext(&ctx);
-    const HMODULE imgbase_h = GetModuleHandleA(NULL);
-    const ULONG64 imgbase = (ULONG64)(uintptr_t)imgbase_h;
-    PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)imgbase_h;
-    PIMAGE_NT_HEADERS nth = (PIMAGE_NT_HEADERS)((BYTE*)imgbase_h + dos->e_lfanew);
-    PIMAGE_SECTION_HEADER shs = (PIMAGE_SECTION_HEADER)
-        ((BYTE*)&nth->OptionalHeader + nth->FileHeader.SizeOfOptionalHeader);
-    typedef struct { DWORD BeginAddress; DWORD EndAddress; DWORD UnwindDataAddress; } D236_RF;
-    D236_RF* rfs = NULL;
-    int nvalid = 0;
-    for (WORD si = 0; si < nth->FileHeader.NumberOfSections; si++) {
-        if (_stricmp((const char*)shs[si].Name, ".pdata") == 0) {
-            rfs = (D236_RF*)((BYTE*)imgbase_h + shs[si].VirtualAddress);
-            nvalid = (int)(shs[si].SizeOfRawData / sizeof(D236_RF));
-            while (nvalid > 0 && (rfs[nvalid - 1].BeginAddress == 0 ||
-                                  rfs[nvalid - 1].EndAddress == 0))
-                nvalid--;
-            break;
-        }
-    }
-    ULONG64 rip = (ULONG64)(uintptr_t)ctx.Rip;
-    fprintf(stderr, "D236BT %s rip_rva=0x%llx nvalid=%d\n",
-            tag ? tag : "?", (unsigned long long)(rip - imgbase), nvalid);
-    for (int depth = 0; depth < 32 && rfs != NULL; depth++) {
-        const ULONG64 rva = rip - imgbase;
-        int lo = 0, hi = nvalid - 1;
-        D236_RF* rf = NULL;
-        while (lo <= hi) {
-            const int mid = (lo + hi) / 2;
-            if (rva < rfs[mid].BeginAddress) hi = mid - 1;
-            else if (rva >= rfs[mid].EndAddress) lo = mid + 1;
-            else { rf = &rfs[mid]; break; }
-        }
-        if (!rf) {
-            fprintf(stderr, "D236BT %s   [%d] rva=0x%llx (outside exe .pdata)\n", tag, depth,
-                    (unsigned long long)rva);
-            break;
-        }
-        PVOID hd = NULL;
-        DWORD64 ef = 0;
-        RtlVirtualUnwind(0, imgbase, rip, (PRUNTIME_FUNCTION)rf, &ctx,
-                         &hd, &ef, NULL);
-        rip = (ULONG64)(uintptr_t)ctx.Rip;
-        fprintf(stderr, "D236BT %s   [%d] rva=0x%llx\n", tag, depth,
-                (unsigned long long)(rip - imgbase));
-    }
-}
-#endif
 
 struct RawTexMetadata {
     uint16_t width, height;
@@ -2145,7 +2067,8 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
          * run fired 116k times in ~1500-2000 frames -- bbox_frac >0.15
          * alone is a common occurrence for ordinary near-camera geometry,
          * not a distinguishing signature. Gated to the reported frame
-         * window (num_dls, same pattern as GE_D236RM below) and the
+         * window (num_dls, the pattern the since-removed GE_D236RM
+         * probe also used) and the
          * threshold raised well above the ~0.15 "normal" baseline M-155
          * established, so a hit here is actually rare. M-155 follow-up:
          * for any_behind_camera==1 triangles the x/w perspective divide is
@@ -2175,160 +2098,6 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
                             v1->color.r, v1->color.g, v1->color.b);
                 }
             }
-        }
-    }
-
-    /* D236 pass 10 (M-155, TEMP): does the 0x0c184b50 render-mode class's
-     * per-frame triangle count actually vary frame-to-frame WITHIN one
-     * deterministic -level_36 boot, or is D280's "run-to-run dependent"
-     * observation only visible ACROSS separate process launches (which
-     * would point at room-streaming state that isn't reset/seeded the
-     * same way twice, not at true per-frame nondeterminism)? Log the
-     * count once per display list (frame) while it's nonzero. Remove
-     * once D236 pass 10 concludes. */
-    static int s_d236rm = -1;
-    if (s_d236rm < 0) s_d236rm = getenv("GE_D236RM") != NULL;
-    if (s_d236rm) {
-        static uint32_t d236rm_last_dl = 0xFFFFFFFFu;
-        static uint32_t d236rm_count = 0;
-        extern uint32_t num_dls;
-        if (num_dls != d236rm_last_dl) {
-            if (d236rm_count != 0 || (num_dls % 300) == 0) {
-                fprintf(stderr, "D236RM dl=%u count=%u\n", d236rm_last_dl, d236rm_count);
-            }
-            d236rm_last_dl = num_dls;
-            d236rm_count = 0;
-        }
-        if (rdp.other_mode_l == 0x0c184b50u) {
-            d236rm_count++;
-        }
-    }
-
-    /* D236 pass 12 (M-191, TEMP): new angle, not tried by passes 1-11 (all of
-     * which focused on the tree-card class's z/w and instantiation counts).
-     * Both the noise "wall" (oml=0xc81049d8) and the discrete tree-card class
-     * (oml=0x0c184b50) decode to Z_CMP=1/Z_UPD=0/ZMODE=DEC (checked offline
-     * against both full oml words) -- NEITHER writes the depth buffer. Two
-     * no-z-write decals drawn against the same static (z-writing) background
-     * never actually depth-test against EACH OTHER: each is tested only
-     * against the background's z, so on-screen precedence between the two
-     * decals is decided purely by which one is submitted LAST in the frame's
-     * draw list, not by which one's own z/w is smaller (the z/w comparisons
-     * all 11 prior passes made are therefore not conclusive either way about
-     * visual winner). This probe tests that directly: track a per-frame
-     * submission-order counter (reset whenever num_dls changes, i.e. once
-     * per frame) and log the min/max order index seen for each of the two
-     * classes whenever num_dls changes and at least one of them appeared
-     * that frame -- if the noise class's order index is consistently HIGHER
-     * (drawn later) than the tree class's in frames where both appear, that
-     * directly explains "wall painted over trees" regardless of geometric
-     * depth, and points at a draw-order (not depth) bug. Remove once D236
-     * pass 12 concludes. */
-    static int s_d236order = -1;
-    if (s_d236order < 0) s_d236order = getenv("GE_D236ORDER") != NULL;
-    if (s_d236order) {
-        static uint32_t d236o_last_dl = 0xFFFFFFFFu;
-        static uint32_t d236o_seq = 0;
-        static uint32_t d236o_noise_min = 0, d236o_noise_max = 0, d236o_noise_n = 0;
-        static uint32_t d236o_tree_min = 0, d236o_tree_max = 0, d236o_tree_n = 0;
-        extern uint32_t num_dls;
-        if (num_dls != d236o_last_dl) {
-            if (d236o_noise_n != 0 || d236o_tree_n != 0) {
-                fprintf(stderr,
-                        "D236ORDER dl=%u noise_n=%u noise_order=[%u,%u] tree_n=%u tree_order=[%u,%u] "
-                        "tree_last_after_noise_last=%d\n",
-                        d236o_last_dl, d236o_noise_n, d236o_noise_min, d236o_noise_max,
-                        d236o_tree_n, d236o_tree_min, d236o_tree_max,
-                        (d236o_tree_n != 0 && d236o_noise_n != 0) ? (int) (d236o_tree_max > d236o_noise_max) : -1);
-            }
-            d236o_last_dl = num_dls;
-            d236o_seq = 0;
-            d236o_noise_min = d236o_noise_max = d236o_noise_n = 0;
-            d236o_tree_min = d236o_tree_max = d236o_tree_n = 0;
-        }
-        if (rdp.other_mode_l == 0xc81049d8u) {
-            if (d236o_noise_n == 0) d236o_noise_min = d236o_seq;
-            d236o_noise_max = d236o_seq;
-            d236o_noise_n++;
-        } else if (rdp.other_mode_l == 0x0c184b50u) {
-            if (d236o_tree_n == 0) d236o_tree_min = d236o_seq;
-            d236o_tree_max = d236o_seq;
-            d236o_tree_n++;
-        }
-        d236o_seq++;
-    }
-
-    /* D236 pass 14 (M-19x, TEMP): pass 13's live capture ruled out draw
-     * order as the dominant cause even in the favorable (tree-after-noise,
-     * high tri count) zone -- redirecting to whether the tree class's own
-     * per-vertex alpha (D280's "gfog=0, CPU-baked bimodal 25/255" census)
-     * is actually LOW (near-transparent) for the close/high-count trees the
-     * live capture walked through. This render mode's blend equation is a
-     * standard alpha-blend decal (FORCE_BL, GBL c1/c2 = CLR_IN,A_IN ->
-     * CLR_MEM,1-A_IN -- see include/PR/gbi.h RM_AA_ZB_XLU_DECAL), so if the
-     * combiner's alpha output tracks vertex/SHADE alpha directly, a card
-     * baked near 25/255 (~10%) would blend almost invisibly over whatever
-     * was drawn under it -- looking exactly like "the noise wall shows
-     * through" even with correct geometry and correct draw order. Logs,
-     * once per triangle of this class: each vertex's raw color.a, the
-     * combine_mode word (to see which alpha slot actually feeds the
-     * blend), and 1/w (a cheap camera-distance proxy) so alpha can be
-     * correlated against "close" vs "far" the same way pass 13's live
-     * capture was read. Zero cost unset. Remove once D236 pass 14
-     * concludes. */
-    /* D236 pass 17 (TEMP): six passes of signature-matching (11-16) failed
-     * to identify the CPU-side writer of the tree class's raw-pointer vertex
-     * batches. Stop guessing: on the first triangle(s) of this class whose
-     * vertices came from a raw (unsegmented, seg 0x70) G_VTX load, capture a
-     * host stack backtrace -- the C call chain that submitted this display
-     * list IS the writer's caller, no inference needed. Windows-only (this
-     * build): RtlCaptureContext + RtlVirtualUnwind over the exe's own .pdata
-     * table -- this box's dbghelp.dll is stripped (no CaptureStackBackTrace;
-     * StackWalk64 fails immediately), so ntdll does the unwind and there is
-     * no dbghelp dependency at all. Frames print as RVAs, resolved offline
-     * with addr2line against this exact exe. Env-gated, fires at most once
-     * per distinct raw pointer (cap 5), zero cost unset. Remove once D236
-     * pass 17 concludes. */
-#ifdef _WIN32
-    static int s_d236bt = -1;
-    if (s_d236bt < 0) s_d236bt = getenv("GE_D236BT") != NULL;
-    if (s_d236bt && rdp.other_mode_l == 0x0c184b50u && g_d236_last_vtx_seg == 0x70) {
-        static uint32_t d236bt_seen[5] = {0, 0, 0, 0, 0};
-        static int d236bt_n = 0;
-        int dup = 0;
-        for (int i = 0; i < d236bt_n; i++) {
-            if (d236bt_seen[i] == g_d236_last_vtx_raw) { dup = 1; break; }
-        }
-        if (!dup && d236bt_n < 5) {
-            d236bt_seen[d236bt_n++] = g_d236_last_vtx_raw;
-            fprintf(stderr,
-                    "D236BT rawvtx=0x%08x a=(%u,%u,%u) invw1=%.4f\n", g_d236_last_vtx_raw,
-                    v1->color.a, v2->color.a, v3->color.a,
-                    (v1->w != 0.f) ? 1.f / v1->w : 0.f);
-            port_d236bt_dump("rsp");
-        }
-    }
-#endif
-
-    static int s_d236alpha = -1;
-    if (s_d236alpha < 0) s_d236alpha = getenv("GE_D236ALPHA") != NULL;
-    if (s_d236alpha && rdp.other_mode_l == 0x0c184b50u) {
-        static uint32_t d236a_hits = 0;
-        static uint64_t d236a_last_combine = 0xFFFFFFFFFFFFFFFFull;
-        if (d236a_hits < 4000) {
-            if (rdp.combine_mode != d236a_last_combine) {
-                fprintf(stderr, "D236ALPHA combine_mode=0x%016llx\n",
-                        (unsigned long long)rdp.combine_mode);
-                d236a_last_combine = rdp.combine_mode;
-            }
-            fprintf(stderr,
-                    "D236ALPHA a=(%u,%u,%u) invw=(%.4f,%.4f,%.4f) vtxseg=0x%02x\n",
-                    v1->color.a, v2->color.a, v3->color.a,
-                    (v1->w != 0.f) ? 1.f / v1->w : 0.f,
-                    (v2->w != 0.f) ? 1.f / v2->w : 0.f,
-                    (v3->w != 0.f) ? 1.f / v3->w : 0.f,
-                    g_d236_last_vtx_seg);
-            d236a_hits++;
         }
     }
 
@@ -2373,25 +2142,6 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     bool depth_test = ((rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER || (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM) &&
                       ((rdp.other_mode_h & G_CYC_1CYCLE) == G_CYC_1CYCLE || (rdp.other_mode_h & G_CYC_2CYCLE) == G_CYC_2CYCLE);
     bool depth_update = (rdp.other_mode_l & Z_UPD) == Z_UPD;
-    /* D236 pass 12 (M-191, TEMP, diagnostic-only): both the noise "wall"
-     * (oml=0xc81049d8) and the discrete tree-card class (oml=0x0c184b50) are
-     * Z_CMP=1/Z_UPD=0 decals, and GE_D236ORDER above shows the noise class is
-     * ALWAYS submitted after the tree class in every sampled frame -- with
-     * neither writing depth, later-submitted always wins the color buffer
-     * regardless of which is geometrically closer. This experiment forces
-     * depth_update=true for the tree-card class ONLY, so it writes real
-     * depth; if the noise class (submitted later, same depth_compare=LEQUAL)
-     * now correctly fails its depth test against the tree cards' nearer z
-     * instead of overwriting them, that confirms draw-order+no-z-write is
-     * the actual visual-precedence mechanism. NOT a proposed fix (forcing
-     * z-write for a decal-mode class is not decomp-faithful either) -- purely
-     * to test the mechanism cheaply before deciding what a real fix looks
-     * like. Remove once D236 pass 12 concludes. */
-    static int s_d236zfix = -1;
-    if (s_d236zfix < 0) s_d236zfix = getenv("GE_D236ZFIX") != NULL;
-    if (s_d236zfix && rdp.other_mode_l == 0x0c184b50u) {
-        depth_update = true;
-    }
     bool depth_compare = (rdp.other_mode_l & Z_CMP) == Z_CMP;
     bool depth_source_prim = (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM /* && gDP.primDepth.z == 1.0f */;
     uint16_t zmode = rdp.other_mode_l & ZMODE_DEC;
@@ -3802,19 +3552,6 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_sp_texture(C1(16, 16), C1(0, 16), C0(11, 3), C0(8, 3), C0(0, 8));
                 break;
             case G_VTX:
-                /* D236 pass 16 (TEMP): pass 15's GE_D236RAW dump proved every
-                 * room-background Vtx (g_BgRoomInfo[].vertices) is alpha=255
-                 * on load -- so the tree class's <=36/255 alpha measured at
-                 * draw time (GE_D236ALPHA) can't be coming from that static
-                 * table. Record which segment (top byte of the raw segmented
-                 * address) the most recent G_VTX load came from, so the next
-                 * triangle-time probe can report it -- distinguishes "still
-                 * room background, something else touches it after load" from
-                 * "not room background at all" (a different segment, e.g. a
-                 * model/CPU-built-quad source) without guessing from source
-                 * review alone. Remove once D236 pass 16 concludes. */
-                g_d236_last_vtx_seg = (uint8_t)(cmd->words.w1 >> 24);
-                g_d236_last_vtx_raw = cmd->words.w1;
                 gfx_sp_vertex(C0(0, 16) / sizeof(Vtx), C0(16, 4), (const Vtx*)seg_addr(cmd->words.w1));
                 d75d_note_vtx(videoGetFrameCount(), C0(0, 16) / sizeof(Vtx), C0(16, 4));
                 break;

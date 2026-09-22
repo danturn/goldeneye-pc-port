@@ -2415,48 +2415,6 @@ s32 bgLoadRoomVtxData(s32 roomnum, u8 *dst, s32 len)
 #ifdef PORT
     /* D85: byte-swap the raw N64 Vtx table (16-byte struct, no widening). */
     bgSwapRoomVtx((Vtx *)dst, result);
-
-    /* D236 pass 16 (TEMP): pass 15's live GE_D236ALPHA capture found the
-     * Surface1 tree-card render class's vertex alpha capped at <=36/255
-     * (<=14% opacity) across a full far->close walk to the tree line, and
-     * confirmed (via the combine_mode decode) that this vertex alpha
-     * directly multiplies the texture's own alpha in the blend equation --
-     * so a capped-low vertex alpha caps every tree pixel's final opacity
-     * outright. bgSwapRoomVtx (just above) explicitly leaves colour bytes
-     * untouched, so whatever is in cn[] here is exactly what bgDecompress
-     * produced -- this is the earliest point after decompression the raw
-     * per-room vertex colour data can be inspected, independent of which
-     * camera path a live player happens to walk. Unlike GE_D236ALPHA (which
-     * only sees whatever triangles are actually drawn from wherever the
-     * player is standing), this dumps a histogram of EVERY vertex's alpha
-     * byte (cn[3]) for the WHOLE room's table the moment it loads --
-     * settling whether the low ceiling pass 15 measured is a sampling
-     * artifact (the walked path just never reached a vertex with a high
-     * baked alpha) or a genuine property of this room's authored data (no
-     * vertex in the whole table goes above the low ceiling, regardless of
-     * where the camera is). Zero cost unset. Remove once D236 pass 16
-     * concludes. */
-    if (getenv("GE_D236RAW")) {
-        s32 vtxCount = result / (s32)sizeof(Vtx);
-        s32 vi;
-        u32 buckets[5] = {0, 0, 0, 0, 0}; /* 0 / 1-36 / 37-100 / 101-200 / 201-255 */
-        u8 amin = 255, amax = 0;
-        Vtx *vtxArr = (Vtx *)dst;
-        for (vi = 0; vi < vtxCount; vi++) {
-            u8 a = vtxArr[vi].v.cn[3];
-            if (a < amin) amin = a;
-            if (a > amax) amax = a;
-            if (a == 0) buckets[0]++;
-            else if (a <= 36) buckets[1]++;
-            else if (a <= 100) buckets[2]++;
-            else if (a <= 200) buckets[3]++;
-            else buckets[4]++;
-        }
-        osSyncPrintf(
-                "D236RAW room=%d n=%d amin=%u amax=%u buckets[0,1-36,37-100,101-200,201-255]=%u,%u,%u,%u,%u\n",
-                (int)roomnum, (int)vtxCount, amin, amax,
-                buckets[0], buckets[1], buckets[2], buckets[3], buckets[4]);
-    }
 #endif
 
     room->vertices = (Vtx *)dst;

@@ -11298,8 +11298,14 @@ stale entry from an earlier type-1 draw satisfies it.
 
 **Generalised to `docs/porting-notes.md` §D12.**
 
-**Housekeeping:** the pass-25 `GE_D236P25` probe and the pass-26 cut-out
-experiment are both removed from the tree (the mip question is closed).
+**Housekeeping:** with D236 closed, every D236 diagnostic is out of the tree 
+-- the pass-25 `GE_D236P25` probe and the pass-26 cut-out experiment, plus 
+`GE_D236RM`/`ORDER`/`ALPHA`/`ZFIX` (`gfx_pc.cpp` `gfx_sp_tri1`), `GE_D236RAW` 
+(`bg.c`), `GE_D236BT` (`chr.c` + `model.c`), the `port_d236bt_dump()` host 
+backtrace dumper and the `windows.h` include it needed, and the 
+`g_d236_last_vtx_seg`/`_raw` G_VTX trackers. Their rows are gone from 
+`GE-ENV-PROBES.md`; `gen_env_probes.py --check` is in sync. Build clean and 
+the Surface 1 spawn capture is unchanged across the strip.
 
 ## D237 — QoL ask (M-106, user QA): F10 options overlay — make it scrollable with the mouse wheel, expose more settings into it (e.g. screen-flash / no-hit-flash…
 
