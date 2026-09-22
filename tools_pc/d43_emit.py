@@ -402,8 +402,11 @@ def process(name):
             merged[-1][1] = max(merged[-1][1], iv[1])
         else:
             merged.append(iv)
+    blob_regions = []   # (old_off, old_size, new_off) raw pixel spans
     for (t, e) in merged:
+        n = dstpos
         dstpos = add_region(t, e - t, dstpos)
+        blob_regions.append((t, e - t, n))
 
     # GDLs last, tight-packed 16B slots. Visited GDLs go in VISIT order (the
     # compaction span arithmetic requires it). Referenced-but-unvisited GDLs
@@ -669,9 +672,17 @@ def process(name):
             j += 1
             o += 8
 
+    # Embedded image blobs: raw pixel copy (the RDP reads them as-is; no
+    # transform). Layout reserves the span and remaps G_SETTIMG w1 to it, but
+    # without this copy the buffer stays zeroed and the texture renders black
+    # (M-197 / D75: PnintendologoZ white wordmark invisible on PC).
+    for (o, osz, n) in blob_regions:
+        buf[n:n + osz] = src[o:o + osz]
+
     # ---- round-trip validation ----
     validate(name, src, D, NS, NT, nodes, R0, placed, all_gdls, buf, D_PC,
-             regions, node_newoff, rec_newoff, gdl_newoff, remap, inv_remap)
+             regions, blob_regions, node_newoff, rec_newoff, gdl_newoff,
+             remap, inv_remap)
 
     # ---- compress ----
     co = zlib.compressobj(6, zlib.DEFLATED, -15)
@@ -693,8 +704,14 @@ op24_is_collision = {}
 op24_pointusage = {}
 
 def validate(name, src, D, NS, NT, nodes, R0, placed, all_gdls, buf, D_PC,
-             regions, node_newoff, rec_newoff, gdl_newoff, remap, inv_remap):
+             regions, blob_regions, node_newoff, rec_newoff, gdl_newoff,
+             remap, inv_remap):
     def err(m): errors.append(f"{name}: RT {m}")
+
+    # embedded image blobs: raw identity round-trip (M-197)
+    for (o, osz, n) in blob_regions:
+        if bytes(buf[n:n + osz]) != bytes(src[o:o + osz]):
+            err(f"blob {o:#x}+{osz:#x}: pixel bytes differ at new {n:#x}")
 
     # tiling: regions cover [0, D_PC) exactly
     rs = sorted(regions, key=lambda x: x[2])

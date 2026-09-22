@@ -5470,6 +5470,43 @@ void doshadow(ModelRenderData *renderdata, Model *model, ModelNode *node)
     }
 #endif
 
+#ifdef PORT
+    /* D236 pass 17c (TEMP): env-gated runtime dump of the live ShadowRecord +
+     * tconfig, to settle which fields the PC loader actually populated (the
+     * d43_emit.py op-13 emit and modelPromoteNodeOffsetsToPointers disagree
+     * on paper; this shows ground truth). Zero cost unset. Remove once D236
+     * pass 17 concludes. */
+    {
+        static int s_d236bt = -1;
+        if (s_d236bt < 0) s_d236bt = getenv("GE_D236BT") != NULL;
+        if (s_d236bt) {
+            static int d236sh_n = 0;
+            if (d236sh_n < 6) {
+                d236sh_n++;
+                if (d236sh_n == 1) {
+                    FILE *f = fopen("d236sh.bin", "wb");
+                    if (f) {
+                        fwrite(shadow, 1, 0x24, f);              /* live ShadowRecord */
+                        fwrite(&node->Opcode, 1, 8, f);          /* node opcode+pad */
+                        fwrite(node->Data, 1, 0x24, f);           /* record via Data ptr */
+                        fwrite(shadow->BaseAddr, 1, 0x60, f);     /* file header */
+                        fclose(f);
+                    }
+                }
+                sImageTableEntry *tc = (sImageTableEntry *)shadow->image;
+                fprintf(stderr,
+                    "D236SH node=%p img=%p hdr=%p base=%p height=%.1f size=(%.1f,%.1f) a=%u\n"
+                    "  tc: idx=0x%08x %ux%u lvl=%u fmt=%u depth=%u fs=%u ft=%u\n",
+                    (void*)node, (void*)shadow->image, (void*)shadow->HeaderNode,
+                    (void*)shadow->BaseAddr, height, sizex, sizey,
+                    (unsigned)vtxtemplate.v.cn[3],
+                    (unsigned)tc->index, tc->width, tc->height, tc->level,
+                    tc->format, tc->depth, tc->flagsS, tc->flagsT);
+            }
+        }
+    }
+#endif
+
     vtx = (Vtx *) vtxallocator(4);
 
     vtx[0] = vtxtemplate;

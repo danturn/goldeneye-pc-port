@@ -4,6 +4,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h> /* D236 pass 17 GE_D236BT backtrace probe */
+#endif
 #include <cassert>
 #include <cstdio>
 
@@ -144,6 +148,74 @@ static struct RSP {
  * which segment the tree class's vertices actually came from. See the
  * G_VTX case comment below for why. Remove once D236 pass 16 concludes. */
 static uint8_t g_d236_last_vtx_seg = 0xFF;
+/* D236 pass 17 (TEMP): full raw w1 of the most recent G_VTX, so the
+ * GE_D236BT backtrace probe can report WHICH buffer the tree class's
+ * triangles read from alongside the C call site that submitted them.
+ * Remove once D236 pass 17 concludes. */
+static uint32_t g_d236_last_vtx_raw = 0;
+
+/* D236 pass 17b (TEMP): host stack backtrace dumper, C-linkage so the
+ * allocator-side probe in src/game/chr.c can call it too. Windows-only:
+ * RtlCaptureContext + RtlVirtualUnwind over the exe's own .pdata table
+ * (this box's dbghelp.dll is stripped: no CaptureStackBackTrace,
+ * StackWalk64 fails immediately; RtlCaptureContext must be called
+ * directly -- GetProcAddress indirection zero-filled the context;
+ * mingw-ld leaves DataDirectory[10] zero even when .pdata is present,
+ * so find it by section name and trim the trailing zeroed entry; NULL
+ * out-params crash RtlVirtualUnwind). Frames print as RVAs -- resolve
+ * offline with addr2line against this exact exe. Remove once D236
+ * pass 17 concludes. */
+#ifdef _WIN32
+extern "C" void port_d236bt_dump(const char* tag) {
+    CONTEXT ctx;
+    RtlCaptureContext(&ctx);
+    const HMODULE imgbase_h = GetModuleHandleA(NULL);
+    const ULONG64 imgbase = (ULONG64)(uintptr_t)imgbase_h;
+    PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)imgbase_h;
+    PIMAGE_NT_HEADERS nth = (PIMAGE_NT_HEADERS)((BYTE*)imgbase_h + dos->e_lfanew);
+    PIMAGE_SECTION_HEADER shs = (PIMAGE_SECTION_HEADER)
+        ((BYTE*)&nth->OptionalHeader + nth->FileHeader.SizeOfOptionalHeader);
+    typedef struct { DWORD BeginAddress; DWORD EndAddress; DWORD UnwindDataAddress; } D236_RF;
+    D236_RF* rfs = NULL;
+    int nvalid = 0;
+    for (WORD si = 0; si < nth->FileHeader.NumberOfSections; si++) {
+        if (_stricmp((const char*)shs[si].Name, ".pdata") == 0) {
+            rfs = (D236_RF*)((BYTE*)imgbase_h + shs[si].VirtualAddress);
+            nvalid = (int)(shs[si].SizeOfRawData / sizeof(D236_RF));
+            while (nvalid > 0 && (rfs[nvalid - 1].BeginAddress == 0 ||
+                                  rfs[nvalid - 1].EndAddress == 0))
+                nvalid--;
+            break;
+        }
+    }
+    ULONG64 rip = (ULONG64)(uintptr_t)ctx.Rip;
+    fprintf(stderr, "D236BT %s rip_rva=0x%llx nvalid=%d\n",
+            tag ? tag : "?", (unsigned long long)(rip - imgbase), nvalid);
+    for (int depth = 0; depth < 32 && rfs != NULL; depth++) {
+        const ULONG64 rva = rip - imgbase;
+        int lo = 0, hi = nvalid - 1;
+        D236_RF* rf = NULL;
+        while (lo <= hi) {
+            const int mid = (lo + hi) / 2;
+            if (rva < rfs[mid].BeginAddress) hi = mid - 1;
+            else if (rva >= rfs[mid].EndAddress) lo = mid + 1;
+            else { rf = &rfs[mid]; break; }
+        }
+        if (!rf) {
+            fprintf(stderr, "D236BT %s   [%d] rva=0x%llx (outside exe .pdata)\n", tag, depth,
+                    (unsigned long long)rva);
+            break;
+        }
+        PVOID hd = NULL;
+        DWORD64 ef = 0;
+        RtlVirtualUnwind(0, imgbase, rip, (PRUNTIME_FUNCTION)rf, &ctx,
+                         &hd, &ef, NULL);
+        rip = (ULONG64)(uintptr_t)ctx.Rip;
+        fprintf(stderr, "D236BT %s   [%d] rva=0x%llx\n", tag, depth,
+                (unsigned long long)(rip - imgbase));
+    }
+}
+#endif
 
 struct RawTexMetadata {
     uint16_t width, height;
@@ -1020,6 +1092,11 @@ bool g_fix_mip_textures = true;
  * off. Video.WrapFix = 1. */
 bool g_wrap_fix = false;
 
+/* D236 pass 26: for a GE TEXTURETYPE_DETAIL binding, sample the BASE image
+ * (tile 1) rather than the detail texture sitting at TMEM 0. See
+ * gfx_lod_tile_offset. Video.DetailBaseTile. */
+bool g_detail_base_tile = false;
+
 /* D183 source-pitch de-stride (see import_texture). Default on;
  * GE_TEXPITCH=0 restores the old flat read for A/B. */
 static bool gfx_tex_pitch_fix(void) {
@@ -1240,6 +1317,33 @@ static void import_texture(int i, int tile, bool importReplacement) {
             snprintf(nm, sizeof nm, "texdump/r%03d_f%u_s%u_%ux%u.bin", tdc - 1, fmt, siz, tw, th);
             FILE* bf = fopen(nm, "wb");
             if (bf) { fwrite(loaded_texture.addr, 1, loaded_texture.size_bytes, bf); fclose(bf); }
+        }
+        /* D75 round 3: GE_TEXDUMP_ADDR=<hex> -- dump the raw source bytes of
+         * EVERY import from that address (bypassing the 400-cap) with byte
+         * stats, so a late re-import into a scratch-arena alias can be told
+         * apart from a never-loaded buffer. */
+        static uint64_t ge_texdump_addr = 0;
+        static int ge_texdump_addr_init = 0;
+        if (!ge_texdump_addr_init) {
+            ge_texdump_addr_init = 1;
+            const char* ea = getenv("GE_TEXDUMP_ADDR");
+            if (ea && *ea) ge_texdump_addr = strtoull(ea, NULL, 16);
+        }
+        if (ge_texdump_addr && (uint64_t)(uintptr_t)orig_addr == ge_texdump_addr) {
+            unsigned mn = 255, mx = 0, nz = 0;
+            for (uint32_t i = 0; i < loaded_texture.size_bytes; i++) {
+                uint8_t b = loaded_texture.addr[i];
+                if (b < mn) mn = b; if (b > mx) mx = b; if (b) nz++;
+            }
+            char nm2[160];
+            snprintf(nm2, sizeof nm2, "texdump/a%05d_%ux%u.bin", tdc - 1, tw, th);
+            FILE* bf2 = fopen(nm2, "wb");
+            if (bf2) { fwrite(loaded_texture.addr, 1, loaded_texture.size_bytes, bf2); fclose(bf2); }
+            extern uint32_t num_dls; // same counter the D157I probe uses
+            sysLogPrintf(LOG_NOTE,
+                "GE_TEXA[%d] dls=%u addr=%p fmt=%u siz=%u size=%u min=%u max=%u nonzero=%u/%u file=%s",
+                tdc - 1, num_dls, (void*)orig_addr, fmt, siz,
+                loaded_texture.size_bytes, mn, mx, nz, loaded_texture.size_bytes, nm2);
         }
     }
 
@@ -1486,6 +1590,16 @@ static uint32_t d75d_oml = 0xFFFFFFFFu; static int d75d_oml_set = 0;
 static float d75d_zmin=1e9f,d75d_zmax=-1e9f; static uint32_t d75d_znan=0; static int d75d_use_tex=-1;
 static uint64_t d75d_comb=0; static int d75d_prim[4]={-1,-1,-1,-1}; static int d75d_env[4]={-1,-1,-1,-1};
 static int d75d_comb_utex=-1; // comb->used_textures[0] (combiner's own claim)
+// D75D round 2: logo-mode-only sampling (the frame-level fields above mix the
+// first emitted tri -- often a title quad -- with the LAST tri's combine mode,
+// which is what made 'comb claims 0' look like an anomaly). These are updated
+// on EVERY emitted tri whose rdp.combine_mode is the logo word, so comb and
+// utex always describe the same triangle.
+static int d75d_lg_utex=-1, d75d_lg_tex=-1; static uint32_t d75d_lg_cnt=0;
+static int d75d_lg_set=0; static uint32_t d75d_lg_tmem,d75d_lg_fmt,d75d_lg_siz;
+static int d75d_lg_shifts,d75d_lg_shifft,d75d_lg_uls,d75d_lg_ult,d75d_lg_lrs,d75d_lg_lrt;
+static const uint8_t* d75d_lg_texaddr=nullptr; static uint32_t d75d_lg_texid,d75d_lg_texbytes;
+static int d75d_lg_u0,d75d_lg_v0;
 
 static void d75d_init(void) {
     if (d75d_init_done) return;
@@ -1501,7 +1615,7 @@ static bool d75d_env_active(void) { d75d_init(); return d75d_lo >= 0; }
 static void d75d_flush(uint32_t f) {
     if (f == 0xFFFFFFFFu || d75d_seqlen == 0) return;
     fprintf(stderr,
-        "D75D: f=%u nv=%u nt=%u maxtri=%u vtxloaded=%u batchhi=%u rej_triv=%u rej_cull=%u emitted=%u emit_on=%u emit_off=%u ndc_x=[%.3f,%.3f] ndc_y=[%.3f,%.3f] invis=%u col=[%d,%d] oml=0x%08x omset=%d z=[%.4f,%.4f] znan=%u utex=%d cutex=%d comb=0x%016llx prim=(%d,%d,%d,%d) env=(%d,%d,%d,%d) seq=%.8s%s\n",
+        "D75D: f=%u nv=%u nt=%u maxtri=%u vtxloaded=%u batchhi=%u rej_triv=%u rej_cull=%u emitted=%u emit_on=%u emit_off=%u ndc_x=[%.3f,%.3f] ndc_y=[%.3f,%.3f] invis=%u col=[%d,%d] oml=0x%08x omset=%d z=[%.4f,%.4f] znan=%u utex=%d cutex=%d comb=0x%016llx prim=(%d,%d,%d,%d) env=(%d,%d,%d,%d) lg_cnt=%u lg_utex=%d lg_tex=%d lg_tile(tmem=%u fmt=%u siz=%u sh=%d st=%d uls=%d ult=%d lrs=%d lrt=%d) lg_texaddr=%p lg_texid=%u lg_texbytes=%u lg_uv0=(%d,%d) seq=%.8s%s\n",
         f, d75d_nv, d75d_nt, d75d_maxtri, d75d_vtxloaded, d75d_batchhi,
         d75d_rej_triv, d75d_rej_cull, d75d_emitted, d75d_emit_on, d75d_emit_off,
         d75d_ndc_minx, d75d_ndc_maxx, d75d_ndc_miny, d75d_ndc_maxy,
@@ -1509,6 +1623,11 @@ static void d75d_flush(uint32_t f) {
         d75d_zmin, d75d_zmax, d75d_znan, d75d_use_tex, d75d_comb_utex,
         (unsigned long long)d75d_comb, d75d_prim[0],d75d_prim[1],d75d_prim[2],d75d_prim[3],
         d75d_env[0],d75d_env[1],d75d_env[2],d75d_env[3],
+        d75d_lg_cnt, d75d_lg_utex, d75d_lg_tex,
+        (unsigned)d75d_lg_tmem,(unsigned)d75d_lg_fmt,(unsigned)d75d_lg_siz,
+        d75d_lg_shifts,d75d_lg_shifft,d75d_lg_uls,d75d_lg_ult,d75d_lg_lrs,d75d_lg_lrt,
+        (const void*)d75d_lg_texaddr,(unsigned)d75d_lg_texid,(unsigned)d75d_lg_texbytes,
+        d75d_lg_u0,d75d_lg_v0,
         d75d_seq, (d75d_seqlen >= 4096) ? "...[trunc]" : "");
     d75d_seqlen = 0; d75d_maxtri = 0; d75d_vtxloaded = 0; d75d_batchhi = 0; d75d_nv = 0; d75d_nt = 0;
     d75d_rej_triv = 0; d75d_rej_cull = 0; d75d_emitted = 0; d75d_emit_on = 0; d75d_emit_off = 0;
@@ -1516,6 +1635,7 @@ static void d75d_flush(uint32_t f) {
     d75d_emit_invis = 0; d75d_cmin=999; d75d_cmax=-1; d75d_oml=0xFFFFFFFFu; d75d_oml_set=0;
     d75d_zmin=1e9f;d75d_zmax=-1e9f;d75d_znan=0;d75d_use_tex=-1;
     d75d_comb=0; for(int i=0;i<4;i++){d75d_prim[i]=-1;d75d_env[i]=-1;} d75d_comb_utex=-1;
+    d75d_lg_utex=-1; d75d_lg_tex=-1;
 }
 static void d75d_frame_check(uint32_t f) {
     if (f != d75d_frame) { d75d_flush(f); d75d_frame = f; }
@@ -1543,6 +1663,8 @@ static void d75d_note_rej(uint32_t f, int which) {
     d75d_frame_check(f);
     if (which == 0) d75d_rej_triv++; else d75d_rej_cull++;
 }
+static inline int gfx_lod_tile_offset(const int i); // fwd (defined below; D75D round 2)
+
 static void d75d_note_emit(uint32_t f, struct LoadedVertex* const* v_arr) {
     d75d_init();
     if (d75d_lo < 0 || f < (uint32_t)d75d_lo || f > (uint32_t)d75d_hi) return;
@@ -1585,6 +1707,24 @@ static void d75d_note_emit_z(uint32_t f, struct LoadedVertex* const* v_arr, int 
     }
     if (d75d_use_tex < 0) d75d_use_tex = has_tex;
     if (d75d_comb_utex < 0) d75d_comb_utex = comb_utex;
+    if (rdp.combine_mode == 0x009ffe4f19ffe4f1ULL) {
+        d75d_lg_utex = comb_utex; d75d_lg_tex = has_tex; d75d_lg_cnt++;
+        if (!d75d_lg_set && v_arr[0] && v_arr[0]->w != 0.f) {
+            d75d_lg_set = 1;
+            const uint32_t t0 = rdp.first_tile_index + gfx_lod_tile_offset(0);
+            d75d_lg_tmem = rdp.texture_tile[t0].tmem; d75d_lg_fmt = rdp.texture_tile[t0].fmt;
+            d75d_lg_siz = rdp.texture_tile[t0].siz;
+            d75d_lg_shifts = rdp.texture_tile[t0].shifts; d75d_lg_shifft = rdp.texture_tile[t0].shiftt;
+            d75d_lg_uls = rdp.texture_tile[t0].uls; d75d_lg_ult = rdp.texture_tile[t0].ult;
+            d75d_lg_lrs = rdp.texture_tile[t0].lrs; d75d_lg_lrt = rdp.texture_tile[t0].lrt;
+            if (rendering_state.textures[0]) {
+                d75d_lg_texaddr = rendering_state.textures[0]->first.texture_addr;
+                d75d_lg_texid = rendering_state.textures[0]->second.texture_id;
+                d75d_lg_texbytes = rendering_state.textures[0]->first.size_bytes;
+            }
+            d75d_lg_u0 = (int)v_arr[0]->u; d75d_lg_v0 = (int)v_arr[0]->v;
+        }
+    }
     d75d_comb = rdp.combine_mode;
     d75d_prim[0]=rdp.prim_color.r; d75d_prim[1]=rdp.prim_color.g; d75d_prim[2]=rdp.prim_color.b; d75d_prim[3]=rdp.prim_color.a;
     d75d_env[0]=rdp.env_color.r; d75d_env[1]=rdp.env_color.g; d75d_env[2]=rdp.env_color.b; d75d_env[3]=rdp.env_color.a;
@@ -1922,7 +2062,38 @@ static inline int gfx_lod_tile_offset(const int i) {
     // fire @ TMEM 0x188. Returning 0 here fed TEXEL1 the smoke texture too
     // (smoke * smoke) -> the magenta/cyan particle colour. Only fold to the
     // base tile when LOD is actually active.
-    return rdp.tex_lod ? 0 : i;
+    //
+    // D236 pass 26: "GE loads the whole mip chain at TMEM 0" holds for the
+    // TEXTURETYPE_LOD / TEXTURETYPE_MIPMAP bindings (texHandleType0 /
+    // texHandleType2 both do texWriteLoadToTmemAddr(tex, 0)), but NOT for
+    // TEXTURETYPE_DETAIL. texHandleType1 (tex.c) loads the DETAIL texture at
+    // TMEM 0 and the real base image at TMEM offset texGetSizeInBytes(tex2,0)
+    // on tiles 1+. Folding to tile 0 there samples the detail texture instead
+    // of the base image. On Surface 1 that is literally the D236 bug: all four
+    // treeline cards (tex1198-1201, RGBA5551 64x17 cut-outs) are type-1
+    // bindings whose detail texture is tex2465, an opaque 32x32 IA8 noise
+    // tile -- so the treeline draws as an opaque tiled noise wall and the
+    // cards themselves are never even imported (pass 25's "zero fmt=0 siz=2
+    // imports in 4800 frames").
+    //
+    // Discriminator: tile fi+1's declared FORMAT. Tiles 1.. of a type-0/type-2
+    // binding are LOD levels of tile 0's image, so they necessarily carry the
+    // same fmt/siz; a type-1 pair is two unrelated textures and generally does
+    // not (Surface 1's cards: tile 0 = tex2465 IA8, tile 1 = tex1198 RGBA16).
+    // Deliberately asymmetric -- a mip chain can never trip this, and a detail
+    // pair that happens to share a format just keeps today's behaviour -- so
+    // the D107 mip case is safe by construction.
+    if (rdp.tex_lod) {
+        const uint32_t fi = rdp.first_tile_index;
+        if (g_detail_base_tile && fi + 1 < 8 &&
+            rdp.texture_tile[fi + 1].tmem != rdp.texture_tile[fi].tmem &&
+            (rdp.texture_tile[fi + 1].fmt != rdp.texture_tile[fi].fmt ||
+             rdp.texture_tile[fi + 1].siz != rdp.texture_tile[fi].siz)) {
+            return 1;
+        }
+        return 0;
+    }
+    return i;
 }
 
 static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
@@ -2105,6 +2276,40 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
      * correlated against "close" vs "far" the same way pass 13's live
      * capture was read. Zero cost unset. Remove once D236 pass 14
      * concludes. */
+    /* D236 pass 17 (TEMP): six passes of signature-matching (11-16) failed
+     * to identify the CPU-side writer of the tree class's raw-pointer vertex
+     * batches. Stop guessing: on the first triangle(s) of this class whose
+     * vertices came from a raw (unsegmented, seg 0x70) G_VTX load, capture a
+     * host stack backtrace -- the C call chain that submitted this display
+     * list IS the writer's caller, no inference needed. Windows-only (this
+     * build): RtlCaptureContext + RtlVirtualUnwind over the exe's own .pdata
+     * table -- this box's dbghelp.dll is stripped (no CaptureStackBackTrace;
+     * StackWalk64 fails immediately), so ntdll does the unwind and there is
+     * no dbghelp dependency at all. Frames print as RVAs, resolved offline
+     * with addr2line against this exact exe. Env-gated, fires at most once
+     * per distinct raw pointer (cap 5), zero cost unset. Remove once D236
+     * pass 17 concludes. */
+#ifdef _WIN32
+    static int s_d236bt = -1;
+    if (s_d236bt < 0) s_d236bt = getenv("GE_D236BT") != NULL;
+    if (s_d236bt && rdp.other_mode_l == 0x0c184b50u && g_d236_last_vtx_seg == 0x70) {
+        static uint32_t d236bt_seen[5] = {0, 0, 0, 0, 0};
+        static int d236bt_n = 0;
+        int dup = 0;
+        for (int i = 0; i < d236bt_n; i++) {
+            if (d236bt_seen[i] == g_d236_last_vtx_raw) { dup = 1; break; }
+        }
+        if (!dup && d236bt_n < 5) {
+            d236bt_seen[d236bt_n++] = g_d236_last_vtx_raw;
+            fprintf(stderr,
+                    "D236BT rawvtx=0x%08x a=(%u,%u,%u) invw1=%.4f\n", g_d236_last_vtx_raw,
+                    v1->color.a, v2->color.a, v3->color.a,
+                    (v1->w != 0.f) ? 1.f / v1->w : 0.f);
+            port_d236bt_dump("rsp");
+        }
+    }
+#endif
+
     static int s_d236alpha = -1;
     if (s_d236alpha < 0) s_d236alpha = getenv("GE_D236ALPHA") != NULL;
     if (s_d236alpha && rdp.other_mode_l == 0x0c184b50u) {
@@ -3609,6 +3814,7 @@ static void gfx_run_dl(Gfx* cmd) {
                  * model/CPU-built-quad source) without guessing from source
                  * review alone. Remove once D236 pass 16 concludes. */
                 g_d236_last_vtx_seg = (uint8_t)(cmd->words.w1 >> 24);
+                g_d236_last_vtx_raw = cmd->words.w1;
                 gfx_sp_vertex(C0(0, 16) / sizeof(Vtx), C0(16, 4), (const Vtx*)seg_addr(cmd->words.w1));
                 d75d_note_vtx(videoGetFrameCount(), C0(0, 16) / sizeof(Vtx), C0(16, 4));
                 break;
@@ -4101,6 +4307,8 @@ extern "C" void gfx_set_mipmap_filter(enum MipmapFilteringMode mode) {
 }
 
 extern "C" void gfx_set_fix_mip_textures(int on) { g_fix_mip_textures = !!on; }
+
+extern "C" void gfx_set_detail_base_tile(int on) { g_detail_base_tile = !!on; }
 
 /* D212: expose the (already-implemented) rendering-API anisotropy hook to the
  * port layer. Clamp to [1, GL max] so a stale ini value can't feed an invalid

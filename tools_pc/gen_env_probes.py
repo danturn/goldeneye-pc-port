@@ -49,7 +49,13 @@ def doc_vars() -> tuple[set[str], set[str]]:
         return set(), set()
     named, tombstone = set(), set()
     for line in DOC.read_text(encoding="utf-8").splitlines():
-        vs = re.findall(r"GE_[A-Z0-9_]+", line)
+        # `GE_FOO[` in prose is a probe's LOG-LINE TAG, not an env var -- several
+        # probes print a tag that is not the name of any getenv() (e.g.
+        # GE_TEXDUMP_ADDR prints "GE_TEXA[...]"). Counting those as documented
+        # vars reports a permanent phantom GONE. A row for a real var always
+        # names it plainly in the table's first cell, so it is still picked up.
+        vs = [m.group(1) for m in re.finditer(r"(GE_[A-Z0-9_]+)(\[?)", line)
+              if not m.group(2)]
         named.update(vs)
         if "tombstone" in line.lower():
             tombstone.update(vs)

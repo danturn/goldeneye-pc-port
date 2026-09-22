@@ -47,6 +47,7 @@ void gfx_set_target_fps(int);
 void gfx_set_texture_filter(enum FilteringMode mode);
 void gfx_set_mipmap_filter(enum MipmapFilteringMode mode);
 void gfx_set_fix_mip_textures(int on);
+void gfx_set_detail_base_tile(int on);  /* D236: sample the base image of a DETAIL binding */
 void gfx_set_wrap_fix(int on);
 void gfx_set_anisotropy_level(int level);  /* 1 = off; clamped to GL max */
 void gfx_set_safe_area_crop(int on);       /* crop the N64 TV-overscan safe-area margin instead of showing it as black bars */

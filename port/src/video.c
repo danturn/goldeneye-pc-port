@@ -58,6 +58,7 @@ static int cfgFpsCap        = 60;  /* frame cap in fps; 0 = uncapped (vsync); me
 static int cfgMSAA          = 4;   /* 1/2/4/8 samples; default 4 (modern ports ship AA on; snaps down to the highest supported level) */
 static int cfgTexFilter     = 1;   /* 0 = nearest, 1 = bilinear (default), 2 = N64 3-point + trilinear */
 static int cfgFixMipTex     = 1;   /* RC2: clip mip-contaminated texture uploads to base height */
+static int cfgDetailBaseTile = 1;  /* D236: TEXTURETYPE_DETAIL -> sample the base image, not the detail tile */
 static int cfgWrapFix       = 0;   /* D74 sub-tile UV pre-wrap + RC3/D167 non-PoT mask-period wrap (opt-in; GE_WRAPFIX env overrides) */
 static int cfgFovScale      = 100; /* D211: percent of the original vertical FOV; 100 = unchanged (byte-identical) */
 static int cfgWidescreenAuto = 1;  /* WIDESCREEN-FOV-PLAN Phase 4: auto-scale vertical FOV by window aspect ratio; on by default, no-op at 4:3 */
@@ -240,6 +241,7 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
     configRegisterInt("Video.MSAA",          &cfgMSAA,       1, 8);
     configRegisterInt("Video.TextureFilter", &cfgTexFilter,  0, 2);
     configRegisterInt("Video.FixMipTextures", &cfgFixMipTex, 0, 1);
+    configRegisterInt("Video.DetailBaseTile", &cfgDetailBaseTile, 0, 1);
     configRegisterInt("Video.WrapFix", &cfgWrapFix, 0, 1);
     configRegisterInt("Video.FovScale", &cfgFovScale, 50, 150);
     configRegisterInt("Video.WidescreenAuto", &cfgWidescreenAuto, 0, 1);
@@ -460,6 +462,7 @@ int videoInit(void)
      * NOT fix the Depot roof, see docs/BRIEF-B2-depot-textures.md). All keep
      * point-sampled tiles (HUD, G_TF_POINT) crisp via the per-tile flag. */
     gfx_set_fix_mip_textures(cfgFixMipTex);
+    gfx_set_detail_base_tile(cfgDetailBaseTile);
     gfx_set_wrap_fix(cfgWrapFix);
 
     videoApplyTexFilter();

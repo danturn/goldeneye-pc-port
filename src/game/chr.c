@@ -1266,8 +1266,37 @@ s32 get_numguards(void)
 }
 
 
+/* D236 pass 17b (TEMP): env-gated backtrace at the vertex allocator --
+ * every dynamic-quad builder in model.c (dotube/doshadow/dorottex/
+ * dogfnegx) funnels through here, so a stack capture on this call names
+ * the actual writer of a raw-pointer G_VTX batch. Correlate the printed
+ * physical address with the RSP-side GE_D236BT rawvtx captures. Port-side
+ * dumper: port/fast3d/gfx_pc.cpp (port_d236bt_dump). Zero cost unset.
+ * Remove once D236 pass 17 concludes. */
 void get_ptr_allocated_block_for_vertices(int param_1)
 {
+#ifdef PORT
+    static int s_d236bt = -1;
+    if (s_d236bt < 0) s_d236bt = getenv("GE_D236BT") != NULL;
+    if (s_d236bt) {
+        extern void port_d236bt_dump(const char* tag);
+        static int d236bt_allocs = 0;
+        if (d236bt_allocs < 8) {
+            d236bt_allocs++;
+            Vtx* p = (Vtx*)dynAllocate(param_1 << 4);
+            fprintf(stderr, "D236BT alloc n=%d bytes=0x%x phys=0x%08x\n",
+                    param_1, param_1 << 4, (unsigned)osVirtualToPhysical(p));
+            port_d236bt_dump("alloc");
+            /* CRITICAL: callers do `vtx = (Vtx*)vtxallocator(n)` on this
+             * void function and read RAX (works on the unprobed path only
+             * because nothing clobbers it between dynAllocate and ret).
+             * Pin p in RAX so the probe's fprintf/unwind calls don't
+             * hand the caller garbage. */
+            __asm__ volatile("" : "+a" (p));
+            return;
+        }
+    }
+#endif
   dynAllocate(param_1 << 4);
 }
 

@@ -28,6 +28,7 @@ good that you are looking at one of these.
 - [D3. GCC/mingw makes an all-non-negative `enum` UNSIGNED](#d3-gccmingw-makes-an-all-non-negative-enum-unsigned)
 - [D4. N64 "interrupts off" must be a real lock on PC](#d4-n64-interrupts-off-is-not-free-on-pc--it-must-be-a-real-lock)
 - [D5. Loop bounds that assume linker adjacency of two globals](#d5-loop-bounds-that-assume-linker-adjacency-of-two-file-scope-globals)
+- [D12. Collapsing an LOD binding to tile 0 breaks a DETAIL binding](#d12-collapse-an-lod-binding-to-tile-0-is-wrong-for-a-two-texture-detail-binding-d236)
 - [E. Process / method notes](#e-process--method-notes)
 
 ## A. Pointer-width struct growth (32→64): the dominant class
@@ -865,6 +866,48 @@ through a converter or a runtime bswap fixup reads scrambled.
   (ginit.s is missing from this repo; the expansion lives there), not UV,
   shade, or the combiner.
 
+## D12. "Collapse an LOD binding to tile 0" is wrong for a two-texture DETAIL binding (D236)
+
+**M-198 (finding D236 pass 26).** GE's `texLoadFromGdl` resolves a room DL's
+`G_NOOP` texture reference through one of three handlers, chosen by
+`in->words.w0 & 7` (`src/game/tex.c`):
+
+| type | handler | TMEM layout |
+|---|---|---|
+| 0 `TEXTURETYPE_LOD` | `texHandleType0` | ONE load block at TMEM 0; tiles 0..n are LOD levels **of that one image** |
+| 1 `TEXTURETYPE_DETAIL` | `texHandleType1` | TWO load blocks: the **detail** texture at TMEM 0, the **base** image at TMEM `texGetSizeInBytes(detail,0)` on tiles 1.. |
+| 2 `TEXTURETYPE_MIPMAP` | `texHandleType2` | as type 0 |
+
+fast3d's `gfx_lod_tile_offset` (`port/fast3d/gfx_pc.cpp`) folded **every**
+`G_TL_LOD` draw to tile 0, on the reasoning (D107) that "GE loads the whole mip
+chain at TMEM 0". That is true for types 0 and 2 and **false for type 1**,
+where TMEM 0 holds the detail texture and the image you actually want is on
+tile 1. The port therefore drew the detail texture in place of the base image —
+and never even *imported* the base image, so every probe looking for it came
+back empty.
+
+On Surface 1 this was the whole of D236: all four treeline cards
+(`tex1198`–`tex1201`, RGBA5551 64×17 cut-outs) are type-1 bindings sharing one
+detail texture, `tex2465` — an opaque 32×32 IA8 noise tile. Result: an opaque
+tiled noise wall where the treeline belongs, for 20+ investigation passes.
+
+**Tells.** (a) A texture the game demonstrably decodes into the pool is never
+imported by the renderer — that is a *binding* bug, not a decode, alpha, mip or
+geometry bug, and no amount of work on the texture's contents will move it.
+(b) The wrong thing drawn is itself a real, correctly-decoded texture from the
+same draw — look for a second texture bound by the same command.
+
+**Discriminating the two layouts at draw time.** Prefer an invariant that a mip
+chain can never satisfy. Tiles 1.. of a type-0/2 binding are LOD levels of tile
+0's image, so they necessarily carry the **same `fmt`/`siz`**; a type-1 pair is
+two unrelated textures and generally does not. Deliberately choose the
+asymmetric test — a mip chain can never trip it, and a detail pair that happens
+to share a format merely keeps the old behaviour. Two weaker discriminators
+were tried live and both misfire: "tile 1 sits at a different TMEM address"
+matches ordinary mip chains (their levels are at different TMEM offsets too),
+and "tile 1's TMEM slot has a registered load" matches them as well, because
+`rdp.loaded_texture[]` is persistent state that is never cleared between binds.
+
 ## D2. The HUD/model "X-mirror" (D114/D116): RESOLVED, it was an upside-down capture
 
 **M-33 (finding D168).** There was no mirror. `gfx_opengl_dump_bound_fbo`
@@ -1169,6 +1212,43 @@ produce the same visual symptom but need opposite fixes.
   writing anything new; same Rare engine family.
 - Don't re-investigate a closed §F finding or re-derive a format spec
   that already has a converter.
+- **When re-implementing a ROM bitstream/codec offline, PORT the derivation
+  from the decomp; never reconstruct it from the comment.** A half-right
+  bitstream parser in this codebase does not fail loudly — it returns
+  confident, plausible, wrong output. Three hits in four D236 passes:
+  (1) a texture-header parse that omitted the leading control byte
+  (`image.c:2568`) still produced sensible-looking formats and dimensions,
+  and was only caught by counting implausible entries (1020/2699 vs 1/2699
+  when correct) and noticing the format nibble only ever took values
+  0/4/8/12 — the tell that a field was straddling a boundary;
+  (2) omitting the per-image byte-align at the end of each LOD
+  (`image.c:1096`: discard the partial byte, and skip a whole byte when
+  already aligned) silently desynchronised every LOD after the first;
+  (3) `texInflateRle`'s run-length `fudge` was *guessed* from the doc comment
+  instead of ported from the loop at `image.c:1605`, and still decoded
+  images — just with the wrong alpha coverage (66.7% vs the correct 43.1%).
+  Practical rules: copy the arithmetic statement-for-statement even when it
+  looks like it could be closed-formed; build a cheap global plausibility
+  counter into the tool and print it every run; and cross-check one decoded
+  artifact against an independent expectation (here, that a LOD chain's
+  dimensions halve exactly and its alpha coverage stays roughly constant)
+  before trusting any number the tool emits.
+
+- **A negative result from a diagnostic is worthless until the diagnostic has
+  been shown capable of producing the positive.** Two independent hits: D219's
+  "verify diagnostic caps exempt the real target signature before trusting
+  'clean'", and D236 pass 21, where a static setup scanner located GE's `PROP`
+  enum with `startswith("typedef enum PROP")` — which matches
+  `typedef enum PROPFLAG` hundreds of lines earlier, yielding an enum with **no
+  `PROP_*` members at all**. Every prop id then resolved to `?` and every
+  "foliage props placed" count came back 0, which is exactly what a clean,
+  meaningful negative looks like. Build the positive control **into** the probe:
+  have it print what it is capable of matching (`foliage props recognised (9):
+  …`) and fail loudly when that set is empty, so the failure mode cannot be
+  read as a finding. Applies equally to grep-based audits over generated C,
+  where near-miss identifier prefixes (`PROP` / `PROPFLAG` / `PROPDEF_TYPE`) are
+  the norm.
+
 - **`docs/dev/findings-index.csv` is generator-derived** (`tools_pc/gen_findings_index.py`): the status cell is normalised from the `## Dxx` entry's §F summary-table row in `findings.md`, so hand-editing the CSV is silently reverted on the next regen (hit live in the D219/D252 M-158 session). Update the table row, then run the generator.
 - **Every game launch rewrites `data/ge007.eep`** (the eeprom shim stores on
   every write; validation resets, cheat patches and normal saves all write).
