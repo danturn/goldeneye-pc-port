@@ -1279,26 +1279,55 @@ static void geEepromPatchAllCheats(u8 *buf)
     memset(&slots[5], 0, sizeof(ge_save_slot));
 
     int changed = 0;
-    for (int i = 0; i < 5; i++) {
-        /* D259: a fresh ge007.eep is zero-filled, so every slot reads as
-         * all-zero. Normally such a slot fails fileValidateSaves' CRC and is
-         * reset to BLANKSAVEDATA (music_vol/sfx_vol = 0xFF); but this patch
-         * gives the slot a valid CRC below, so it survives with volume 0
-         * -> silence. Emulate fileResetSave: seed max volume on all-zero
-         * slots only -- real saves (incl. a deliberately muted one) keep
-         * their bytes. */
-        {
+
+    /* D259 + D281: a fresh ge007.eep is zero-filled, so every slot reads as
+     * all-zero. Without this patch such a slot fails fileValidateSaves' CRC
+     * and becomes a free BLANKSAVEDATA slot (fileResetSave), after which
+     * fileBuildWriteNewSave fills the first free slot for each folder with
+     * no save, in folder order. This patch gives every slot a valid CRC
+     * below, so an all-zero slot would instead SURVIVE as-is: five slots all
+     * claiming folder 1 with volume 0 (D259: silence) and options 0 (D281:
+     * sight-on-screen, auto-aim, look-ahead and ammo display all off, which
+     * reads as "RMB aim broken"). D259 seeded only the volumes. Reproduce
+     * the game's full result instead: all-zero slots take the folders that
+     * no real slot holds, in order, built exactly as fileBuildWriteNewSave
+     * builds them (BLANKSAVEDATA + folder + not-free + bond); any left over
+     * become free BLANKSAVEDATA slots. Real saves keep their bytes. */
+    {
+        extern void fileSetSaveFoldernum(void *save, u32 folder);
+        extern void fileSetSaveFlagDoReset(void *save, s32 enable);
+        extern void fileSetSelectedBond(void *save, s32 bond);
+        static const ge_save_slot blank = {
+            0, 0, 0x80 /* SAVEFLAGS_SET(0,0,BOND_BROSNAN,1): free */, 0x00,
+            0xFF, 0xFF, 0x3A /* DEFAULT_OPTIONS */, 0, 0, 0, 0, {0}
+        };
+        int allzero[5], present[4] = {0, 0, 0, 0};
+        for (int i = 0; i < 5; i++) {
             const u8 *raw = (const u8 *)&slots[i];
-            int allzero = 1;
+            allzero[i] = 1;
             for (int b = 0; b < (int)sizeof(ge_save_slot); b++)
-                if (raw[b]) { allzero = 0; break; }
-            if (allzero && (slots[i].music_vol != 0xFF ||
-                            slots[i].sfx_vol   != 0xFF)) {
-                slots[i].music_vol = 0xFF;
-                slots[i].sfx_vol   = 0xFF;
-                changed = 1;
+                if (raw[b]) { allzero[i] = 0; break; }
+            if (!allzero[i] && !(slots[i].completion_bitflags & 0x80 /* DORESET */)) {
+                int f = slots[i].completion_bitflags & 0x7;   /* SAVEFLAG_FOLDER */
+                if (f < 4) present[f] = 1;                    /* MAX_FOLDER_COUNT */
             }
         }
+        int folder = 0;
+        for (int i = 0; i < 5; i++) {
+            if (!allzero[i]) continue;
+            slots[i] = blank;
+            while (folder < 4 && present[folder]) folder++;
+            if (folder < 4) {
+                fileSetSaveFoldernum(&slots[i], (u32)folder);
+                fileSetSaveFlagDoReset(&slots[i], 0);
+                fileSetSelectedBond(&slots[i], folder);
+                present[folder] = 1;
+            }
+            changed = 1;
+        }
+    }
+
+    for (int i = 0; i < 5; i++) {
         /* Cheat ids are level ids 0..19 (CHEAT_INPUT_BUFFER_SIZE == 20):
          * bits 0-7 in _1, 8-15 in _2, 16-19 in the low nibble of _3. */
         if (slots[i].unlocked_cheats_1 != 0xFF ||

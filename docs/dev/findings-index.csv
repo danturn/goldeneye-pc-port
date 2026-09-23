@@ -96,7 +96,7 @@ D270,?,Backfilled (M-132) — this label was never given its own row; only code 
 D271,FIXED,"D236 wall, third pass —",FIXED-but-insufficient (src/game/bg.c #ifdef PORT) —
 D276,OPEN,"D236 wall, eighth pass —","REFRAMED — oml=0xc81049d8/fmt=3 is the primary suspect now, not D269's CI8 pair; 0x0c184b50 unattributed; wall still open, see D236"
 D279,?,Backfilled — this label was consumed by an undocumented partial session (2026-09-14 ~23:00) that left artifacts in scratch/ (d279_run.log… —,undocumented — artifacts only
-D281,OPEN,"Game.AllUnlocked (D257) still breaks audio, and can also break right-mouse aim, when enabled before any save has ever been written (v0.2.1 user testing… —","OPEN — user-reported regression, not root-caused; mitigation is user-facing guidance only (release notes:"
+D281,FIXED,"Game.AllUnlocked (D257) still breaks audio, and can also break right-mouse aim, when enabled before any save has ever been written (v0.2.1 user testing… —","FIXED (2026-09-23, port/src/libultra.c):"
 D282,FIXED,"QoL ask (v0.2.1 user testing, 2026-09-15):","FIXED (port/src/input.c, #ifdef not needed —"
 D283,OPEN,"Steam Deck first-run preset (D-unnumbered in port/src/video.c/main.c, videoApplySteamOSDefaults()) did not apply for a user who added the game via Steam… —","OPEN — mechanism understood, root cause (Desktop-vs-Game-Mode STEAMOS env var difference) unverified on real hardware; user-facing workaround documented in README/release notes."
 D280,?,"D236 wall, ninth pass —","REFRAMED again — no fix; next steps in detail section, see D236"
