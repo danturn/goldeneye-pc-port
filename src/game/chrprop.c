@@ -39,6 +39,9 @@
 #include "objective_status.h"
 #include "stan.h"
 #include "tex.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 
 // bss
@@ -433,7 +436,7 @@ Gfx *chrpropRender(Gfx * gdl, PropRecord *prop, s32 withalpha)
     u8 type;
 #if defined(PORT)
     Gfx *gdl_in = gdl;
-    int probe = getenv("GE_D96") != NULL;
+    int probe = GE_ENVFLAG("GE_D96");
 #endif
 
     type = prop->type;
@@ -504,7 +507,7 @@ Gfx *chrpropsRenderPass(Gfx *gdl, s32 roomid, s32 renderpass)
     }
 
 #if defined(PORT)
-    if (getenv("GE_D96")) {
+    if (GE_ENVFLAG("GE_D96")) {
         s32 n = (s32)((PropRecord **)g_LastOnScreenProp - g_OnScreenPropList);
         osSyncPrintf("D96 chrpropsRenderPass room=%d pass=%d gdl=%p list=[%p..%p) n=%d cap=%d\n",
                      (int)roomid, (int)renderpass, (void*)gdl,

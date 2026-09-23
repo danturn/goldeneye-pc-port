@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "audiotrace.h"   /* D202/M-70: serialized trace writer */
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 #endif
 //likely named gslibaudio.c from xbla
 /**
@@ -417,7 +420,7 @@ void sndHandleEvent(ALSndPlayer *sndp, ALSndpEvent *event) {
                                 }
                                 iterState = (ALSoundState *) iterState->link.prev;
                             } while (limitReached && iterState != NULL);
-                            else if (getenv("GE_D305")) {
+                            else if (GE_ENVFLAG("GE_D305")) {
                                 /* D305: log the desync state for a future occurrence --
                                  * confirms whether Game.AllUnlocked correlates or was
                                  * coincidental, and whether it recurs at all now that the
@@ -500,7 +503,7 @@ void sndHandleEvent(ALSndPlayer *sndp, ALSndpEvent *event) {
                     expireEvt.common.type = AL_SNDP_PORT_EXPIRE_EVT;
                     expireEvt.common.state = soundState;
                     alEvtqPostEvent(&sndp->evtq, (ALEvent *) &expireEvt, D202_EXPIRE_DELAY_US);
-                    if (getenv("GE_AUDIOTRACE")) {
+                    if (GE_ENVFLAG("GE_AUDIOTRACE")) {
                         geTracePrintf("audiotrace.log", "[EXPIRE] sound=%p state=%p delay=%dus fade=%dus (ownerless infinite loop; D202/M-66)\n",
                                 (void *)sound, (void *)soundState, (int)D202_EXPIRE_DELAY_US, (int)D202_EXPIRE_FADE_US);
                     }

@@ -18,6 +18,9 @@
 #include "objecthandler.h"
 #include "quaternion.h"
 #include "random.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 
 typedef struct ModelGroupMtxBuildArg {
@@ -541,7 +544,7 @@ union ModelRwData* modelGetNodeRwData(Model *Objinst, ModelNode *root)
 
 #ifdef PORT
     /* TEMP D51: trace rwdata pool addressing */
-    if (getenv("GE_D51")) {
+    if (GE_ENVFLAG("GE_D51")) {
         static FILE *f = NULL;
         if (!f) { f = fopen("d52rw.log", "a"); setvbuf(f, NULL, _IONBF, 0); }
         fprintf(f, "GND obj=%p datas=%p idx=%d rwdatalen=%d op=%d data=%p res=%p\n",
@@ -4682,7 +4685,7 @@ void modelRenderNodeGundl(ModelRenderData* renderdata, ModelNode* arg1)
 
 #if defined(PORT)
         /* TEMP D63: log Primary/Secondary before emit (env GE_D63=1) */
-        if (getenv("GE_D63") && ((renderdata->flags & 1) && rodata->Primary))
+        if (GE_ENVFLAG("GE_D63") && ((renderdata->flags & 1) && rodata->Primary))
             osSyncPrintf("D63 modelRenderNodeGundl Primary=%p Secondary=%p BaseAddr=%p ModelType=%d\n",
                          (void *)rodata->Primary, (void *)rodata->Secondary,
                          (void *)rodata->BaseAddr, (int)rodata->ModelType);

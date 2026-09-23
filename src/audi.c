@@ -10,6 +10,9 @@
 #if defined(__x86_64__)
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 #endif
 #endif
 
@@ -664,7 +667,7 @@ s32 amDmaCallback(s32 addr, s32 len, void* state)
             dmaPtr->lastFrame = (s32) g_AudioFrameCount;
             freeBuffer = (dmaPtr->ptr + addr) - dmaPtr->startAddr;
 #if defined(__x86_64__)
-            if (getenv("GE_MIXERTRACE")) {
+            if (GE_ENVFLAG("GE_MIXERTRACE")) {
                 static FILE *dtf2 = NULL;
                 if (!dtf2) { dtf2 = fopen("mixertrace.log", "a"); if (dtf2) setvbuf(dtf2, NULL, _IONBF, 0); }
                 if (dtf2) fprintf(dtf2, "[DMAHIT] addr=0x%08x len=%d bufStart=0x%08x bufPtr=%p ret=%p\n",
@@ -732,7 +735,7 @@ s32 amDmaCallback(s32 addr, s32 len, void* state)
 
     osPiStartDma(&g_DmaIOMessageBuffer[g_NextDMa++], OS_MESG_PRI_HIGH, OS_READ, (u32)addr, freeBuffer, AUDIO_DMA_MAX_BUFFER_LENGTH, &g_DmaMessageQueue);
 #if defined(__x86_64__)
-    if (getenv("GE_MIXERTRACE")) {
+    if (GE_ENVFLAG("GE_MIXERTRACE")) {
         static FILE *dtf3 = NULL;
         if (!dtf3) { dtf3 = fopen("mixertrace.log", "a"); if (dtf3) setvbuf(dtf3, NULL, _IONBF, 0); }
         if (dtf3) fprintf(dtf3, "[DMAMISS] addr=0x%08x len=%d bufPtr=%p ret=0x%08x\n",

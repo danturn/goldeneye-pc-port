@@ -25,6 +25,7 @@
 #include "platform.h"
 #include "system.h"
 #include "config.h"
+#include "envflag.h"
 
 /*
  * [Debug] knobs mirroring the dev env vars. The env var always wins so
@@ -43,14 +44,14 @@ PD_CONSTRUCTOR static void configDebugInit(void)
 
 const char *configGetFrameDump(void)
 {
-    const char *e = getenv("GE_PCDUMP");
+    const char *e = GE_ENVSTR("GE_PCDUMP");   /* per frame (videoPreSwapCapture) */
     if (e && *e) return e;
     return dbgFrameDump[0] ? dbgFrameDump : NULL;
 }
 
 int configGetInputLog(void)
 {
-    return getenv("GE_INPUTLOG") ? 1 : dbgInputLog;
+    return GE_ENVFLAG("GE_INPUTLOG") ? 1 : dbgInputLog;   /* several calls per poll */
 }
 
 #define MAX_OPTIONS 256

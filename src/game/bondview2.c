@@ -48,6 +48,9 @@
 #include "stan.h"
 #include "stanintersection.h"
 #include "textrelated.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 #ifdef VERSION_EU
 
@@ -1689,7 +1692,7 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
              * M-141/M-142 -- the pad-orbit branch below was ruled out with
              * zero hits, so the Dam cutscene must be reaching this branch
              * or the gBondViewCutscene branch further down instead). */
-            if (getenv("GE_D243CAM")) {
+            if (GE_ENVFLAG("GE_D243CAM")) {
                 osSyncPrintf("D243CAM lookatpad: pos=%.2f,%.2f,%.2f pos2=%.2f,%.2f,%.2f\n",
                              (double) pos->f[0], (double) pos->f[1], (double) pos->f[2],
                              (double) pos2->f[0], (double) pos2->f[1], (double) pos2->f[2]);
@@ -1742,7 +1745,7 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
              * zero hits in M-141/M-142). theta/verta are the spherical
              * angles driving pos2's look-at offset from pos; a jump/jitter
              * in either between calls would show up as the reported shake. */
-            if (getenv("GE_D243CAM")) {
+            if (GE_ENVFLAG("GE_D243CAM")) {
                 osSyncPrintf("D243CAM cutscene: pos=%.2f,%.2f,%.2f pos2=%.2f,%.2f,%.2f theta=%.4f verta=%.4f\n",
                              (double) pos->f[0], (double) pos->f[1], (double) pos->f[2],
                              (double) pos2->f[0], (double) pos2->f[1], (double) pos2->f[2],
@@ -1789,7 +1792,7 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
          * wall-clock sim-tick count, normally clamped to <=6 but not
          * necessarily steady at 1) is jittering frame-to-frame in a way that
          * would show up as this exact judder. */
-        if (getenv("GE_D243CAM")) {
+        if (GE_ENVFLAG("GE_D243CAM")) {
             osSyncPrintf("D243CAM: dt=%.4f angle=%.4f pos=%.2f,%.2f,%.2f pad=%d\n",
                          (double) g_GlobalTimerDelta, (double) flt_CODE_bss_80079A00,
                          (double) pos->f[0], (double) pos->f[1], (double) pos->f[2],

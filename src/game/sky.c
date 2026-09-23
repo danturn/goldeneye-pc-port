@@ -16,6 +16,9 @@
 #include "image_bank.h"
 #ifdef PORT
 #include "dyn.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 #endif
 
 #define SKYABS(val) (val >= 0.0f ? (val) : -(val))
@@ -343,7 +346,7 @@ Gfx *skyRender(Gfx *gdl)
     env = fogGetCurrentEnvironmentp();
 
 #ifdef PORT
-    if (getenv("GE_D176")) {
+    if (GE_ENVFLAG("GE_D176")) {
         static int n = 0;
         if (n++ < 4)
             fprintf(stderr, "D176 sky: Clouds=%d RGB=%d,%d,%d SkyImageId=%d CloudRGB=%.1f,%.1f,%.1f "
@@ -404,7 +407,7 @@ Gfx *skyRender(Gfx *gdl)
     sp52c = skyIsScreenCornerInSky(&sp680, &sp620, &sp580);
 
 #ifdef PORT
-    if (getenv("GE_D176")) {
+    if (GE_ENVFLAG("GE_D176")) {
         static int m = 0;
         if (m++ < 3) {
             coord3d *eye = bondviewGetCurrentPlayersPosition();
@@ -943,7 +946,7 @@ Gfx *skyRender(Gfx *gdl)
              * comment. Off by default (unset env => identical to the current
              * allowShift=TRUE behaviour this row is still reopened against). */
             {
-                const char *fs = getenv("GE_D245_FIXEDSHIFT");
+                const char *fs = GE_ENVSTR("GE_D245_FIXEDSHIFT");
                 if (fs) {
                     s32 kFixed = atoi(fs);
                     if (kFixed < 0) kFixed = 0;
@@ -959,7 +962,7 @@ Gfx *skyRender(Gfx *gdl)
              * still-open question after allowShift=TRUE didn't fix the live
              * symptom. Recomputed locally rather than reading skyPortBeginFan's
              * statics (defined later in this TU, not forward-declared). */
-            if (getenv("GE_D245V")) {
+            if (GE_ENVFLAG("GE_D245V")) {
                 static int callN = 0;
                 f32 minS = sp274[0].unk20, maxS = sp274[0].unk20;
                 f32 minT = sp274[0].unk24, maxT = sp274[0].unk24;
@@ -2039,7 +2042,7 @@ static Gfx *skyPortRenderPoly(Gfx *gdl, SkyRelated38 **v, s32 nverts)
          * one sky quad spans ~30,000 texels in S and T, but tc is S10.5, so
          * (S - foldS) * 32 only holds +/-1024 texels. Same env-gate style as
          * the GE_D176 probes above. */
-        if (getenv("GE_D227V")) {
+        if (GE_ENVFLAG("GE_D227V")) {
             static int n = 0;
             if (n++ < 200)
                 fprintf(stderr, "D227V poly nv=%d i=%d w=%.1f 1/w=%.6g sx=%.1f sy=%.1f S=%.1f T=%.1f "

@@ -27,6 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "audiotrace.h"   /* D202/M-70: serialized trace writer */
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 #endif
 
 #ifndef MIN
@@ -391,7 +394,7 @@ alLoadParam(void *filter, s32 paramID, void *param)
         case (AL_FILTER_SET_WAVETABLE):
             a->table = (ALWaveTable *) param;
 #if defined(__x86_64__)
-            if (getenv("GE_AUDIOTRACE")) {
+            if (GE_ENVFLAG("GE_AUDIOTRACE")) {
                 extern uint64_t sysGetMicroseconds(void); /* port/src/system.c */
                 geTracePrintf("audiotrace_wire.log", "[WIRE] t=%llu filter=%p <- table=%p base=%p len=%d book=%p\n",
                         (unsigned long long)sysGetMicroseconds(),
@@ -399,7 +402,7 @@ alLoadParam(void *filter, s32 paramID, void *param)
                         a->table->len,
                         (a->table->type == AL_ADPCM_WAVE) ? (void *)a->table->waveInfo.adpcmWave.book : NULL);
             }
-            if (getenv("GE_MIXERTRACE")) {
+            if (GE_ENVFLAG("GE_MIXERTRACE")) {
                 static FILE *btf = NULL;
                 if (!btf) { btf = fopen("mixertrace.log", "a"); if (btf) setvbuf(btf, NULL, _IONBF, 0); }
                 if (btf) fprintf(btf, "[BINDTABLE] filter=%p <- table=%p base=%p len=%d book=%p\n",
@@ -494,7 +497,7 @@ Acmd *_decodeChunk(Acmd *ptr, ALLoadFilter *f, s32 tsam, s32 nbytes, s16 outp, s
     
     if (nbytes > 0){
 #if defined(__x86_64__)
-        if (getenv("GE_MIXERTRACE")) {
+        if (GE_ENVFLAG("GE_MIXERTRACE")) {
             static FILE *dtf = NULL;
             if (!dtf) { dtf = fopen("mixertrace.log", "a"); if (dtf) setvbuf(dtf, NULL, _IONBF, 0); }
             if (dtf) fprintf(dtf, "[DMAREQ] filter=%p memin=0x%08x nbytes=%d\n",

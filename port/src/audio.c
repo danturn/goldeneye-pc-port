@@ -17,6 +17,9 @@
 #include "config.h"
 #include "audio.h"
 #include "audiotrace.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 static SDL_AudioDeviceID dev = 0;
 
@@ -289,7 +292,7 @@ void audioSetNextBuffer(const s16 *buf, u32 len)
      * baseline after quiet sections, is the voice-leak signature; q pinning at
      * queueLimit with drop climbing is the overproduction/queue signature.
      * Cheap (one locked list walk per 5 s) -- safe for a full playtest. */
-    if (getenv("GE_D322")) {
+    if (GE_ENVFLAG("GE_D322")) {
         static u64 d322StartUs = 0, d322NextUs = 0;
         extern void sndD322PoolSummary(s32 *, s32 *, s32 *, s32 *, s32 *, s32 *);
         u64 now = sysGetMicroseconds();
