@@ -612,7 +612,8 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D324 | **GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes — implicit `int f()` declarations silently corrupt non-int returns: `atof` garbage in every float ini parse (D38 class).** — full `## D324` entry at file tail | FIXED (2026-09-22) — proven impact: `Game.ScreenShakeIntensity` (the only float ini option) silently parsed to garbage whenever a user set it; caught via the D294 `GE_ROOMPOOL` hook. Fix: `port/shim/stdlib.h` now declares atof/strtod/strtol/atexit/getenv unconditionally (K&R form); pc_protos.h gains atof/strtod for game TUs; glass2.c PORT block uses `__builtin_memset`. Residual harmless implicit decls (atoi/floorf/sqrtf/memset builtins, lround) documented. |
 | D325 | **ROM-mod (xdelta) compatibility: relocating/total-conversion mods cannot work while the file table is compiled in; in-place data-only mods are one sidecar-staleness fix away (Goldfinger 64 probe, 2026-09-22).** — full `## D325` entry at file tail | CLOSED as a question — mechanism measured (GF64 relocates 797/803 vanilla file slices; 12→24 MB expanded ROM; `d43_emit` dies on a vanilla-offset zlib slice). ASM mods never work; relocating mods need a runtime-parsed file table (rule-2 collision for added levels); in-place data-only mods need only a ROM-identity stamp in `manifest.csv` (`port/src/romconvert.c`). |
 | D326 | **Random Eye randomizer repacks the ROM too — the hypothesised "in-place data-only" mod tier is empty in practice; the in-ROM file table is the single keystone for any mod support (2026-09-22).** — full `## D326` entry at file tail | CLOSED as a question — identical ROM size but 96.5% of bytes and 803/803 file slices differ (content preserved, shifted +7216/+7392/−229888); same `d43_emit` zlib failure. D325's cheap tier disproven. Two bounded scans failed to find the in-ROM `fileentry` table (likely inside the compressed code image); that recovery question gates everything. Backlogged (local notes §5, extends T3.6). |
-| D327 | **Mod support, resolved plan: reading the file table out of the ROM is ruled out by measurement; content-addressed offset remapping (gap inference over contiguously-packed files) is the viable route (1964GEPD fork review, 2026-09-22).** — full `## D327` entry at file tail | CLOSED as a question — plan settled, no research blocker left. `hw_address` absent from the ROM in all 4 encodings tested (0 hits for the segment-relative form); `file_resource_table.inc.c` is a decomp reconstruction. Viable route: locate unchanged files by content, bound changed ones by neighbour gaps (`obInit` differencing proves contiguity). Verified primitive: GE's `0x7F000000` segment maps uncompressed from ROM `0x34b30`, uniquely signature-findable. 1964 fork is GPL-2.0 — facts only, no code reuse. |
+| D327 | **Mod support, resolved plan: reading the file table out of the ROM is ruled out by measurement; content-addressed offset remapping (gap inference over contiguously-packed files) is the viable route (1964GEPD fork review, 2026-09-22).** — full `## D327` entry at file tail | RESOLVED — superseded by D328; approach (a) is NOT ruled out (these scans missed the 1172-compressed data segment). `hw_address` absent from the ROM in all 4 encodings tested (0 hits for the segment-relative form); `file_resource_table.inc.c` is a decomp reconstruction. Viable route: locate unchanged files by content, bound changed ones by neighbour gaps (`obInit` differencing proves contiguity). Verified primitive: GE's `0x7F000000` segment maps uncompressed from ROM `0x34b30`, uniquely signature-findable. 1964 fork is GPL-2.0 — facts only, no code reuse. |
+| D328 | **Mod support is viable and D327's "ruled out" was wrong: GE's file table IS in the ROM, inside the 1172-compressed data segment, and locating it needs no hardcoded offsets (PD dabs fork review + verification on vanilla + 2 mods, 2026-09-22).** — full `## D328` entry at file tail | CLOSED as a question — table at `0x252c4` inside the segment inflated from ROM `0x21990` (727 rows; 681 exact offset+size matches vs filelist, 0 mismatches). Hardcode-free scan reads Random Eye's own table -> **704/726 files byte-identical** (vs 0/803 at vanilla offsets in D326) and GF64's 24 MB table correctly. PD's architecture is an offline importer + mod-dir override, not a runtime ROM loader; its MIT `rompatch.c` removes the GPL xdelta3 constraint. Remaining work is the mod-dir override layer. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -12884,7 +12885,17 @@ vanilla NTSC ROM by scanning for the instruction sequence
 emulator's old hardcoded `0x90034b30`. This locates a *relocated* segment in a
 modded ROM in one pass. Useful, but on its own it does not yield the file table.
 
-### (a) Reading the table out of the ROM — RULED OUT
+### (a) Reading the table out of the ROM — **CORRECTED BY D328: NOT ruled out**
+
+> **This section's conclusion is wrong.** Every scan below was run over
+> *uncompressed* ROM bytes. GE's file table lives at offset `0x252c4` inside
+> the 1172-compressed data segment that starts at ROM `0x21990`, with
+> pointers in a `0x80020d90`-based space — one raw-inflate call away, using
+> the decompressor `port/src/rzdecomp.c` already ships. D328 verifies it
+> against our own ROM (681 exact offset+size matches vs `filelist.u.csv`, 0
+> mismatches) and reads two real mods' own tables with no hardcoded offsets.
+> The measurements below remain accurate as *negative results about raw ROM
+> bytes*; the inference drawn from them does not hold.
 
 `file_resource_table`'s `hw_address` values are not present in the vanilla ROM
 in any plaintext encoding. Measured over the first 100 `filelist.u.csv` offsets:
@@ -12903,12 +12914,12 @@ plausible ASCII string. No candidate in either ROM. (The 40-entry run at
 `0x29e24c` reported in D325 appears identically in vanilla *and* Goldfinger 64,
 confirming it as heuristic noise.)
 
-This is consistent with `assets/obseg/file_resource_table.inc.c` being
-self-labelled `//TODO: Autogenerate me` — a decomp **reconstruction**, not the
-retail layout. The retail equivalent lives in the loaded/compressed code image,
-which this port never unpacks (we compile the decomp instead). **So D326's
-gating question is answered in the negative, and no further scanning is
-warranted.**
+The retail table does live in the compressed image — that much was right — but
+"which this port never unpacks" was the error: the data segment is a single
+raw-inflate away and `port/src/rzdecomp.c` already does exactly that inflate.
+See **D328**, which reads the table out of it and validates it end to end.
+(`file_resource_table.inc.c` is still a decomp reconstruction; its *ordering*
+matches the retail table, which is what makes index-keyed extraction work.)
 
 ### (b) Content-addressed offset remapping — the viable route
 
@@ -12946,9 +12957,128 @@ any implementation must be written from our sources, with provenance noted as
 still: the segment start is obtainable from our own link map, so the scan can be
 skipped entirely.
 
-**Status:** CLOSED as a question — mod-support plan settled. Approach (a) ruled
-out by measurement; approach (b) specified above with its limits; no runtime
-research blocker remains, only implementation effort (large, correct sequencing
+**Status:** SUPERSEDED BY D328 — approach (a) is **not** ruled out; this entry's
+scans missed the compressed data segment. Approach (b) (content-addressed
+remapping) remains a valid fallback for a mod that relocates the data segment
+beyond what the scan finds. Mod support is viable; only implementation effort
+remains (large, correct sequencing
 is after first public release). No code changed. Cross-ref: D325 (Goldfinger 64
 probe + mod taxonomy), D326 (Random Eye repack — cheap tier disproven),
 D43/D69/D88 (converters carrying vanilla offsets), D179 (missing-sidecar abort).
+
+## D328 — Mod support is viable and D327's "ruled out" was wrong: GE's file table is in the ROM inside the 1172-compressed data segment, and locating it needs no hardcoded offsets (verified on vanilla + 2 mods, 2026-09-22)
+
+### Source
+
+The Perfect Dark PC port fork at `perfect-dark-dabs-mod-dabs-mod` (**MIT**,
+Copyright 2022 Ryan Dwyer — same license as this tree; `AGENTS.md` already names
+the PD port a standing reference). Two files matter:
+
+- `port/src/modimport.c` — in-game console-mod import. Its header states our own
+  constraint verbatim: *"The port cannot run the patched ROM — it runs decomp
+  code and reads the ROM at fixed offsets — but it can use the mod's content."*
+- `port/src/geconvert.c` — converts a **GoldenEye 007 US ROM** into PD arenas, so
+  it parses *our* ROM and carries GE's constants.
+
+### The architectural flip (why D325–D327 asked the wrong question)
+
+D325–D327 scoped mod support as "make the port load a modded ROM", concluded
+that needed a runtime-parsed file table, and stalled on whether that table was
+recoverable. PD does not do that at all: it **diffs the patched ROM against
+stock, extracts only what differs, and writes it out as a mod directory**
+(`files/`, `segs/`) in the layout its loader already reads. The game keeps
+running its own stock ROM at fixed compiled offsets; mod content arrives as loose
+files. Mod support is an **offline import step plus a file-override layer**, not
+a loader rewrite.
+
+Supporting pieces in that fork, all MIT:
+
+- `port/src/rompatch.c` — its own VCDIFF (xdelta3: RFC 3284 + app header +
+  per-window adler32), BPS and IPS decoder, verified byte-identical against
+  xdelta3 on 40 patches. **This removes the GPLv2 xdelta3 dependency D325 flagged
+  as a licensing constraint.**
+- `findFileTable()` (`modimport.c:321`) scans the decompressed data segment for a
+  run of ≥`MIN_FILES` (500) records; the data segment is found by scanning the
+  first 4 MB. No hardcoded offsets, so it survives relocation.
+- `tblStartBySamples()` locates audio tables by searching for stock waveform
+  prefixes and voting — the content-addressed idea D327 proposed, in production.
+
+### GE's file table: where it actually is
+
+`geconvert.c` gives `DATA_ROM 0x21990`, `DATA_VRAM 0x80020d90`, `FILES_AT
+0x252c4`, and reads the table as 12-byte records with size by differencing
+adjacent addresses — **exactly `obInit` (`src/game/ob.c:126`)**. Verified here
+against our own `data/ge007.ntsc-final.z64`:
+
+- `1172` magic present at `0x21990`; `zlib` raw-inflate (`-15`) after the 2-byte
+  header yields a **247,120-byte** data segment. This is the same inflate
+  `port/src/rzdecomp.c` already wraps.
+- Table at `0x252c4`, **727 rows**, first word counting `0..726`. Names resolve
+  via `vaddr − 0x80020d90` to `bg/bg_sev_all_p.seg`, `bg/bg_silo_all_p.seg`, …
+  matching `assets/obseg/file_resource_table.inc.c` order.
+- **Cross-checked against ground truth:** derived `addr`/`size` pairs vs
+  `scripts/filelist.u.csv` — **681 exact offset+size matches, 0 mismatches**
+  (44 unmatched are artifacts of the basename matcher used, not data errors).
+
+**D327's approach (a) is therefore NOT ruled out.** Its scans were run over
+*uncompressed* ROM bytes, so it was right about the mechanism ("lives inside the
+compressed code image") and wrong about the consequence: the segment inflates in
+one call with a decompressor we already ship.
+
+### Hardcode-free discovery, verified on two real mods
+
+Implemented the PD strategy independently (scan for `1172` in the first 4 MB,
+inflate, scan for a ≥500-row run whose first word counts from 0) and ran it on
+all three ROMs. **No constant from `geconvert.c` was used.** Then validated by
+comparing vanilla file *content* against each mod ROM at the offsets its **own**
+table gives:
+
+| ROM | data seg | table | rows | content identical to vanilla at extracted offsets |
+|---|---|---|---|---|
+| vanilla NTSC-U | `0x21990` | `0x252c4` | 727 | — (reference) |
+| Random Eye v1.1 | **`0x219f0`** | `0x25304` | 727 | **704 / 726 (97.0%)** |
+| Goldfinger 64 v1.0 (24 MB) | `0x21990` | `0x252c4` | 727 | 19 / 726 (2.6%, as expected for a total conversion) |
+
+Random Eye's non-identical entries, fully accounted for:
+
+- **2 real changes** — `UsetupcaveZ` and `UsetuptraZ` (setup files; the
+  randomizer's actual edits).
+- **1 artifact** — index 0, the `NULLFILE` slot, whose "size" is the differencing
+  of `addr 0` against the first real file.
+- **19 zero-size slots** — unused `bg/` entries (`bg_sho_all_p.seg`,
+  `bg_eld_all_p.seg`, `bg_imp_all_p.seg`, …), i.e. cut-level table padding, not
+  failures.
+
+704 + 2 + 1 + 19 = 726. **Complete.**
+
+Contrast with D326, which found **0 of 803** slices matching when read at
+*vanilla* offsets: the same ROM, read through its own table, is 97% recognisable.
+That is the whole mod story in one number, and it also confirms D326's shift
+measurement (`+7392`) was the data segment and file area moving together.
+
+### Revised viability
+
+From "architectural project gated on unresolved research" (D327) to **known-good
+architecture with an MIT reference implementation**. Remaining work is real but
+bounded, and none of it is research:
+
+1. **File-table extraction** — the scan above, in C, reusing
+   `port/src/rzdecomp.c`. Proven.
+2. **Patch decoding** — VCDIFF/BPS/IPS. `rompatch.c` is MIT and adaptable with
+   attribution; no GPL dependency needed.
+3. **Mod-directory override layer** — the genuinely new piece. PD has
+   `romfile.moddir` file slots; **we have no analogue** — `port/src/romdata.c`
+   reads the ROM only. This is where the effort sits.
+4. **Converter integration** — `d43`/`d69`/`d88` taking an extracted table
+   instead of `scripts/filelist.u.csv`.
+
+**Unchanged limits:** mods that *add levels* still need new stage-table entries in
+`src/game` (AGENTS.md rule 2, not the ABI/layout exception); ASM/code mods remain
+impossible since ROM code is never executed here.
+
+**Status:** CLOSED as a question — viability established, mechanism verified end
+to end on two real mods, no research blocker remains. Amends **D327** (approach
+(a) un-ruled-out) and supersedes its keystone framing. No code changed; backlog
+updated in the local notes backlog §5. Cross-ref: D325 (GF64 probe + taxonomy),
+D326 (Random Eye repack measurement this re-reads correctly), D327 (the scans
+whose conclusion this corrects), D43/D69/D88 (converters), D179.

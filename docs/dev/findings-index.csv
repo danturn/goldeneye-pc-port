@@ -204,4 +204,5 @@ D323,OPEN,G_TL_LOD bindings of explicit-LOD textures:,"OPEN / parked — mechani
 D324,FIXED,"GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes —",FIXED (2026-09-22) — proven impact:
 D325,CLOSED,ROM-mod (xdelta) compatibility:,CLOSED as a question —
 D326,CLOSED,Random Eye randomizer repacks the ROM too —,CLOSED as a question —
-D327,CLOSED,"Mod support, resolved plan:",CLOSED as a question —
+D327,RESOLVED,"Mod support, resolved plan:",RESOLVED — superseded by D328; approach (a) is NOT ruled out (these scans missed the 1172-compressed data segment).
+D328,CLOSED,"Mod support is viable and D327's ""ruled out"" was wrong:",CLOSED as a question —
