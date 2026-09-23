@@ -202,3 +202,6 @@ D321,CLOSED,D318 trigger chain fully mapped:,CLOSED — trigger chain mapped and
 D322,OPEN,Long-session audio degradation:,"OPEN — static triage done (teardown audit, mixer statelessness, D202-coverage check); ranked hypotheses:"
 D323,OPEN,G_TL_LOD bindings of explicit-LOD textures:,"OPEN / parked — mechanism confirmed in code; census (tools_pc/bg_lod_audit.py) shows 15 levels with explicit-LOD textures bound under TEXTLOD-on classes (stat 378, azt 806 binds heaviest); overwhelmi…"
 D324,FIXED,"GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes —",FIXED (2026-09-22) — proven impact:
+D325,CLOSED,ROM-mod (xdelta) compatibility:,CLOSED as a question —
+D326,CLOSED,Random Eye randomizer repacks the ROM too —,CLOSED as a question —
+D327,CLOSED,"Mod support, resolved plan:",CLOSED as a question —
