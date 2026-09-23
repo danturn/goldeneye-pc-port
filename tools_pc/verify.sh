@@ -18,7 +18,7 @@
 #
 # Options:
 #   --platform win|linux   default: autodetect via `uname -s`
-#   --dump lo-hi:step      GE_PCDUMP window (default: 200-440:120 single level,
+#   --dump lo-hi:step      GE_PCDUMP window (default: 400-880:240 single level,
 #                          80-400:40 sweep — matches the existing golden set
 #                          and level_sweep.sh respectively)
 #   --script "..."         GE_INPUTSCRIPT passthrough (scripted input)
@@ -135,23 +135,25 @@ golden_dir_for() {
   echo ""
 }
 
-# --- ini pin: golden frames are captured at 640x480; back up + restore -----
+# --- ini pin: golden frames are captured at 640x480 with every other option
+#     at its compiled-in default (a personal ini -- FovScale, DrawDistance,
+#     MSAA... -- changes the frame and would fail the golden); back up + restore
 INI="$ROOT/data/ge007.ini"
 INI_BAK=""
+INI_CREATED=0
 pin_ini_640x480() {
-  [ -f "$INI" ] || return
-  INI_BAK=$(mktemp)
-  cp "$INI" "$INI_BAK"
-  python3 - "$INI" <<'EOF'
-import re, sys
-p = sys.argv[1]
-s = open(p, encoding="utf-8").read()
-s = re.sub(r'(\[Window\]\s*\nWidth = )\d+', r'\g<1>640', s, count=1)
-s = re.sub(r'(\[Window\]\s*\nWidth = 640\s*\nHeight = )\d+', r'\g<1>480', s, count=1)
-open(p, "w", encoding="utf-8").write(s)
-EOF
+  if [ -f "$INI" ]; then
+    INI_BAK=$(mktemp)
+    cp "$INI" "$INI_BAK"
+  else
+    INI_CREATED=1
+  fi
+  printf '[Window]\nWidth = 640\nHeight = 480\n' > "$INI"
 }
-restore_ini() { [ -n "$INI_BAK" ] && cp "$INI_BAK" "$INI" && rm -f "$INI_BAK"; }
+restore_ini() {
+  if [ -n "$INI_BAK" ]; then cp "$INI_BAK" "$INI" && rm -f "$INI_BAK"
+  elif [ "$INI_CREATED" = 1 ]; then rm -f "$INI"; fi
+}
 trap 'restore_ini; KILL' EXIT INT TERM
 
 # --- run one level -> sets globals: R_STATUS R_FRAMES R_SYM R_BRIEF -------
@@ -282,7 +284,7 @@ except Exception:
           # exit 1 = a real per-frame threshold fail (pixel/cell/hash delta).
           # exit 2 = a structural mismatch (missing/size) -- most commonly the
           # golden's frame stems don't line up with this run's --dump window
-          # (today's only golden, level_09, was captured at 200-440:120; a
+          # (today's only golden, level_09, was captured at 400-880:240; a
           # sweep using a different stride has nothing to compare against
           # rather than a real regression). Only exit 1 is a verdict fail.
           case "$fexit" in
@@ -325,7 +327,7 @@ case "$MODE" in
     name="${resolved%%:*}"; num="${resolved##*:}"
     [ "${resolved%%:*}" = num ] && name=$(name_for_num "$num")
     pin_ini_640x480 2>/dev/null || true
-    verify_level "$name" "$num" "${DUMP:-200-440:120}"
+    verify_level "$name" "$num" "${DUMP:-400-880:240}"
     ;;
 
   sweep)
@@ -373,7 +375,7 @@ case "$MODE" in
     [ -z "$resolved" ] && { echo "unknown level '$LEVEL_ARG'" >&2; exit 2; }
     name="${resolved%%:*}"; num="${resolved##*:}"
     pin_ini_640x480 2>/dev/null || true
-    run_one "$name" "$num" "${DUMP:-200-440:120}" 90
+    run_one "$name" "$num" "${DUMP:-400-880:240}" 90
     if [ "$R_STATUS" != PASS ]; then
       emit_verdict "$name" "$R_STATUS" "$R_FRAMES" "" "$R_SYM"
       rm -rf "$CAPDIR"; exit 1
