@@ -170,6 +170,9 @@ docs/img/shots/CONTACT-SHEET.jpg
 /audiodump.raw
 /audiotrace.log
 /mixertrace.log
+# texture-dump probe artifacts (regenerable via GE_TEXDUMP)
+/texdump/
+/texdump_p23_old/
 
 # Claude Code local state / agent worktrees
 .claude/

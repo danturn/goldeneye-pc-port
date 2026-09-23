@@ -466,7 +466,34 @@ void bossMainloop(void)
         {
             g_CurentMaMallocValue = (s32) (strtol(tokenFind(1, "-ma"), NULL, 0) * 1024);
         }
+#ifdef PORT
+        /* D294: PC visibility settings (Video.FovScale / WidescreenAuto /
+         * DrawDistance / LodDistance) keep more rooms on screen at once than
+         * the N64's fixed view, so the authored `-ma` room pool can exhaust;
+         * memaAlloc() then fails and undrawn rooms render as solid black.
+         * Scale the pool by portRoomPoolScale() (1.0 at all-N64-faithful
+         * settings, capped 2.0x) and never let it eat more than the STAGE
+         * bank minus 128 KB headroom for zbuf/object resources. */
+        {
+            extern f32 portRoomPoolScale(void);
+            f32 scale = portRoomPoolScale();
+            s32 avail;
+            u32 scaled;
 
+            if (scale < 0.9999f || scale > 1.0001f) {
+                scaled = (u32)(((s64)g_CurentMaMallocValue * (s64)(scale * 4.0f) + 3) / 4);
+                avail = mempGetBankSizeLeft(MEMPOOL_STAGE) - 0x20000;
+                if ((s32)scaled > avail && avail >= (s32)g_CurentMaMallocValue) {
+                    scaled = (u32)avail;
+                }
+                g_CurentMaMallocValue = scaled;
+            }
+        }
+#endif
+
+#ifdef PORT
+        if (getenv("GE_D294")) { osSyncPrintf("D294 stage=%d ma=%d\n", (s32)g_StageNum, (s32)g_CurentMaMallocValue); }
+#endif
         memaReset(mempAllocBytesInBank(g_CurentMaMallocValue, MEMPOOL_STAGE), g_CurentMaMallocValue);
         reset_play_data_ptrs();
 #ifdef PORT

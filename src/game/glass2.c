@@ -646,7 +646,9 @@ void bullet_spark_render(s_bullet_spark *thing, Gfx *gdlarg, s32 zbufferMode)
      * the local directly instead of reading 12 bytes past a 4-byte global
      * (harmless in practice so far, but real UB the PC compiler already
      * flags with -Warray-bounds). */
-    memset(&vtx, 0, sizeof(vtx));
+    /* __builtin_memset: this TU sees no memset prototype (D324); the builtin
+     * needs none and generates identical code. */
+    __builtin_memset(&vtx, 0, sizeof(vtx));
 #else
     vtx = *((Vtx *) (&D_80040980));
 #endif

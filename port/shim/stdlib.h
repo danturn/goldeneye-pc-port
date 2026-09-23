@@ -17,15 +17,29 @@
 #include "hoststdlib.h"
 #else
 #include "include/stdlib.h"
-#if !defined(_WIN32)
-/* The N64 stub declares only lldiv_t/ldiv_t + lldiv/ldiv. MinGW's other CRT
- * headers leak getenv() etc.; a strict host GCC (Linux/macOS) does not, so
- * getenv()'s 64-bit pointer return is assumed int and truncated (crashed
- * configGetFrameDump). Declare the pointer-returning stragglers the port +
- * game code use that nothing else declares. K&R form = compatible with any
- * real prototype. (malloc/calloc/free are in port/include/pc_protos.h and
- * a few port TUs' own local decls — not repeated here to avoid conflicts.) */
+/* D324: the N64 stub declares nothing else, and -- unlike getenv/realloc
+ * below -- MinGW's leaked CRT headers do NOT declare these in the port TUs
+ * that use them. An implicit `int f()` declaration makes the caller read a
+ * double return from eax instead of xmm0 (silent garbage) and truncates
+ * pointer/64-bit-long returns to 32 bits (latent on LP64 for strtol).
+ * Declared unconditionally; K&R form is compatible with any real prototype.
+ * Game TUs that never include <stdlib.h> get these from pc_protos.h. */
+extern double atof();
+extern double strtod();
+extern long int strtol();
+extern int atexit();
+/* D324: getenv was previously declared only on non-Windows, on the (wrong)
+ * assumption that MinGW's other CRT headers leak a prototype -- config.c gets
+ * none, so its implicit `int f()` declaration truncated the pointer return to
+ * 32 bits. Declare unconditionally; K&R form is compatible with any leaked or
+ * real prototype. */
 extern char *getenv();
+#if !defined(_WIN32)
+/* The N64 stub declares only lldiv_t/ldiv_t + lldiv/ldiv, and a strict host
+ * GCC (Linux/macOS) leaks no CRT prototypes at all, so realloc's pointer
+ * return would be assumed int and truncated (crashed configGetFrameDump).
+ * (malloc/calloc/free are in port/include/pc_protos.h and a few port TUs'
+ * own local decls — not repeated here to avoid conflicts.) */
 extern void *realloc();
 #endif
 #endif

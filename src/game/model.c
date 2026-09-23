@@ -3896,15 +3896,23 @@ void modelTickAnim(struct Model *model, s32 numticks, s32 update_chrstuff)
             {
                 ge_d156_logged = 1;
                 fprintf(stderr,
-                    "[D156] bad anim frame guarded: frame=%g animframe1=%g "
+                    "[D156] bad anim frame guarded: model=%p frame=%g animframe1=%g "
                     "speed=%g playspeed=%g newspeed=%g oldspeed=%g "
                     "timespeed=%g elapsespeed=%g unkb0=%g unk88=%g anim=%p\n",
-                    (double)frame, (double)model->animframe1,
+                    (void *)model, (double)frame, (double)model->animframe1,
                     (double)model->speed, (double)model->playspeed,
                     (double)model->newspeed, (double)model->oldspeed,
                     (double)model->timespeed, (double)model->elapsespeed,
                     (double)model->unkb0, (double)model->unk88,
                     (void *)model->anim);
+                /* TEMP D294: hexdump the struct to identify the overwriter. */
+                {
+                    const unsigned char *p = (const unsigned char *)model;
+                    int i;
+                    fprintf(stderr, "[D156] model=%p bytes:", (void *)model);
+                    for (i = 0; i < 128; i++) { if ((i & 15) == 0) fprintf(stderr, "\n  +%02x: ", i); fprintf(stderr, "%02x ", p[i]); }
+                    fprintf(stderr, "\n");
+                }
                 fflush(stderr);
             }
             /* D311: heal the stored state BEFORE falling back to it -- if

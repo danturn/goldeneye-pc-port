@@ -171,7 +171,7 @@ D290,OPEN,"Watch's in-game ""controller"" section shows no control-pad graphic (
 D291,OPEN,"Dam: texture glitches when the truck drives past (M-141, Steam Deck user playtest).","OPEN — observed, not investigated."
 D292,FIXED,Death animations are glitched —,"MOSTLY FIXED as a side effect of D243 (2026-09-18, user-confirmed alongside D173) —"
 D293,FIXED,"QoL ask: no discoverable way to quit the game from the UI (M-141, Steam Deck user playtest —","FIXED (M-141) — ""Quit to desktop"" row added to the F10 overlay; build-verified Win+Linux, not yet live-confirmed.…"
-D294,OPEN,"Statue: ground geometry near the large CCCP/hammer-and-sickle monument briefly renders solid black over a wide area, then self-recovers 10-30 seconds later… —",OPEN — not investigated.…
+D294,FIXED,"Statue: ground geometry near the large CCCP/hammer-and-sickle monument briefly renders solid black over a wide area, then self-recovers 10-30 seconds later… —",FIXED pending user playtest (2026-09-22) —
 D295,FIXED,"Campaign-halting crash at the end of Control Center on 00 Agent difficulty, then a crash on every subsequent relaunch/resume (GitHub #87, user campaign playtes…",FIXED (M-149) — M-148 root-caused + reproduced on HEAD; fix landed:
 D296,OPEN,"Control Center, 00 Agent:","OPEN — single live report, un-triaged; observed only under a gdb-attached debug-harness launch (tools_pc/debug.ps1), not the packaged release artifact —"
 D297,FIXED,v0.3.0 silently wipes ALL pre-fix player saves on first launch (D284 side effect; found during D295/M-148).,FIXED (M-150) — migration shim landed:
@@ -197,6 +197,8 @@ D316,FIXED,"Mouse-clicking some menu items glitches and lands on the item below 
 D317,CLOSED,"Crash when toggling Game.AllUnlocked back and forth in-game (user report, v0.3.0 playtest build, 2026-09-18) —","CLOSED — symptom of D316 (confirmed instant window close, no WER report; the D316 hit-band bias let a click on ""All unlocked"" fall through to the adjacent ""Quit to desktop"" row)."
 D318,RESOLVED,Facility (regular play path):,RESOLVED (2026-09-19):
 D319,FIXED,"Frame cap slider was mostly a dead zone; replaced with a plain 30/60 toggle (user ask, 2026-09-18).",FIXED — new ROW_FPSCAP cycle (30/60 only) in port/src/optionsoverlay.c; default changed to 60 in port/src/video.c.
-D320,OPEN,"D318-class sweep: aim-hold → _update AI lists in 8 levels carry the same as-authored softlock race (static analysis, 2026-09-20).","OPEN — static sweep complete (Facility ai_19, Control ai_9, Depot ai_12 flagged high/med-high; Bond-combat loops likely safe); no live confirmation beyond D318 itself; probe-verify path + generalized…"
+D320,RESOLVED,"D318-class sweep: aim-hold → _update AI lists in 8 levels carry the same as-authored softlock race (static analysis, 2026-09-20).",RESOLVED (2026-09-22):
 D321,CLOSED,D318 trigger chain fully mapped:,CLOSED — trigger chain mapped and faithful; D318 watchdog validated in live play.
 D322,OPEN,Long-session audio degradation:,"OPEN — static triage done (teardown audit, mixer statelessness, D202-coverage check); ranked hypotheses:"
+D323,OPEN,G_TL_LOD bindings of explicit-LOD textures:,"OPEN / parked — mechanism confirmed in code; census (tools_pc/bg_lod_audit.py) shows 15 levels with explicit-LOD textures bound under TEXTLOD-on classes (stat 378, azt 806 binds heaviest); overwhelmi…"
+D324,FIXED,"GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes —",FIXED (2026-09-22) — proven impact:

@@ -230,6 +230,76 @@ f32 portLodDistanceMultiplier(void)
     return 100.0f / pct;
 }
 
+/* D294: the room-model pool (mema, sized per level by boss.c's
+ * memallocstringtable `-maNNN` rows) was budgeted by Rare for the N64's fixed
+ * ~60deg FOV / 4:3 / authored far-clip. The PC visibility knobs above widen
+ * what is on screen at once (FovScale + WidescreenAuto widen the frustum;
+ * DrawDistance pushes the far clip; LodDistance keeps high-detail meshes out
+ * further), so more rooms stay resident simultaneously. When demand exceeds
+ * the authored pool, memaAlloc() returns NULL and bgLoadRoomModelData() bails
+ * silently -- the undrawn room's scissor region shows the framebuffer clear
+ * colour: a transient solid-black patch of ground that self-recovers when the
+ * player moves (D294, Statue monument plaza at FovScale 130 + max DD/Lod).
+ *
+ * This returns a pool-size multiplier for boss.c to apply to `-ma` on PC:
+ *   - FOV term: manual FovScale composed with the WidescreenAuto aspect
+ *     scale (same sqrt(aspect/4:3) factor portScaleFovY uses), since both
+ *     widen the frustum horizontally and admit more side rooms;
+ *   - DD/Lod terms: square-root of the distance multipliers -- room COUNT
+ *     grows far slower than distance-squared, so sqrt keeps the bump modest;
+ *     a linear-terms + 3.0-cap variant was tried (Statue's full room set is
+ *     487 KB = 2.2x its authored pool and starves even 2x) but regressed
+ *     the renderer on the menu-driven path -- see the in-function note;
+ * capped at 2.0x (worst case `-ma350` level row -> 700 KB, well inside the
+ * PC's ~6 MB STAGE bank; see D95). NOTE: a live instrumented Statue playtest
+ * showed 2x still starves under whole-level room churn (the full set is
+ * 487 KB = 2.2x the authored `-ma220` pool), and the attempted 3x/linear
+ * fix REGRESSED the renderer on the menu-driven path -- reverted, see the
+ * in-function note + findings D294. Identity (1.0) when every knob is at its
+ * N64-faithful value, so all-100 settings keep the exact authored budget.
+ * Called once per stage load from bossMainloop (src/boss.c).
+ *
+ * GE_ROOMPOOL=<float> overrides the computed scale outright (test hook for
+ * before/after captures; also a user opt-out if the larger pool ever causes
+ * trouble on a level). */
+f32 portRoomPoolScale(void)
+{
+    const char *ov = getenv("GE_ROOMPOOL");
+    f32 scale = 1.0f;
+    f32 t;
+
+    if (ov && *ov) {
+        /* Test hook: values < 1.0 shrink the pool BELOW the authored size
+         * to stress-test the exhaustion path (D294 verification). */
+        scale = (f32)atof(ov);
+        if (scale > 2.0f) { scale = 2.0f; }
+        if (scale < 0.25f) { scale = 0.25f; }
+        return scale;
+    }
+
+    t = portFovScale;
+    if (cfgWidescreenAuto && gfx_current_dimensions.aspect_ratio > 0.01f) {
+        t *= sqrtf(gfx_current_dimensions.aspect_ratio / (4.0f / 3.0f));
+    }
+    if (t > scale) { scale = t; }
+
+    /* D294 follow-up (2026-09-22): linear terms + a 3.0 cap were tried to
+     * cover Statue's full 487 KB room set, but that build corrupted model
+     * anim state on the MENU-driven Statue path (D156 NaN frames; direct
+     * -level_22 boots stayed clean headless). Reverted to sqrt + 2.0 cap,
+     * the user-verified working state. Do not re-apply without the capture-bat
+     * repro data (scratch/d294_capture.bat -> D156 hexdump + GE_D294BANK). */
+    t = sqrtf(portDrawDistanceMultiplier());
+    if (t > scale) { scale = t; }
+
+    t = sqrtf(1.0f / portLodDistanceMultiplier());
+    if (t > scale) { scale = t; }
+
+    if (scale > 2.0f) { scale = 2.0f; }
+    if (scale < 1.0f) { scale = 1.0f; }
+    return scale;
+}
+
 PD_CONSTRUCTOR static void videoConfigInit(void)
 {
     configRegisterFloat("Game.ScreenShakeIntensity", &portScreenShakeScale, 0.0f, 10.0f);
