@@ -18,7 +18,7 @@
 #
 # Options:
 #   --platform win|linux   default: autodetect via `uname -s`
-#   --dump lo-hi:step      GE_PCDUMP window (default: 400-880:240 single level,
+#   --dump lo-hi:step      GE_PCDUMP window (default: 640-1120:240 single level,
 #                          80-400:40 sweep — matches the existing golden set
 #                          and level_sweep.sh respectively)
 #   --script "..."         GE_INPUTSCRIPT passthrough (scripted input)
@@ -284,7 +284,7 @@ except Exception:
           # exit 1 = a real per-frame threshold fail (pixel/cell/hash delta).
           # exit 2 = a structural mismatch (missing/size) -- most commonly the
           # golden's frame stems don't line up with this run's --dump window
-          # (today's only golden, level_09, was captured at 400-880:240; a
+          # (today's only golden, level_09, was captured at 640-1120:240; a
           # sweep using a different stride has nothing to compare against
           # rather than a real regression). Only exit 1 is a verdict fail.
           case "$fexit" in
@@ -327,7 +327,7 @@ case "$MODE" in
     name="${resolved%%:*}"; num="${resolved##*:}"
     [ "${resolved%%:*}" = num ] && name=$(name_for_num "$num")
     pin_ini_640x480 2>/dev/null || true
-    verify_level "$name" "$num" "${DUMP:-400-880:240}"
+    verify_level "$name" "$num" "${DUMP:-640-1120:240}"
     ;;
 
   sweep)
@@ -375,7 +375,7 @@ case "$MODE" in
     [ -z "$resolved" ] && { echo "unknown level '$LEVEL_ARG'" >&2; exit 2; }
     name="${resolved%%:*}"; num="${resolved##*:}"
     pin_ini_640x480 2>/dev/null || true
-    run_one "$name" "$num" "${DUMP:-400-880:240}" 90
+    run_one "$name" "$num" "${DUMP:-640-1120:240}" 90
     if [ "$R_STATUS" != PASS ]; then
       emit_verdict "$name" "$R_STATUS" "$R_FRAMES" "" "$R_SYM"
       rm -rf "$CAPDIR"; exit 1

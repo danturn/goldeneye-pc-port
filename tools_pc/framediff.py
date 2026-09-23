@@ -51,7 +51,7 @@ threshold, 1 = at least one frame/region over threshold, 2 = usage / IO
 error (e.g. a golden frame with no candidate).
 
 Regenerate the golden set (after a deliberate visual change):
-  GE_PCDUMP="400-880:240" ./build-pc/ge007.x86_64.exe -level_09
+  GE_PCDUMP="640-1120:240" ./build-pc/ge007.x86_64.exe -level_09
   (with data/ge007.ini = only [Window] Width=640 Height=480; see
   tools_pc/golden/README.md)
   python tools_pc/framediff.py ppm --update
