@@ -1012,6 +1012,21 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                         "GE_INPUTLOG menuptr abs=%d cursor=(%.1f,%.1f) stick=(%d,%d)",
                         haveAbs, (double)cursor_h_pos, (double)cursor_v_pos, sx, sy);
                 }
+            } else if (g_CurrentPlayer != NULL &&
+                       (!g_CurrentPlayer->outside_watch_menu ||
+                        g_CurrentPlayer->pause_state != 0)) {
+                /* D330 (#103): in-stage watch / pause -- the mouse drives
+                 * nothing. menuMode is 0 here (current_menu is still
+                 * RUN_STAGE) and hipDirectCompute declines on this same gate,
+                 * so the legacy stick fallbacks below used to turn mouse
+                 * motion into stick deflection (and an RMB hold ran the GEPD
+                 * aim writes, which GEPD itself gates on !watch): a ~15 px flick
+                 * crossed the watch's +/-0x2E left/right threshold, which on
+                 * a selected option means "pick OFF/ON" (options.c
+                 * game_option_toggle_input) and otherwise flips watch pages,
+                 * while mouse Y scrolled the rows. Auto-aim / look-ahead
+                 * "wouldn't stay on". Keyboard and pad still drive the watch
+                 * exactly as before. */
             } else if (aimHeld) {
                 /* D194 GEPD-mirror aim: direct crosshair/camera writes, no
                  * look stick (see aimGepdCompute). Keyboard turn (sx/sy set

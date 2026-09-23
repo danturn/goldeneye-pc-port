@@ -564,6 +564,14 @@ through a converter or a runtime bswap fixup reads scrambled.
 - Controller state has one source: `port/src/input.c`. `libultra.c`'s SI
   section marshals `inputComputePad()` into `g_contPad[]`; it is driven by
   `osContStartReadData` (per logic tick), no separate `video.c` frame hook.
+- **The in-level watch/pause is not a "menu" to `input.c`** (`current_menu`
+  stays `RUN_STAGE`), but it reads the stick as **discrete** input: ±0x2E
+  on X picks an option value or flips a page, and Y scrolls rows. Any path
+  that turns a continuous device (the mouse) into stick deflection must be
+  gated off there (`!outside_watch_menu || pause_state`), or small hand
+  motion becomes phantom menu choices. D330/#103: mouse → legacy stick
+  fallback silently reset Auto-Aim/Look-Ahead to OFF. The direct-write
+  look paths already gate on this; the fallbacks must too.
 
 ## D. N64 hardware idioms fast3d does not emulate
 
