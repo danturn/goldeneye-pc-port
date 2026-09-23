@@ -40,6 +40,9 @@
 #ifdef PORT
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef PORT
+#include "hudaspect.h"   /* D335 HUD alignment under native widescreen */
+#endif
 /* D102: the 1P weapon Model and its RW-data pool were punned onto
  * hand->field_B68 / hand->modeldatas; on x86-64 struct Model (0xE8) is too
  * big for that layout and modelInit() aliases objinst->datas onto the pool
@@ -6216,6 +6219,10 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 rightx = 109;
             }
 
+#ifdef PORT
+            /* D335: right-hand ammo anchors to the right edge (native widescreen). */
+            PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_RIGHT);
+#endif
             if (weapon_right != ITEM_UNARMED)
             {
                 ammotype = get_ammo_type_for_weapon(weapon_right);
@@ -6282,6 +6289,10 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 }
             }
 
+#ifdef PORT
+            /* D335: left-hand (dual-wield) ammo anchors to the left edge. */
+            PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_LEFT);
+#endif
             if (weapon_left != ITEM_UNARMED)
             {
                 ammotype = get_ammo_type_for_weapon(weapon_left);
@@ -6350,6 +6361,9 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
         }
     }
 
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     return gdl;
 }
 

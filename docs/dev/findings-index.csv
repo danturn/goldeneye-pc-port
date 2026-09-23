@@ -212,3 +212,4 @@ D331,FIXED,Ejected shell casings never rendered on PC:,"FIXED (gunfire.c #ifdef 
 D332,FIXED,Reticule jitter in aim mode (RMB) —,FIXED (fix/mouse-pd-model) —
 D333,OPEN,"#104 (v0.3.0, Linux):","IMPLEMENTED (port/src/input.c + optionsoverlay.c, port-only); default N64 = unchanged; build + golden clean; feel check owed."
 D334,?,"Native widescreen, world side (WIDESCREEN-FOV-PLAN Option B Phase 2):",IMPLEMENTED (Rule-2 approved 2026-09-23); 4:3 identity (golden 3/3); native 16:9 centre matches the 4:3 frame (mean diff 4.3 vs 12.4 stretched); 21:9 clean on Bunker/Facility/Dam.
+D335,?,"Native widescreen, HUD + front end (WIDESCREEN-FOV-PLAN Phase 3):","IMPLEMENTED (Rule-2 approved 2026-09-23); 4:3 byte-identical (no emission at ≤4:3); verified at 16:9/21:9 on HUD, watch, title card, legal/file-select/gun-barrel."

@@ -49,6 +49,9 @@
 #include "ob.h"
 #include "gbi_extension.h"
 #include "model.h"
+#ifdef PORT
+#include "hudaspect.h"   /* D335 front-end pillarbox under native widescreen */
+#endif
 
 
 /**
@@ -8855,6 +8858,12 @@ void menu_init(void)
 
 Gfx * menu_jump_constructor_handler(Gfx *DL)
 {
+#ifdef PORT
+    /* D335: under native widescreen the front end is 4:3 logical content;
+     * pillarbox it (centred, undistorted) instead of stretching it to the
+     * window. input.c maps the menu pointer into the same centred region. */
+    PORT_HUD_ASPECT(DL, GE_HUD_ASPECT_CENTER);
+#endif
     switch(current_menu) {
         case MENU_LEGAL_SCREEN:
             DL = constructor_menu00_legalscreen(DL);
@@ -8932,6 +8941,9 @@ Gfx * menu_jump_constructor_handler(Gfx *DL)
             DL = constructor_menu19_spectrum(DL);
     }
 
+#ifdef PORT
+    PORT_HUD_ASPECT(DL, GE_HUD_ASPECT_NONE);
+#endif
     return DL;
 }
 

@@ -50,6 +50,9 @@
 #include "textrelated.h"
 #ifdef PORT
 #include "envflag.h"   /* cached getenv for hot-path probes */
+#ifdef PORT
+#include "hudaspect.h"   /* D335 HUD alignment under native widescreen */
+#endif
 #endif
 
 #ifdef VERSION_EU
@@ -9273,10 +9276,28 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     if (g_CurrentPlayer->cameramode == 1)
     {
         bondviewIntroCameraTextTick();
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = hudmsgBottomRender(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
         bondviewUpperTextWindowTimerTick();
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = sub_GAME_7F08AAE8(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = countdownTimerRender(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
         gdl = currentPlayerDrawFade(gdl);
         return bondviewRenderCredits(gdl);
     }
@@ -9284,7 +9305,13 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     gunUpdateAndFireBothHands();
     gunRenderCasings(&gdl);
     gunRenderFirstPersonGunModels(&gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
     gdl = bondviewRenderWatch(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
 
     if (g_CurrentPlayer->mpmenuon != 0)
     {
@@ -9299,11 +9326,23 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     if (bondviewGetIfCurrentPlayerHealthShowTime() &&
         (g_CurrentPlayer->watch_animation_state == 0))
     {
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = bondviewRenderGaugeBars(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     }
     else if (mpwatchShouldDisplayGauges())
     {
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = bondviewRenderGaugeBars(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
         if (g_CurrentPlayer->healthdisplaytime > 0)
         {
             g_CurrentPlayer->healthdisplaytime -= g_ClockTimer;
@@ -9412,12 +9451,30 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     }
 
     bondviewIntroCameraTextTick();
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
     gdl = hudmsgBottomRender(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     bondviewUpperTextWindowTimerTick();
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
     gdl = sub_GAME_7F08AAE8(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     gunDrawSight(&gdl);
     gdl = generate_ammo_total_microcode(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
     gdl = countdownTimerRender(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     gdl = display_red_blue_on_radar(gdl);
     return currentPlayerDrawFade(gdl);
 }

@@ -1052,6 +1052,18 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                         }
                         if (mx != lastMenuMouseX || my != lastMenuMouseY) {
                             double fx = (double)mx / (double)ww;
+                            /* D335: under native widescreen the front end is
+                             * pillarboxed to a centred 4:3 region
+                             * (front.c menu_jump_constructor_handler), so map
+                             * the pointer across that region, not the window. */
+                            {
+                                extern f32 portNativeAspect(void);
+                                f32 na = portNativeAspect();
+                                if (na > (4.0f / 3.0f)) {
+                                    double vis = (4.0 / 3.0) / (double)na;   /* visible width fraction */
+                                    fx = (fx - (1.0 - vis) * 0.5) / vis;
+                                }
+                            }
                             double fy = (double)my / (double)wh;
                             if (fx < 0.0) fx = 0.0; else if (fx > 1.0) fx = 1.0;
                             if (fy < 0.0) fy = 0.0; else if (fy > 1.0) fy = 1.0;
