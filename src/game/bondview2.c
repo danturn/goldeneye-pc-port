@@ -9299,7 +9299,15 @@ Gfx *maybe_mp_interface(Gfx *gdl)
         PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
 #endif
         gdl = currentPlayerDrawFade(gdl);
+#ifdef PORT
+        /* D335: end credits are centred 4:3 text -> keep their shape. */
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+        gdl = bondviewRenderCredits(gdl);
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+        return gdl;
+#else
         return bondviewRenderCredits(gdl);
+#endif
     }
 
     gunUpdateAndFireBothHands();

@@ -8863,6 +8863,16 @@ Gfx * menu_jump_constructor_handler(Gfx *DL)
      * pillarbox it (centred, undistorted) instead of stretching it to the
      * window. input.c maps the menu pointer into the same centred region. */
     PORT_HUD_ASPECT(DL, GE_HUD_ASPECT_CENTER);
+    {
+        /* D335a: a full-canvas scissor set while CENTER is active is squeezed
+         * to the pillarbox, so off-canvas draws (the gun-barrel backdrop sliding
+         * in from logical x > 320) clip at the 4:3 edge as they would at the
+         * N64 screen edge instead of painting into the side bars. */
+        extern f32 portNativeAspect(void);
+        if (portNativeAspect() > 1.3334f) {
+            gDPSetScissor(DL++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
+        }
+    }
 #endif
     switch(current_menu) {
         case MENU_LEGAL_SCREEN:
