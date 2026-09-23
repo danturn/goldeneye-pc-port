@@ -251,6 +251,12 @@ framing — it never looked like game logic to begin with.
   decompilation of what the write side already does, `#ifdef PORT` with the
   N64 hand-rolled offset kept verbatim under `#else`. §F **D248**.
 
+- **One layout bug often has sibling call sites.** D264 fixed a
+  cross-global `ModelRenderData` template read in the watch item preview;
+  the identical read in `watchRenderController` (`D_80035D04 + 0x3c`) stayed
+  broken until D290. When fixing a raw-offset global read, grep for every
+  other read of the same globals (`D_80035D00`/`D_80035D04` here) before closing.
+
 ## B. 16-byte PC `Gfx` / `Vtx` vs 8-byte N64
 
 Any buffer reservation, `memcpy` size, slot stride, or pool budget

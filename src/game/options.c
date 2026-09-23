@@ -3420,7 +3420,12 @@ Gfx *draw_watch_controller(Gfx *gdl)
     }
     else
     {
+#ifdef PORT
+        /* D290: the (s32) cast truncates a 64-bit stack pointer. */
+        gdl = watchRenderControllerOpaque(gdl, &finalmtx, 1, watchTable, &contpadnum0);
+#else
         gdl = watchRenderControllerOpaque(gdl, &finalmtx, 1, (s32) watchTable, &contpadnum0);
+#endif
     }
 
     if (controllerCheckDualControllerTypesAllowed())
@@ -3460,7 +3465,15 @@ Gfx *draw_watch_controller(Gfx *gdl)
          * 
          * but it doesn't match for some reason.
          */
+#ifdef PORT
+        /* D290 (B class): a hand-encoded N64 G_MTX word does not decode as the
+         * same command in the PC Gfx layout; emit it through the macro (the
+         * form the comment above says it really is). */
+        cmd1 = gdl++;
+        gSPMatrix(cmd1, osVirtualToPhysical(perspmtx), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+#else
         cmd1 = gdl++; cmd1->words.w0 = 0x01030040; cmd1->words.w1 = osVirtualToPhysical(perspmtx);
+#endif
 
         gdl = sub_GAME_7F0A6EE8(gdl);
         green = g_WatchBackgroundGreen;

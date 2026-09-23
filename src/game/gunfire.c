@@ -2029,7 +2029,21 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
     struct coord3d coord_node12_pos;
     struct coord3d coord_node12_base;
 
+#ifdef PORT
+    /* D290 (ABI/layout class; same pattern as D264 above): on N64 this
+     * 64-byte copy starts at the last word of D_80035D04 (0) and runs into
+     * watchControllerButtonBases {1, 3, 0..} (gun.c), i.e. the same
+     * ModelRenderData template as D264: basemtx=NULL, zbufferenabled=TRUE,
+     * flags=3, rest zero. On PC the struct is wider (8-byte pointers) and the
+     * globals are not laid out at those byte offsets, so flags read 0 and
+     * subdraw() skipped every node: the watch control-options page showed
+     * its labels but no controller model. Use the explicit template. */
+    renderdata = (ModelRenderData){0};
+    renderdata.zbufferenabled = TRUE;
+    renderdata.flags = 3;
+#else
     renderdata = *(ModelRenderData *)((u8 *)D_80035D04 + 0x3c);
+#endif
 
     sub_GAME_7F05DA8C(GUNRIGHT, 0x55);
 
@@ -2091,7 +2105,13 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
     for (i = 0; i < objheader->numMatrices; i++)
     {
+#ifdef PORT
+        /* D290: N64 does this pointer math through a u32 cast, which truncates a
+         * 64-bit pointer (fatal once the pool sits above 4 GB, e.g. Linux PIE). */
+        matrix_4x4_copy((Mtxf *)((u8 *)modelstack.render_pos + i * sizeof(Mtxf)), &sp41c);
+#else
         matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+#endif
         matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
     }
 
@@ -2326,7 +2346,13 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
         for (i = 0; i < objheader->numMatrices; i++)
         {
+#ifdef PORT
+            /* D290: N64 does this pointer math through a u32 cast, which truncates a
+             * 64-bit pointer (fatal once the pool sits above 4 GB, e.g. Linux PIE). */
+            matrix_4x4_copy((Mtxf *)((u8 *)modelstack.render_pos + i * sizeof(Mtxf)), &sp41c);
+#else
             matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+#endif
             matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
         }
 
