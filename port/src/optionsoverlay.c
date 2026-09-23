@@ -63,7 +63,8 @@ extern s16   viGetY(void);
 
 /* ------------------------------------------------------------------------ */
 
-enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSCAP };
+enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSCAP,
+       ROW_HEADER /* D237: non-selectable category label */ };
 
 static const char *const kOnOff[]     = { "OFF", "ON", NULL };
 static const char *const kTexFilter[] = { "NEAREST", "BILINEAR", "3-POINT", NULL };
@@ -119,6 +120,7 @@ struct Row {
 };
 
 static struct Row rows[] = {
+    { "__HdrDisplay",            "DISPLAY",          ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Video.Fullscreen",         "Fullscreen",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "__Resolution",             "Resolution",       ROW_RES,    0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Video.VSync",              "VSync",            ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
@@ -126,6 +128,7 @@ static struct Row rows[] = {
     { "Video.MSAA",               "MSAA",             ROW_MSAA,   0,    NULL,       1, 0, 0,   0,0,0,0,0 },
     { "Video.TextureFilter",      "Texture filter",   ROW_ENUM,   1,    kTexFilter, 0, 0, 0,   0,0,0,0,0 },
     { "Video.Anisotropy",         "Anisotropic",      ROW_SLIDER, 1,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "__HdrView",               "VIEW",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Video.FovScale",           "FOV scale %",      ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
     /* D334: native widescreen (world projected at the window aspect, Hor+).
      * While on, "Widescreen auto FOV" has no effect (it was the stretch-era
@@ -166,6 +169,7 @@ static struct Row rows[] = {
     /* { "Input.AimModeSens",        "Mouse aim speed",  ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
     /* { "Input.MouseTurnSpeed",     "Mouse turn speed", ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
     /* { "Input.SensLink",           "Link aim/turn sens",ROW_TOGGLE,1, kOnOff, 0, 0, 0, 0,0,0,0,0 }, */
+    { "__HdrMouse",              "MOUSE / AIM",      ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.MouseSensitivity",   "Mouse sensitivity",ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.MouseInvertY",       "Mouse invert Y",   ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     /* Input.PdMouseAim (findings D332): the Perfect Dark port's mouse-aim
@@ -179,6 +183,10 @@ static struct Row rows[] = {
      * PD DAMP = the PD model above, CENTRED = mouse turns the camera and the
      * crosshair stays centred. Input.PdMouseAim=1 migrates to PD DAMP. */
     { "Input.AimStyle",           "RMB aim style",    ROW_ENUM,   1,    kAimStyle,  0, 0, 0,   0,0,0,0,0 },
+    { "__HdrPad",                "CONTROLLER",       ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Input.PadLookInvertY",     "Pad invert look Y",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { "Input.PadDeadzone",        "Stick deadzone",   ROW_SLIDER, 500,  NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Input.PadTriggerPct",      "Trigger threshold %",ROW_SLIDER,1,   NULL,       0, 0, 0,   0,0,0,0,0 },
     /* D181/Game.ScreenShakeIntensity: user testing (v0.2.1) found the slider
      * "basically useless" -- viShake() is only called from explosion.c, so it
      * scales explosion shake alone; it never touches the always-on walking
@@ -188,6 +196,9 @@ static struct Row rows[] = {
      * hook stay in place. */
     /* D232: the community "no damage flash" toggle (suppresses the red/green
      * hit-flash overlay in bondview2). */
+    { "__HdrGame",               "GAME",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Game.SkipIntro",           "Skip intro",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { "Video.DisplayFPS",         "Show FPS",         ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Game.NoHitFlash",          "No hit flash",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     /* D216/Game.SkipIntro: user report (v0.2.1 testing) that it breaks audio
      * -- pulled from the menu until root-caused. Not exposed to players; the
@@ -323,6 +334,28 @@ static int overlayRowAtY(double oy)
 }
 
 /* Rebuild the visible-row list and keep the selection in range. */
+/* D237: move a visible-list position by dir (+1/-1) to the next row that
+ * is not a category header; stays put at the ends. */
+static int overlayStepSel(int pos, int dir)
+{
+    int p = pos;
+    for (;;) {
+        int q = p + dir;
+        if (q < 0 || q >= s_visN) {
+            /* nothing selectable that way: if we started on a header, try
+             * the other direction once so we never rest on one */
+            if (rows[s_visIdx[p]].kind == ROW_HEADER && dir > 0) {
+                return overlayStepSel(pos, -1);
+            }
+            return (rows[s_visIdx[p]].kind == ROW_HEADER) ? pos : p;
+        }
+        p = q;
+        if (rows[s_visIdx[p]].kind != ROW_HEADER) {
+            return p;
+        }
+    }
+}
+
 static void overlayUpdateVisible(void)
 {
     s_visN = 0;
@@ -339,6 +372,11 @@ static void overlayUpdateVisible(void)
     }
     if (s_sel >= s_visN) {
         s_sel = s_visN - 1;
+    }
+    /* D237: never rest on a category header -- step to the nearest row
+     * below it (or above, at the end of the list). */
+    if (rows[s_visIdx[s_sel]].kind == ROW_HEADER) {
+        s_sel = overlayStepSel(s_sel, +1);
     }
 }
 
@@ -421,7 +459,8 @@ static void overlayInit(void)
     configForEachOption(resolveCb, NULL);
 
     for (int i = 0; i < NUM_ROWS; i++) {
-        if (rows[i].kind == ROW_RES || rows[i].kind == ROW_ACTION) {
+        if (rows[i].kind == ROW_RES || rows[i].kind == ROW_ACTION ||
+            rows[i].kind == ROW_HEADER) {
             rows[i].found = 1;   /* not config-backed */
             continue;
         }
@@ -560,7 +599,7 @@ static void rowSet(struct Row *r, double v)
 
 static void rowAdjust(struct Row *r, int dir)
 {
-    if (!r->found) {
+    if (!r->found || r->kind == ROW_HEADER) {   /* D237: headers have no value */
         return;
     }
     double v = rowGet(r);
@@ -649,11 +688,9 @@ void optionsOverlayScroll(int dir)
         return;
     }
     overlayUpdateVisible();
-    s_sel += (dir > 0) ? -1 : 1;   /* wheel-up -> move up the list */
-    /* Clamp at both ends like a normal PC settings list -- wrapping made the
-     * selection "repeat" from the far edge, which read as a duplicate. */
-    if (s_sel < 0) s_sel = 0;
-    if (s_sel >= s_visN) s_sel = s_visN - 1;
+    /* wheel-up -> move up the list; clamps at both ends like a normal PC
+     * settings list (wrapping read as a duplicate) and skips D237 headers. */
+    s_sel = overlayStepSel(s_sel, (dir > 0) ? -1 : 1);
 }
 
 /* Set a slider row from an overlay-space x inside its value bar, snapped to
@@ -744,8 +781,8 @@ void optionsOverlayHandleInput(void)
     prevStart = startNow;
 
     /* ---- keyboard / D-pad nav (clamped at the ends; scroll follows) ---- */
-    if (up && !prevUp && s_sel > 0) s_sel--;
-    if (dn && !prevDn && s_sel < s_visN - 1) s_sel++;
+    if (up && !prevUp) s_sel = overlayStepSel(s_sel, -1);   /* skips headers */
+    if (dn && !prevDn) s_sel = overlayStepSel(s_sel, +1);
     overlayUpdateScroll();
     if (lf && !prevLf) rowAdjust(&rows[s_visIdx[s_sel]], -1);
     if (rt && !prevRt) rowAdjust(&rows[s_visIdx[s_sel]], +1);
@@ -781,7 +818,7 @@ void optionsOverlayHandleInput(void)
                 optionsOverlayToggle();   /* close + configSave */
                 return;
             }
-            if (hoverVis >= 0) {
+            if (hoverVis >= 0 && rows[s_visIdx[hoverVis]].kind != ROW_HEADER) {
                 s_sel = hoverVis;         /* explicit click -> select */
                 overlayUpdateScroll();
                 if (ox >= bx0) {
@@ -803,7 +840,8 @@ void optionsOverlayHandleInput(void)
             dragRow = -1;
         }
         /* right press in the value column: cycle back / decrement */
-        if (rmb && !prevRmb && hoverVis >= 0 && !onClose && ox >= bx0) {
+        if (rmb && !prevRmb && hoverVis >= 0 && !onClose && ox >= bx0 &&
+            rows[s_visIdx[hoverVis]].kind != ROW_HEADER) {
             s_sel = hoverVis;
             overlayUpdateScroll();
             rowAdjust(&rows[s_visIdx[hoverVis]], -1);
@@ -999,6 +1037,10 @@ Gfx *optionsOverlayEmit(void)
         u32 col = (p == s_sel) ? 0xffffffff : 0xc0c0c8ff;
         char val[48];
 
+        if (r->kind == ROW_HEADER) {   /* D237 category label, no value */
+            gdl = drawText(gdl, OV_X0, rowY, (char *)r->label, 0xffe040ff);
+            continue;
+        }
         gdl = drawText(gdl, OV_LABEL_X, rowY, (char *)r->label,
                        r->found ? col : 0x808080ff);
         if (!r->found) {

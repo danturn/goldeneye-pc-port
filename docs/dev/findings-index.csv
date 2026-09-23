@@ -133,7 +133,7 @@ D165,FIXED,"Front-end menu cursor doesn't feel like a mouse pointer (M-31, user 
 D166,FIXED,Hipfire mouse pitch is digital while yaw is analog —,FIXED (port/src/input.c).…
 D235,OPEN,Wrong textures load after dying/restarting a level —,"OPEN — fix wired, headless reload clean (2026-09-23); bug NOT reproduced even with the fix off (GE_D235_OFF)."
 D236,CLOSED,"Surface 1: 2D billboard trees render as a wall/sheet of tree texture instead of discrete camera-facing tree sprites (M-106, user QA report).","CLOSED (M-198, pass 26, 425237f9; probes stripped 0503d335):"
-D237,OPEN,"QoL ask (M-106, user QA):",OPEN — not designed; port-only
+D237,FIXED,"QoL ask (M-106, user QA):","FIXED (2026-09-23): category headers + 5 more settings (SkipIntro, Show FPS, pad invert/deadzone/trigger); wheel scroll already existed."
 D238,OPEN,"QoL ask (M-106, user QA):",OPEN — not designed; port-only (port/src/input.c + config.c)
 D239,CLOSED,"QoL ask (M-106, user QA):",CLOSED — executed in the v0.2.0 prep pass (port-only)…
 D240,OPEN,"Player gunshot SFX timing/cadence reportedly does not match the N64 original's rate (M-106, user QA report).","OPEN — not root-caused; static call-site tracing only, no runtime verification possible in this environment."
