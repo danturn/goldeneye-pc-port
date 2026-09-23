@@ -62,6 +62,7 @@ static int cfgDetailBaseTile = 1;  /* D236: TEXTURETYPE_DETAIL -> sample the bas
 static int cfgWrapFix       = 0;   /* D74 sub-tile UV pre-wrap + RC3/D167 non-PoT mask-period wrap (opt-in; GE_WRAPFIX env overrides) */
 static int cfgFovScale      = 100; /* D211: percent of the original vertical FOV; 100 = unchanged (byte-identical) */
 static int cfgWidescreenAuto = 1;  /* WIDESCREEN-FOV-PLAN Phase 4: auto-scale vertical FOV by window aspect ratio; on by default, no-op at 4:3 */
+static int cfgNativeWidescreen = 1; /* D334 (WIDESCREEN-FOV-PLAN Phase 2): project the world at the real window aspect (Hor+); no-op at 4:3 */
 static int cfgDrawDistance      = 150; /* D218: percent of the level's authored far-clip/fog distance. Default raised 100->150 for v0.2.0: at the authored N64 distance, props visibly fade in just before they become visible on modern displays (Dam alarms / wall switches); 150 is the value the Steam Deck preset playtest-validated. 100 = unchanged N64. */
 static int cfgDrawDistanceAutoFov = 1;   /* D218: couple draw distance to Video.FovScale unless DrawDistance is set explicitly */
 static int cfgLodDistance         = 150; /* D249: percent scale on the geometry/model LOD-swap distance. Default raised 100->150 for v0.2.0 (same pop-in family as DrawDistance: LOD-swapped props like Dam's alarms/wall switches faded in at range); 150 matches the Steam Deck preset. 100 = unchanged N64. */
@@ -143,10 +144,38 @@ f32 portFovScale = 1.0f;
  * auto-scale formula can otherwise degenerate toward as aspect -> 0; this
  * resolves WIDESCREEN-FOV-PLAN.md's open "horizontal extreme-aspect sanity
  * clamp" question. */
+/* D334 (WIDESCREEN-FOV-PLAN Option B, Phase 2): the world-projection aspect
+ * for native widescreen, or 0 when off. The game's own N64 16:9 mode
+ * (bondview2.c bondviewMovePlayerUpdateViewport) projects at
+ * viewport_ratio * 0.75 * 16/9 -- an anamorphic pre-squash the TV undid. The
+ * port already stretches the 4:3 logical canvas to the window (fast3d
+ * RATIO_X), exactly like that TV, so the same formula with 16/9 replaced by
+ * the real window aspect renders the world undistorted at any aspect: vertical
+ * FOV stays the game's, horizontal widens (Hor+, the PD standard). Canvas,
+ * portal scissors and culling all stay in the game's 320x240 logical space and
+ * see the same aspect, so there is no second "view width" to reconcile
+ * (WIDESCREEN-FOV-PLAN s6). Clamped to [0.5, 4.0]. At exactly 4:3 the
+ * formula is identity, so 4:3 renders are unchanged. */
+f32 portNativeAspect(void)
+{
+    f32 a = gfx_current_dimensions.aspect_ratio;
+    if (!cfgNativeWidescreen || a < 0.01f) {
+        return 0.0f;
+    }
+    if (a < 0.5f) { a = 0.5f; }
+    if (a > 4.0f) { a = 4.0f; }
+    return a;
+}
+
 f32 portScaleFovY(f32 fovy, s32 isTitleScreen)
 {
     if (!isTitleScreen) {
-        if (cfgWidescreenAuto && gfx_current_dimensions.aspect_ratio > 0.01f) {
+        /* D334: native widescreen already widens the horizontal FOV through
+         * the projection aspect; the Phase-4 vertical boost below was the
+         * stretch-era compensation and would double-count, so it is skipped
+         * (vertical FOV stays the game's, as in the PD port). */
+        if (cfgWidescreenAuto && !cfgNativeWidescreen &&
+            gfx_current_dimensions.aspect_ratio > 0.01f) {
             fovy *= sqrtf(gfx_current_dimensions.aspect_ratio / (4.0f / 3.0f));
         }
         if (portFovScale > 0.4f && portFovScale < 2.01f && portFovScale != 1.0f) {
@@ -278,7 +307,10 @@ f32 portRoomPoolScale(void)
     }
 
     t = portFovScale;
-    if (cfgWidescreenAuto && gfx_current_dimensions.aspect_ratio > 0.01f) {
+    /* D334: native widescreen widens the horizontal frustum too (via the
+     * projection aspect instead of the vertical boost), so it admits the same
+     * extra side rooms and keeps the pool bump. */
+    if ((cfgWidescreenAuto || cfgNativeWidescreen) && gfx_current_dimensions.aspect_ratio > 0.01f) {
         t *= sqrtf(gfx_current_dimensions.aspect_ratio / (4.0f / 3.0f));
     }
     if (t > scale) { scale = t; }
@@ -315,6 +347,7 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
     configRegisterInt("Video.WrapFix", &cfgWrapFix, 0, 1);
     configRegisterInt("Video.FovScale", &cfgFovScale, 50, 150);
     configRegisterInt("Video.WidescreenAuto", &cfgWidescreenAuto, 0, 1);
+    configRegisterInt("Video.NativeWidescreen", &cfgNativeWidescreen, 0, 1);   /* D334 */
     configRegisterInt("Video.DrawDistance", &cfgDrawDistance, 100, 400);
     configRegisterInt("Video.DrawDistanceAutoFov", &cfgDrawDistanceAutoFov, 0, 1);
     configRegisterInt("Video.LodDistance", &cfgLodDistance, 25, 400);

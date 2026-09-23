@@ -500,6 +500,16 @@ void gunUpdateAndFire(GUNHAND handnum)
         gunofs.y += g_CurrentPlayer->ducking_height_offset / (-100.0f);
         gunofs.z += (3.0f * g_CurrentPlayer->ducking_height_offset) / (-100.0f);
 
+#ifdef PORT
+        /* D334: a native-widescreen window counts as the N64's 16:9 ratio for
+         * the rocket launcher's lowered viewmodel (>= 16:10 treated as wide). */
+        extern f32 portNativeAspect(void);
+        if ((item == ITEM_ROCKETLAUNCH) && portNativeAspect() >= 1.55f)
+        {
+            gunofs.y -= 3.0f;
+        }
+        else
+#endif
         if ((item == ITEM_ROCKETLAUNCH) && (((cur_player_get_screen_setting() == SCREEN_SIZE_WIDESCREEN) || (cur_player_get_screen_setting() == SCREEN_SIZE_CINEMA)) || (get_screen_ratio() == SCREEN_RATIO_16_9)))
         {
             gunofs.y -= 3.0f;
@@ -6476,6 +6486,15 @@ void gunDrawSight(s32 *gdl) {
         halfedxy[0] = 16.0f;
         halfedxy[1] = 16.0f;
 
+#ifdef PORT
+        /* D334: native widescreen generalises the N64 16:9 sprite fix
+         * (x0.75 = (4/3)/(16/9)) to the window aspect, so the crosshair
+         * sprite isn't stretched by the canvas-to-window mapping. */
+        extern f32 portNativeAspect(void);
+        if (portNativeAspect() > 0.0f) {
+            halfedxy[0] = halfedxy[0] * ((4.0f / 3.0f) / portNativeAspect());
+        } else
+#endif
         if (get_screen_ratio() == SCREEN_RATIO_16_9) {
             halfedxy[0] = halfedxy[0] * 0.75f;
         }

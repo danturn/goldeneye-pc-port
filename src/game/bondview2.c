@@ -8216,6 +8216,14 @@ void bondviewMovePlayerUpdateViewport(s8 stick_x, s8 stick_y, u16 buttons)
     }
 
 #ifdef VERSION_EU
+#ifdef PORT
+    extern f32 portNativeAspect(void);   /* D334, see the NTSC branch below */
+    if (portNativeAspect() > 0.0f)
+    {
+        faspect = ((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * portNativeAspect();
+    }
+    else
+#endif
     if (get_screen_ratio() == SCREEN_RATIO_16_9)
     {
         faspect = ((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * WIDESCREEN_ASPECT;
@@ -8235,6 +8243,19 @@ void bondviewMovePlayerUpdateViewport(s8 stick_x, s8 stick_y, u16 buttons)
 
 #else
 
+#ifdef PORT
+    /* D334 (native widescreen, Rule-2 approved 2026-09-23): the N64 16:9 mode
+     * below with WIDESCREEN_ASPECT replaced by the real window aspect -- see
+     * portNativeAspect() (port/src/video.c). The in-game "Ratio 16:9" option
+     * is ignored while this is on (the window is the ratio). */
+    extern f32 portNativeAspect(void);
+    if (portNativeAspect() > 0.0f)
+    {
+        set_cur_player_aspect(((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * portNativeAspect());
+        viSetAspect(((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * portNativeAspect());
+    }
+    else
+#endif
     if (get_screen_ratio() == SCREEN_RATIO_16_9)
     {
         set_cur_player_aspect(((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * WIDESCREEN_ASPECT);
