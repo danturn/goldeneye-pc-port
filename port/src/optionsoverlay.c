@@ -67,6 +67,7 @@ enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSC
 
 static const char *const kOnOff[]     = { "OFF", "ON", NULL };
 static const char *const kTexFilter[] = { "NEAREST", "BILINEAR", "3-POINT", NULL };
+static const char *const kAimStyle[]  = { "N64", "PD DAMP", "CENTRED", NULL };   /* D333 */
 static const int         kMsaaSeq[]   = { 1, 2, 4, 8 };
 /* D186: the sim's own tick pacemaker is hardcoded to the console's native VI
  * rate (60Hz NTSC / 50Hz PAL, port/src/libultra.c) -- Video.FpsCap can only
@@ -169,7 +170,11 @@ static struct Row rows[] = {
      * (0.01), instead of GEPD's overwrite with the weapon's ~0.8 -- which is
      * what made the reticule step. Changes aim feel, so opt-in. GE_PDMOUSEAIM=0/1
      * overrides it at launch for A/B runs. */
-    { "Input.PdMouseAim",         "PD mouse aim",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    /* D333: one selector for what RMB aim does (#104 asked for centred,
+     * FPS-style aim on RMB): N64 = GEPD crosshair + edge scroll (default),
+     * PD DAMP = the PD model above, CENTRED = mouse turns the camera and the
+     * crosshair stays centred. Input.PdMouseAim=1 migrates to PD DAMP. */
+    { "Input.AimStyle",           "RMB aim style",    ROW_ENUM,   1,    kAimStyle,  0, 0, 0,   0,0,0,0,0 },
     /* D181/Game.ScreenShakeIntensity: user testing (v0.2.1) found the slider
      * "basically useless" -- viShake() is only called from explosion.c, so it
      * scales explosion shake alone; it never touches the always-on walking

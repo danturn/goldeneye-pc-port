@@ -363,10 +363,33 @@ static int pdMouseAim = 0;
  * lookup is cached (GE_ENVSTR): this runs every input poll and every aim tick
  * (D250/D302 hot-path class). The live, no-restart toggle is the ini key via
  * the F10 "PD mouse aim" row. */
+/* Input.AimStyle (D333, #104 + #96): what RMB aim does with the mouse.
+ *   0 = N64/GEPD (default): crosshair moves across the screen, camera
+ *       edge-scrolls (D194, GEPD mirror).
+ *   1 = PD damp: same N64-style crosshair, driven through the game's own
+ *       integrator with PD's mouse damp (D332, PR #96).
+ *   2 = Centred: FPS-style -- the mouse turns the camera directly (the
+ *       hipfire WI-1 path, FOV-scaled so zoom slows it) and the crosshair
+ *       stays centred: with no stick input the game's aim integrator
+ *       (pos = pos*damp + turn, gunfire.c) settles at 0. This is what
+ *       holding the game's L button (Q) already did; #104 asked for it on RMB.
+ * The legacy Input.PdMouseAim=1 (PR #96 builds) is migrated to style 1. */
+enum { AIMSTYLE_GEPD = 0, AIMSTYLE_PD = 1, AIMSTYLE_CENTRED = 2 };
+static int aimStyle = AIMSTYLE_GEPD;
+
+static int aimStyleGet(void)
+{
+    if (pdMouseAim && aimStyle == AIMSTYLE_GEPD) {   /* one-time migration */
+        aimStyle = AIMSTYLE_PD;
+        pdMouseAim = 0;
+    }
+    return aimStyle;
+}
+
 static int pdMouseAimEnabled(void)
 {
     const char *e = GE_ENVSTR("GE_PDMOUSEAIM");
-    return e ? (atoi(e) != 0) : (pdMouseAim != 0);
+    return e ? (atoi(e) != 0) : (aimStyleGet() == AIMSTYLE_PD);
 }
 
 /* D194 GEPD-aim state. Touched ONLY in inputComputePad (game thread), the
@@ -1067,7 +1090,13 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                  * look stick (see aimGepdCompute). Keyboard turn (sx/sy set
                  * above) still works. Otherwise fall through to the legacy
                  * velocity stick below. */
-                if (pdMouseAimEnabled()) {
+                if (aimStyleGet() == AIMSTYLE_CENTRED) {
+                    /* D333: FPS-style centred aim -- the camera takes the
+                     * mouse (same path as hipfire, which also declines on
+                     * the watch/pause/cutscene gates) and no stick is
+                     * emitted, so the crosshair settles at centre. */
+                    hipDirectCompute(edx * lookDtScale, dyLook * lookDtScale);
+                } else if (pdMouseAimEnabled()) {
                     /* PD model: accumulate only. The game's own integrator is
                      * driven by the port-supplied turn through the
                      * sub_GAME_7F067FBC hook (see Input.PdMouseAim above). */
@@ -1689,7 +1718,8 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
 {
     configRegisterInt("Input.MouseEnabled", &mouseEnabled, 0, 1);
     configRegisterInt("Input.MouseAimSpeed", &mouseAimSpeed, 1, 500);
-    configRegisterInt("Input.PdMouseAim",     &pdMouseAim,     0, 1);
+    configRegisterInt("Input.PdMouseAim",     &pdMouseAim,     0, 1);   /* legacy -> AimStyle 1 */
+    configRegisterInt("Input.AimStyle",       &aimStyle,       0, 2);   /* D333 */
     configRegisterInt("Input.AimAbsolute", &aimAbsolute, 0, 1);  /* D194 */
     configRegisterInt("Input.MouseDirectLook", &mouseDirectLook, 0, 1);  /* WI-1 */
     /* D194: renamed Input.GepdSens -> Input.AimModeSens (community name for

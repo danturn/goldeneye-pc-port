@@ -210,3 +210,4 @@ D329,FIXED,The D318/D320 guard anim pin is a tick-granularity divergence:,"FIXED
 D330,FIXED,"#103 (v0.3.0, Win 11):","FIXED (port/src/input.c), build clean, bunker1 golden 3/3; mouse feel-check owed (a human must run it:"
 D331,FIXED,Ejected shell casings never rendered on PC:,"FIXED (gunfire.c #ifdef PORT, explicit template); PP7 casing verified on native Windows (before:"
 D332,FIXED,Reticule jitter in aim mode (RMB) —,FIXED (fix/mouse-pd-model) —
+D333,OPEN,"#104 (v0.3.0, Linux):","IMPLEMENTED (port/src/input.c + optionsoverlay.c, port-only); default N64 = unchanged; build + golden clean; feel check owed."
