@@ -29,6 +29,7 @@ good that you are looking at one of these.
 - [D4. N64 "interrupts off" must be a real lock on PC](#d4-n64-interrupts-off-is-not-free-on-pc--it-must-be-a-real-lock)
 - [D5. Loop bounds that assume linker adjacency of two globals](#d5-loop-bounds-that-assume-linker-adjacency-of-two-file-scope-globals)
 - [D12. Collapsing an LOD binding to tile 0 breaks a DETAIL binding](#d12-collapse-an-lod-binding-to-tile-0-is-wrong-for-a-two-texture-detail-binding-d236)
+- [D13. Per-render accumulation is not associative (1 vs 2–3 ticks/frame)](#d13-per-render-accumulation-is-not-associative-the-ports-1-tickframe-can-reach-states-the-n64s-23-ticksframe-never-did-d329)
 - [E. Process / method notes](#e-process--method-notes)
 
 ## A. Pointer-width struct growth (32→64): the dominant class
@@ -1206,6 +1207,14 @@ produce the same visual symptom but need opposite fixes.
 When a user reports z-fighting, do NOT assume the software renderer has less depth precision than the RDP. Verified for GE: the RSP's vertex transform (`rsp/graphics/gmain.s`) writes post-transform x/y/z/w back to the vertex buffer as **full 32-bit 16.16 fixed-point** (`sdv` stores), not s16 8.8 — the RDP interpolates from full-precision NDC and quantizes once, into its 24-bit z-image. The port keeps floats through `gfx_sp_vertex` and writes a `GL_DEPTH24_STENCIL8` buffer: same or better precision at every stage, same near/far. So coincident geometry authored into the level fights on both platforms; a PC-only explanation needs positive evidence (an N64 reference of the same spot), not just the existence of the symptom. A mitigation like switching to 32-bit float depth would *reduce* fighting but diverge from N64 behavior — that's a rule-2-style decision, not a silent fix.
 
 **Probe technique that worked (vs. three variants that didn't):** detecting z-fighting from emitted triangles requires filtering out (a) tessellation gradients — adjacent tris of one surface have near-equal depths by construction — and (b) camera-motion coincidences — as the camera moves, unrelated world points pass through the same screen cell and their depths happen to sit close. What survives both: a coarse screen-cell grid keeping a short per-cell depth history, flagging only **non-monotonic** (a-b-a) oscillation within a small tolerance that **recurs many times at the same cell**. Monotonic drift = gradient; one-off close pairs = motion artifact; sustained recurrence = a real fight. `GE_ZF` in `port/fast3d/gfx_pc.cpp` implements this (`GE_ZFTOL` tolerance, `GE_ZFBOX` region filter).
+
+## D13. Per-render accumulation is not associative: the port's 1 tick/frame can reach states the N64's 2–3 ticks/frame never did (D329)
+
+GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphframes`, 60 Hz ticks per rendered frame) is normally 2–3. The port at 60 fps gives 1. Code that folds `numticks` ticks into **one** downstream call is not equivalent at different granularities. `modelTickAnim` sums `playspeed*speed` over the ticks, then makes one `modelSetAnimFrame2WithChrStuff` call, which only moves `framea`/`frameb` when `floor(frame)` crosses an integer. At speed < 1 and 1 tick/frame a clamped (`framea == frameb`) non-looping anim never crosses, so it stays pinned even after its endframe is raised. At 2+ ticks it crosses on the next frame. Result: permanent guard freezes on PC (D318/D320) that the console could not sustain.
+
+- **Tell:** a state that holds forever at 60 fps, is frame-exact (integer frame, `fa == fb`), and has a per-tick step < 1.0 unit.
+- **Repro correctly:** force the granularity with `GE_D318B_CLK=N` (TEMP probe, lockstep N ticks/frame) and A/B N=1 vs N=2. Wall-clock runs on a slow host (WSLg renders ~5 fps → mixed clk 1–6) and `GE_DETERM=1` (advances per VI-retrace request, also mixed clk) both give uncalibrated results.
+- **Where else to look:** any `for/while (numticks)` accumulator followed by a single threshold/floor consumer; D193 (AI locomotion rate) and D243 (cutscene `numticks` bursts) touched the same axis from the other side.
 
 ## E. Process / method notes
 

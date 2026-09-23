@@ -3485,6 +3485,64 @@ void modelSetAnimFrame2WithChrStuff(Model *model, f32 framea, f32 frameb, f32 fr
             va = modelptr->framea;
             vb = modelptr->frameb;
 
+#ifdef PORT
+            /* D329 (RULE-2-SIGNOFF 2026-09-23, user approved): tick-
+             * granularity fix. The per-frame loop above only writes
+             * framea/frameb when floor(frame) crosses an integer. N64 GE
+             * renders at ~20-30 fps, so modelTickAnim folds 2-3 ticks into
+             * this call and any attack-speed advance (0.5-0.8/tick) crosses
+             * at once; the port at 60 fps folds 1 tick, which does not. A
+             * pair clamped equal by an earlier endframe (aim hold: both at
+             * ceil(H)) is then re-emitted stale after the endframe is raised
+             * (actor_fire_or_aim_at_target_update -> chrlvAttackActionRelated
+             * changes only the endframe) and the sub-frame progress below is
+             * discarded every call -> permanent pin (D318/D320). Only when
+             * the loop did not run, progress was requested, and the CURRENT
+             * endframe no longer blocks the next frame, re-derive frameb the
+             * way modelSetAnimFrame does, so the model advances at the rate
+             * the N64 does. Genuine holds (endframe still at the frame) and
+             * every >=2-tick call are untouched. */
+            /* GE_D329=0 disables (A/B only); GE_D329LOG=1 logs each trigger
+             * (capped). Both cached -- this is a per-model per-frame path. */
+            static s32 s_d329 = -1;
+            static s32 s_d329log = 0;
+            static s32 s_d329n = 0;
+
+            if (s_d329 < 0)
+            {
+                const char *e = getenv("GE_D329");
+
+                s_d329 = !(e && e[0] == '0');
+                s_d329log = (getenv("GE_D329LOG") != NULL);
+            }
+
+            if (s_d329 && (vb == va)
+                && (forward ? ((endframe < floorFloatToInt(framea) + 1) && (framea < frameb))
+                            : ((ceilFloatToInt(framea) - 1 < endframe) && (frameb < framea))))
+            {
+                s32 next = modelConstrainOrWrapAnimFrame(forward ? va + 1 : va - 1, modelptr->anim, modelptr->endframe);
+
+                if (next == (forward ? va + 1 : va - 1))
+                {
+                    if (s_d329log && s_d329n < 2000)
+                    {
+                        extern s32 g_GlobalTimer;
+                        extern s32 g_ClockTimer;
+
+                        s_d329n++;
+                        osSyncPrintf("D329: t=%d clk=%d model=%p va=%d next=%d framea=%.4f frameb=%.4f "
+                                     "endframe=%.4f speed=%.4f playspeed=%.4f\n",
+                                     (int) g_GlobalTimer, (int) g_ClockTimer, (void *) modelptr, (int) va,
+                                     (int) next, (double) framea, (double) frameb,
+                                     (double) modelptr->endframe, (double) modelptr->speed,
+                                     (double) modelptr->playspeed);
+                    }
+                    modelptr->frameb = next;
+                    vb = next;
+                }
+            }
+#endif
+
             if (vb == va)
             {
                 modelptr->unk2c = 0.0f;

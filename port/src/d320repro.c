@@ -193,6 +193,20 @@ void d320ReproTick(void)
                 {
                     const char *q = colon + 6;
 
+                    /* documented form "jump=<chr>,list=..": a leading bare
+                     * number (no '=' before the first ',') is the chr */
+                    {
+                        char *eq0 = strchr(q, '=');
+                        char *cm0 = strchr(q, ',');
+
+                        if (cm0 && (!eq0 || cm0 < eq0))
+                        {
+                            *cm0   = 0;
+                            a->chr = (s16)strtol(q, NULL, 0);
+                            q      = cm0 + 1;
+                        }
+                    }
+
                     while (q && *q)
                     {
                         char       *eq = strchr(q, '=');

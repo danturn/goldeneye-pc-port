@@ -195,10 +195,10 @@ D314,OPEN,"F10 menu items flicker randomly/intermittently (reported on the main-
 D315,OPEN,Menu scaling differs between main menu and in-game —,"OPEN — disclosed as a known issue, deferred to v0.3.1 (bigger design question, not a mechanical fix)."
 D316,FIXED,"Mouse-clicking some menu items glitches and lands on the item below instead (user report, v0.3.0 playtest build, 2026-09-18).",FIXED — root-caused to two compounding bugs (naive mouse->logical mapping ignoring the safe-area crop; asymmetric row hit-test band) in port/src/optionsoverlay.c + port/fast3d/gfx_pc.cpp.
 D317,CLOSED,"Crash when toggling Game.AllUnlocked back and forth in-game (user report, v0.3.0 playtest build, 2026-09-18) —","CLOSED — symptom of D316 (confirmed instant window close, no WER report; the D316 hit-band bias let a click on ""All unlocked"" fall through to the adjacent ""Quit to desktop"" row)."
-D318,RESOLVED,Facility (regular play path):,RESOLVED (2026-09-19):
+D318,OPEN,Facility (regular play path):,"OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
 D319,FIXED,"Frame cap slider was mostly a dead zone; replaced with a plain 30/60 toggle (user ask, 2026-09-18).",FIXED — new ROW_FPSCAP cycle (30/60 only) in port/src/optionsoverlay.c; default changed to 60 in port/src/video.c.
-D320,RESOLVED,"D318-class sweep: aim-hold → _update AI lists in 8 levels carry the same as-authored softlock race (static analysis, 2026-09-20).",RESOLVED (2026-09-22):
-D321,CLOSED,D318 trigger chain fully mapped:,CLOSED — trigger chain mapped and faithful; D318 watchdog validated in live play.
+D320,OPEN,"D318-class sweep: aim-hold → _update AI lists in 8 levels carry the same as-authored softlock race (static analysis, 2026-09-20).","OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
+D321,OPEN,D318 trigger chain fully mapped:,"OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
 D322,OPEN,Long-session audio degradation:,"OPEN — static triage done (teardown audit, mixer statelessness, D202-coverage check); ranked hypotheses:"
 D323,OPEN,G_TL_LOD bindings of explicit-LOD textures:,"OPEN / parked — mechanism confirmed in code; census (tools_pc/bg_lod_audit.py) shows 15 levels with explicit-LOD textures bound under TEXTLOD-on classes (stat 378, azt 806 binds heaviest); overwhelmi…"
 D324,FIXED,"GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes —",FIXED (2026-09-22) — proven impact:
@@ -206,3 +206,4 @@ D325,CLOSED,ROM-mod (xdelta) compatibility:,CLOSED as a question —
 D326,CLOSED,Random Eye randomizer repacks the ROM too —,CLOSED as a question —
 D327,RESOLVED,"Mod support, resolved plan:",RESOLVED — superseded by D328; approach (a) is NOT ruled out (these scans missed the 1172-compressed data segment).
 D328,CLOSED,"Mod support is viable and D327's ""ruled out"" was wrong:",CLOSED as a question —
+D329,FIXED,The D318/D320 guard anim pin is a tick-granularity divergence:,"FIXED — Rule-2 high-FPS fix in model.c; clk=1 no longer pins (WSL + native Windows), 0 triggers at clk=2; bunker1 golden failure predates it (on/off A/B); user playtest confirms N64-matching Ourumov…"
