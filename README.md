@@ -89,7 +89,8 @@ start), front-end menu navigation on the left stick to match the F10 overlay
 playtested end to end at Agent difficulty, including the ending sequence); steady 60 fps
 (software RSP off the presentation critical path); full audio: in-level music and SFX; keyboard + mouse (click-to-lock, proportional aim mode, a single
 simplified sensitivity control) and a modern dual-stick controller layout;
-automatic widescreen FOV scaling; Bond is fixed in cutscenes (no more
+native widescreen at any aspect ratio (undistorted world, HUD anchored to the
+screen edges, 4:3 menus pillarboxed); Bond is fixed in cutscenes (no more
 floating or spin-glitching) and his third-person model positioning generally
 is right the large majority of the time now, at most a small drift when off; file-backed saves; faithful N64 progression
 by default (F10 → *All unlocked* opens every level, 007 mode and the full
@@ -117,13 +118,11 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
   ~10 s before resuming the scripted shootout — a latent race that exists in
   the N64 original too (where it softlocks permanently); the port detects and
   auto-recovers it (D318).
-- **Widescreen is stretched, not native**: on non-4:3 windows the whole
-  frame (world and HUD) is stretched horizontally to fill your display —
-  about 33% wider than original at 16:9, like a 4:3 video in a TV's "stretch"
-  mode. Automatic FOV scaling keeps the framing comfortable and gameplay is
-  completely unaffected (all game logic runs in world space), but shapes are
-  subtly wider than on the N64 — most visible on round objects (barrels, the
-  radar). A distortion-free native widescreen render is on the roadmap.
+- **Native widescreen is new in v0.4.0**: the world renders undistorted at
+  your display's aspect (wider view, same vertical FOV) and the HUD keeps its
+  shape; front-end menus are shown 4:3 with side bars. The F10 *Native
+  widescreen* toggle restores the old stretched frame. Minor: during the
+  gun-barrel intro Bond's spotlight can briefly draw into the side bars.
 - Distant geometry can drop out on the biggest open levels (Streets,
   Egyptian) at default FOV — a culling/LOD issue that sometimes
   self-corrects as you keep moving (D249).
@@ -178,9 +177,6 @@ directionally, on the way to v1.0:
 - Working through the [known issues](#status) above and the fuller list in
   [`docs/dev/findings.md`](docs/dev/findings.md).
 - **PAL and JP ROM support** ([issue #85](https://github.com/jkdansereau/goldeneye-pc-port/issues/85)); NTSC-U is the only supported region today.
-- **Native widescreen** — a distortion-free render at your display's aspect
-  (correct-aspect projection and a wide-frame HUD), replacing today's
-  stretched 4:3 frame + FOV compensation.
 - **Controller rebinding UI**, and macOS/ARM builds.
 - **LAN multiplayer**: reviving GoldenEye's original split-screen/deathmatch
   netplay across multiple PCs on a local network. Genuinely under
