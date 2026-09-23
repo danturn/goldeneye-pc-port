@@ -5761,7 +5761,19 @@ void sub_GAME_7F068EC4(CasingRecord *casing, Gfx **gdl)
     ModelFileHeader *model_header = casing->header;
     RenderPosView   *model_matrices = dynAllocate(model_header->numMatrices * sizeof(RenderPosView));
     ModelHead        model;
+#ifdef PORT
+    /* D331 (ABI/layout class; D264/D290 pattern): g_DefaultCasingModelRenderData
+     * is a u32[15] {0, 1, 3, 0..} holding the N64 ModelRenderData template
+     * (basemtx NULL, zbufferenabled TRUE, flags 3). Read as the PC struct
+     * (8-byte basemtx) it gives zbufferenabled 3 / flags 0 -- subdraw() then
+     * draws nothing, so ejected shell casings were invisible -- and the read
+     * runs past the 60-byte array. Use the explicit template. */
+    ModelRenderData  render_data = {0};
+    render_data.zbufferenabled = TRUE;
+    render_data.flags = 3;
+#else
     ModelRenderData  render_data = *(ModelRenderData *)g_DefaultCasingModelRenderData;
+#endif
     Mtxf             casing_model_mtx;
     s32              axis_offset;
     s32              matrix_translation_in_range = TRUE;

@@ -208,3 +208,4 @@ D327,RESOLVED,"Mod support, resolved plan:",RESOLVED — superseded by D328; app
 D328,CLOSED,"Mod support is viable and D327's ""ruled out"" was wrong:",CLOSED as a question —
 D329,FIXED,The D318/D320 guard anim pin is a tick-granularity divergence:,"FIXED — Rule-2 high-FPS fix in model.c; clk=1 no longer pins (WSL + native Windows), 0 triggers at clk=2; bunker1 golden failure predates it (on/off A/B); user playtest confirms N64-matching Ourumov…"
 D330,FIXED,"#103 (v0.3.0, Win 11):","FIXED (port/src/input.c), build clean, bunker1 golden 3/3; mouse feel-check owed (a human must run it:"
+D331,FIXED,Ejected shell casings never rendered on PC:,"FIXED (gunfire.c #ifdef PORT, explicit template); PP7 casing verified on native Windows (before:"
