@@ -121,8 +121,7 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
 - **Native widescreen is new in v0.4.0**: the world renders undistorted at
   your display's aspect (wider view, same vertical FOV) and the HUD keeps its
   shape; front-end menus are shown 4:3 with side bars. The F10 *Native
-  widescreen* toggle restores the old stretched frame. Minor: during the
-  gun-barrel intro Bond's spotlight can briefly draw into the side bars.
+  widescreen* toggle restores the old stretched frame.
 - Distant geometry can drop out on the biggest open levels (Streets,
   Egyptian) at default FOV — a culling/LOD issue that sometimes
   self-corrects as you keep moving (D249).
