@@ -39,9 +39,28 @@ void bheadSetdamp(f32 headdamp);
 
 
 
+#ifdef PORT
+/* D336 (ABI/layout, A1 raw-offset alias; the D100 follow-up): on N64 the
+ * player's `model` at 0x598 is an INLINE struct Model, and the decomp's
+ * placeholders after it alias its fields by raw offset: animFlipFlag (0x5BC)
+ * is model+0x24 = model.gunhand, field_5C0 (0x5C0) is model+0x28 =
+ * model.animframe1 (4-byte pointers, no holes: unk25/unk27/unk2c confirm).
+ * D100 made `model` a real inline struct on PC, so those placeholders became
+ * separate fields that nothing initialises or keeps in sync -- the head-bob
+ * start frame was read from never-written memory (uninitialised player-struct
+ * bytes; garbage like 2e32 poisoned Bond's anim -> D156, and with the D294
+ * 2x room pool the player struct lands on dirty memory, corrupting Frigate).
+ * Read/write the real model fields, i.e. the bytes the N64 code touches. */
+#define BHEAD_FLIPFLAG   (g_CurrentPlayer->model.gunhand)
+#define BHEAD_CURFRAME   (g_CurrentPlayer->model.animframe1)
+#else
+#define BHEAD_FLIPFLAG   (g_CurrentPlayer->animFlipFlag)
+#define BHEAD_CURFRAME   (g_CurrentPlayer->field_5C0)
+#endif
+
 void bheadFlipAnimation()
 {
-    g_CurrentPlayer->animFlipFlag = !g_CurrentPlayer->animFlipFlag;
+    BHEAD_FLIPFLAG = !BHEAD_FLIPFLAG;
 }
 
 void bheadUpdateIdleRoll()
@@ -410,7 +429,7 @@ void bheadAdjustAnimation(f32 speed)
 
                 if (g_CurrentPlayer->headanim >= 0)
                 {
-                    startframe = (g_CurrentPlayer->field_5C0 - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe)
+                    startframe = (BHEAD_CURFRAME - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe)
                         / (g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].endframe - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe);
 
                     startframe = g_BondMoveAnimationSetup[i].loopframe + ((g_BondMoveAnimationSetup[i].endframe - g_BondMoveAnimationSetup[i].loopframe) * startframe);
@@ -420,7 +439,7 @@ void bheadAdjustAnimation(f32 speed)
                     &g_CurrentPlayer->model,
                     // match hack: addu address backwards
                     (struct ModelAnimation *) ((s32)g_BondMoveAnimationSetup[i].anim_id + (s32)&ptr_animation_table->data),
-                    (s32) g_CurrentPlayer->animFlipFlag,
+                    (s32) BHEAD_FLIPFLAG,
                     startframe,
                     0.5f,
                     12.0f);
