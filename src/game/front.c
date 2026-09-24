@@ -8953,6 +8953,18 @@ Gfx * menu_jump_constructor_handler(Gfx *DL)
 
 #ifdef PORT
     PORT_HUD_ASPECT(DL, GE_HUD_ASPECT_NONE);
+    {
+        /* D335a follow-up: fast3d stores the scissor as adjusted when it was
+         * set, so the pillarbox scissor above would persist -- squeezed to the
+         * 4:3 centre -- into the first stage frames after the front end hands
+         * over, clipping anything the stage draws before setting its own
+         * scissor (right-anchored HUD such as the ammo counter vanished).
+         * Re-set the full-canvas scissor with the aspect mode off. */
+        extern f32 portNativeAspect(void);
+        if (portNativeAspect() > 1.3334f) {
+            gDPSetScissor(DL++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
+        }
+    }
 #endif
     return DL;
 }
