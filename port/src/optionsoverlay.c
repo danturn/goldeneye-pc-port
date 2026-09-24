@@ -203,6 +203,9 @@ static struct Row rows[] = {
     /* D232: the community "no damage flash" toggle (suppresses the red/green
      * hit-flash overlay in bondview2). */
     { "__HdrGame",               "GAME",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    /* D226: scales the ammo counter, pickup / status messages and dialogue
+     * about their screen anchors. 100% = original, nothing emitted. */
+    { "Game.HudScale",            "HUD scale %",      ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Game.SkipIntro",           "Skip intro",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Video.DisplayFPS",         "Show FPS",         ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Game.NoHitFlash",          "No hit flash",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },

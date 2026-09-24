@@ -3384,8 +3384,36 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     }
 }
 
+/* D226: HUD span scale (G_HUDSCALE_EXT, emitted by port/include/hudaspect.h
+ * PORT_HUD_SCALE around specific HUD draws). While active, every rectangle
+ * (text glyphs, message boxes, ammo icons are all rects) is scaled about the
+ * anchor in logical 10.2 screen space, and texrect steps are divided by the
+ * scale so the same texels cover the larger/smaller rect. 1.0 = inactive. */
+static float s_hud_scale = 1.0f;
+static int32_t s_hud_ax = 0, s_hud_ay = 0;   /* anchor, 10.2 fixed (px*4) */
+
+static inline void gfx_hud_scale_rect(int32_t& ulx, int32_t& uly, int32_t& lrx, int32_t& lry) {
+    if (s_hud_scale == 1.0f) {
+        return;
+    }
+    ulx = s_hud_ax + (int32_t)lroundf((float)(ulx - s_hud_ax) * s_hud_scale);
+    lrx = s_hud_ax + (int32_t)lroundf((float)(lrx - s_hud_ax) * s_hud_scale);
+    uly = s_hud_ay + (int32_t)lroundf((float)(uly - s_hud_ay) * s_hud_scale);
+    lry = s_hud_ay + (int32_t)lroundf((float)(lry - s_hud_ay) * s_hud_scale);
+    /* A full-width box (e.g. the dialogue backdrop, 0..W) scaled about a
+     * centre anchor goes negative; negative rect coords are not drawn, so
+     * clip at the canvas origin (the right/bottom overhang is harmless). */
+    if (ulx < 0) ulx = 0;
+    if (uly < 0) uly = 0;
+}
+
 static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls,
                                      int16_t ult, int16_t dsdx, int16_t dtdy, bool flip) {
+    if (s_hud_scale != 1.0f) {   /* D226 */
+        gfx_hud_scale_rect(ulx, uly, lrx, lry);
+        dsdx = (int16_t)lroundf((float)dsdx / s_hud_scale);
+        dtdy = (int16_t)lroundf((float)dtdy / s_hud_scale);
+    }
     uint64_t saved_combine_mode = rdp.combine_mode;
     if ((rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) == G_CYC_COPY) {
         // Per RDP Command Summary Set Tile's shift s and this dsdx should be set to 4 texels
@@ -3509,6 +3537,7 @@ static void gfx_dp_image_rectangle(int32_t tile, int32_t w, int32_t h,
 }
 
 static void gfx_dp_fill_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry) {
+    gfx_hud_scale_rect(ulx, uly, lrx, lry);   /* D226 */
     if (rdp.color_image_address == rdp.z_buf_address) {
         // Don't clear Z buffer here since we already did it with glClear
         return;
@@ -3698,6 +3727,14 @@ static void gfx_run_dl(Gfx* cmd) {
             case (uint8_t)G_CLEARGEOMETRYMODE:
                 gfx_sp_geometry_mode(cmd->words.w1, 0);
                 break;
+            case 0x46: /* G_HUDSCALE_EXT (D226): w0 low16 = scale*256 (0/256 = off), w1 = ax4<<16 | ay4 */
+            {
+                const uint32_t sc = C0(0, 16);
+                s_hud_scale = (sc == 0 || sc == 256) ? 1.0f : (float)sc / 256.0f;
+                s_hud_ax = (int32_t)C1(16, 16);
+                s_hud_ay = (int32_t)C1(0, 16);
+                break;
+            }
             case G_EXTRAGEOMETRYMODE_EXT:
                 gfx_sp_extra_geometry_mode(~C0(0, 24), cmd->words.w1);
                 break;
@@ -4091,6 +4128,7 @@ static double s_perf_pre = 0, s_perf_post = 0, s_perf_swap = 0;
 static uint64_t s_perf_frames = 0, s_perf_last_start = 0;
 
 extern "C" void gfx_run(Gfx* commands) {
+    s_hud_scale = 1.0f;   /* D226: never carry a HUD scale across frames */
     const uint64_t perf_t0 = gfx_perfstat_on() ? gfx_perf_now_ns() : 0;
     ++num_dls;
     gfx_sp_reset();

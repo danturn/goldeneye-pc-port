@@ -35,4 +35,15 @@ extern float portNativeAspect(void);   /* port/src/video.c */
 #define PORT_HUD_ASPECT(gdl, mode) \
     do { if (portNativeAspect() > 1.3334f) { gSPHudAspectEXT((gdl)++, (mode)); } } while (0)
 
+/* D226: HUD span scale. PORT_HUD_SCALE(gdl, ax, ay) scales every rectangle
+ * drawn after it (glyphs, message boxes, ammo icons) about the anchor
+ * (logical screen px) by Game.HudScale %, until PORT_HUD_SCALE_END. At 100%
+ * nothing is emitted (byte-identical). Decoded as G_HUDSCALE_EXT in fast3d. */
+#define GE_HUDSCALE_EXT 0x46
+extern s32 portHudScalePercent(void);   /* port/src/video.c */
+#define gSPHudScaleEXT(pkt, scale256, ax4, ay4)     gDma0p((pkt), GE_HUDSCALE_EXT, ((u32)(ax4) << 16) | ((u32)(ay4) & 0xFFFFu), ((u32)(scale256) & 0xFFFFu))
+#define PORT_HUD_SCALE(gdl, ax, ay)     do { s32 _hp = portHudScalePercent();          if (_hp != 100) { gSPHudScaleEXT((gdl)++, _hp * 256 / 100, (ax) * 4, (ay) * 4); } } while (0)
+#define PORT_HUD_SCALE_PCT(gdl, pct, ax, ay)     do { s32 _hp = (pct); if (_hp != 100) { gSPHudScaleEXT((gdl)++, _hp * 256 / 100, (ax) * 4, (ay) * 4); } } while (0)
+#define PORT_HUD_SCALE_END(gdl)     do { if (portHudScalePercent() != 100) { gSPHudScaleEXT((gdl)++, 256, 0, 0); } } while (0)
+
 #endif

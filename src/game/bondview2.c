@@ -9260,6 +9260,63 @@ Gfx *bondviewRenderCredits(Gfx *gdl)
 }
 
 
+#ifdef PORT
+/* D226: the top dialogue's line breaks are authored into the text (no runtime
+ * wrap), so an unconditional HUD scale pushes long lines off-screen. Scale it
+ * as far as the widest line still fits between the text origin (view left +
+ * 0x1e, msg.x) and the same margin on the right. */
+static s32 portDialogueHudScalePercent(void)
+{
+    s32 hp = portHudScalePercent();
+    s32 th = 0, tw = 0;
+    s32 avail;
+    char *text;
+
+    if (hp <= 100) {
+        return hp;
+    }
+#if defined(LEFTOVERDEBUG)
+    text = stringbuffer_top[upper_text_buffer_index];
+#else
+    text = dword_CODE_bss_80079DC8[upper_text_buffer_index];
+#endif
+    if (text == NULL || text[0] == '\0') {
+        return hp;
+    }
+    textMeasure(&th, &tw, text, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+    avail = viGetViewWidth() - 2 * 0x1e;
+    if (tw > 0 && tw * hp > avail * 100) {
+        hp = (avail * 100) / tw;
+        if (hp < 100) hp = 100;
+    }
+    return hp;
+}
+#endif
+
+#ifdef PORT
+/* D226: same width cap for the lower-left pickup / status message (and the
+ * level title card), measured with the fonts the bottom renderer uses. */
+static s32 portBottomHudScalePercent(void)
+{
+    s32 hp = portHudScalePercent();
+    s32 th = 0, tw = 0;
+    s32 avail;
+    char *text = stringbuffer_lowerleft[status_bar_text_buffer_index];
+
+    if (hp <= 100 || text[0] == 0) {
+        return hp;
+    }
+    textMeasure(&th, &tw, text, BONDVIEW_2ND_FONTTABLE(status_bar_text_buffer_index),
+                BONDVIEW_1ST_FONTTABLE(status_bar_text_buffer_index), 0);
+    avail = viGetViewWidth() - 2 * 0x1e;
+    if (tw > 0 && tw * hp > avail * 100) {
+        hp = (avail * 100) / tw;
+        if (hp < 100) hp = 100;
+    }
+    return hp;
+}
+#endif
+
 Gfx *maybe_mp_interface(Gfx *gdl)
 {
     s32 ulx;
@@ -9279,7 +9336,13 @@ Gfx *maybe_mp_interface(Gfx *gdl)
 #ifdef PORT
         PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
 #endif
+#ifdef PORT
+        PORT_HUD_SCALE_PCT(gdl, portBottomHudScalePercent(), viGetViewLeft(), viGetViewTop() + viGetViewHeight());   /* D226: bottom messages, width-capped */
+#endif
         gdl = hudmsgBottomRender(gdl);
+#ifdef PORT
+        PORT_HUD_SCALE_END(gdl);
+#endif
 #ifdef PORT
         PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
 #endif
@@ -9287,7 +9350,13 @@ Gfx *maybe_mp_interface(Gfx *gdl)
 #ifdef PORT
         PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
 #endif
+#ifdef PORT
+        PORT_HUD_SCALE_PCT(gdl, portDialogueHudScalePercent(), viGetViewLeft() + 0x1e, viGetViewTop());   /* D226: dialogue, width-capped */
+#endif
         gdl = sub_GAME_7F08AAE8(gdl);
+#ifdef PORT
+        PORT_HUD_SCALE_END(gdl);
+#endif
 #ifdef PORT
         PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
 #endif
@@ -9462,7 +9531,13 @@ Gfx *maybe_mp_interface(Gfx *gdl)
 #ifdef PORT
     PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
 #endif
+#ifdef PORT
+    PORT_HUD_SCALE_PCT(gdl, portBottomHudScalePercent(), viGetViewLeft(), viGetViewTop() + viGetViewHeight());   /* D226: bottom messages, width-capped */
+#endif
     gdl = hudmsgBottomRender(gdl);
+#ifdef PORT
+    PORT_HUD_SCALE_END(gdl);
+#endif
 #ifdef PORT
     PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
 #endif
@@ -9470,7 +9545,13 @@ Gfx *maybe_mp_interface(Gfx *gdl)
 #ifdef PORT
     PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
 #endif
+#ifdef PORT
+    PORT_HUD_SCALE_PCT(gdl, portDialogueHudScalePercent(), viGetViewLeft() + 0x1e, viGetViewTop());   /* D226: dialogue, width-capped */
+#endif
     gdl = sub_GAME_7F08AAE8(gdl);
+#ifdef PORT
+    PORT_HUD_SCALE_END(gdl);
+#endif
 #ifdef PORT
     PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
 #endif

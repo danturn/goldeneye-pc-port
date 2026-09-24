@@ -63,6 +63,7 @@ static int cfgWrapFix       = 0;   /* D74 sub-tile UV pre-wrap + RC3/D167 non-Po
 static int cfgFovScale      = 100; /* D211: percent of the original vertical FOV; 100 = unchanged (byte-identical) */
 static int cfgWidescreenAuto = 1;  /* WIDESCREEN-FOV-PLAN Phase 4: auto-scale vertical FOV by window aspect ratio; on by default, no-op at 4:3 */
 static int cfgNativeWidescreen = 1; /* D334 (WIDESCREEN-FOV-PLAN Phase 2): project the world at the real window aspect (Hor+); no-op at 4:3 */
+static int cfgHudScale = 100;        /* D226: HUD text/ammo scale %, 100 = original (no emission) */
 static int cfgDrawDistance      = 150; /* D218: percent of the level's authored far-clip/fog distance. Default raised 100->150 for v0.2.0: at the authored N64 distance, props visibly fade in just before they become visible on modern displays (Dam alarms / wall switches); 150 is the value the Steam Deck preset playtest-validated. 100 = unchanged N64. */
 static int cfgDrawDistanceAutoFov = 1;   /* D218: couple draw distance to Video.FovScale unless DrawDistance is set explicitly */
 static int cfgLodDistance         = 150; /* D249: percent scale on the geometry/model LOD-swap distance. Default raised 100->150 for v0.2.0 (same pop-in family as DrawDistance: LOD-swapped props like Dam's alarms/wall switches faded in at range); 150 matches the Steam Deck preset. 100 = unchanged N64. */
@@ -156,6 +157,12 @@ f32 portFovScale = 1.0f;
  * see the same aspect, so there is no second "view width" to reconcile
  * (WIDESCREEN-FOV-PLAN s6). Clamped to [0.5, 4.0]. At exactly 4:3 the
  * formula is identity, so 4:3 renders are unchanged. */
+/* D226: Game.HudScale percent (75..200); 100 = original size, nothing emitted. */
+s32 portHudScalePercent(void)
+{
+    return cfgHudScale;
+}
+
 f32 portNativeAspect(void)
 {
     f32 a = gfx_current_dimensions.aspect_ratio;
@@ -348,6 +355,7 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
     configRegisterInt("Video.FovScale", &cfgFovScale, 50, 150);
     configRegisterInt("Video.WidescreenAuto", &cfgWidescreenAuto, 0, 1);
     configRegisterInt("Video.NativeWidescreen", &cfgNativeWidescreen, 0, 1);   /* D334 */
+    configRegisterInt("Game.HudScale", &cfgHudScale, 75, 200);   /* D226 */
     configRegisterInt("Video.DrawDistance", &cfgDrawDistance, 100, 400);
     configRegisterInt("Video.DrawDistanceAutoFov", &cfgDrawDistanceAutoFov, 0, 1);
     configRegisterInt("Video.LodDistance", &cfgLodDistance, 25, 400);

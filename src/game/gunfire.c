@@ -6222,6 +6222,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
 #ifdef PORT
             /* D335: right-hand ammo anchors to the right edge (native widescreen). */
             PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_RIGHT);
+            PORT_HUD_SCALE(gdl, viGetViewLeft() + viGetViewWidth(), viGetViewTop() + viGetViewHeight());   /* D226 */
 #endif
             if (weapon_right != ITEM_UNARMED)
             {
@@ -6291,7 +6292,9 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
 
 #ifdef PORT
             /* D335: left-hand (dual-wield) ammo anchors to the left edge. */
+            PORT_HUD_SCALE_END(gdl);
             PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_LEFT);
+            PORT_HUD_SCALE(gdl, viGetViewLeft(), viGetViewTop() + viGetViewHeight());   /* D226 */
 #endif
             if (weapon_left != ITEM_UNARMED)
             {
@@ -6362,6 +6365,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
     }
 
 #ifdef PORT
+    PORT_HUD_SCALE_END(gdl);
     PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
 #endif
     return gdl;
