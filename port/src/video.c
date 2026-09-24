@@ -157,7 +157,7 @@ f32 portFovScale = 1.0f;
  * see the same aspect, so there is no second "view width" to reconcile
  * (WIDESCREEN-FOV-PLAN s6). Clamped to [0.5, 4.0]. At exactly 4:3 the
  * formula is identity, so 4:3 renders are unchanged. */
-/* D226: Game.HudScale percent (75..200); 100 = original size, nothing emitted. */
+/* D226: Game.HudScale percent (75..150); 100 = original size, nothing emitted. */
 s32 portHudScalePercent(void)
 {
     return cfgHudScale;
@@ -355,7 +355,7 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
     configRegisterInt("Video.FovScale", &cfgFovScale, 50, 150);
     configRegisterInt("Video.WidescreenAuto", &cfgWidescreenAuto, 0, 1);
     configRegisterInt("Video.NativeWidescreen", &cfgNativeWidescreen, 0, 1);   /* D334 */
-    configRegisterInt("Game.HudScale", &cfgHudScale, 75, 200);   /* D226 */
+    configRegisterInt("Game.HudScale", &cfgHudScale, 75, 150);   /* D226: capped at 150 (user: little benefit above) */
     configRegisterInt("Video.DrawDistance", &cfgDrawDistance, 100, 400);
     configRegisterInt("Video.DrawDistanceAutoFov", &cfgDrawDistanceAutoFov, 0, 1);
     configRegisterInt("Video.LodDistance", &cfgLodDistance, 25, 400);
