@@ -257,6 +257,18 @@ framing — it never looked like game logic to begin with.
   broken until D290. When fixing a raw-offset global read, grep for every
   other read of the same globals (`D_80035D00`/`D_80035D04` here) before closing.
 
+- **When a split N64 struct is made inline on PC, its placeholder fields
+  become dead, and any code still reading them reads uninitialised memory.**
+  D100 turned `player.model` into a real inline `struct Model`, but the
+  decomp's `field_59C..field_650` placeholders (raw N64 offsets into that
+  model) stayed as separate fields. `bheadAdjustAnimation` kept reading
+  `field_5C0` (= N64 `model.animframe1`) and `animFlipFlag` (= `model.gunhand`),
+  which nothing ever wrote (D336: garbage anim frames, Frigate scene wrecked,
+  sensitive to memory layout). After inlining a split struct, grep every
+  placeholder in the old range and remap each read to the real field.
+  Diagnostic tell: a hardware watchpoint on the "poisoned" field sees *no
+  writes at all*.
+
 ## B. 16-byte PC `Gfx` / `Vtx` vs 8-byte N64
 
 Any buffer reservation, `memcpy` size, slot stride, or pool budget
