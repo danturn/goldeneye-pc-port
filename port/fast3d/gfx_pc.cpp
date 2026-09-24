@@ -16,6 +16,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
+#include <chrono>
 #include <limits>
 
 #ifndef _LANGUAGE_C
@@ -288,8 +289,13 @@ static constexpr float clampf(const float x, const float min, const float max) {
     return (x < min) ? min : (x > max) ? max : x;
 }
 
+/* #92 perf probe (GE_PERFSTAT=1): per-frame counters, see gfx_run. */
+static uint64_t s_perf_batches = 0, s_perf_tris = 0;
+
 static void gfx_flush(void) {
     if (buf_vbo_len > 0) {
+        s_perf_batches++;
+        s_perf_tris += buf_vbo_num_tris;
         gfx_rapi->draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
         buf_vbo_len = 0;
         buf_vbo_num_tris = 0;
@@ -4071,7 +4077,21 @@ uint32_t num_dls = 0;
  * frame is byte-identical to before (golden dumps unaffected). */
 extern "C" Gfx* optionsOverlayEmit(void);
 
+static uint64_t gfx_perf_now_ns(void) {
+    return (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+static int gfx_perfstat_on(void) {
+    static int on = -1;
+    if (on < 0) on = getenv("GE_PERFSTAT") != NULL;
+    return on;
+}
+static double s_perf_dl = 0, s_perf_run = 0, s_perf_present = 0, s_perf_interval = 0;
+static double s_perf_pre = 0, s_perf_post = 0, s_perf_swap = 0;
+static uint64_t s_perf_frames = 0, s_perf_last_start = 0;
+
 extern "C" void gfx_run(Gfx* commands) {
+    const uint64_t perf_t0 = gfx_perfstat_on() ? gfx_perf_now_ns() : 0;
     ++num_dls;
     gfx_sp_reset();
 
@@ -4093,6 +4113,7 @@ extern "C" void gfx_run(Gfx* commands) {
     rdp.viewport_or_scissor_changed = true;
     rendering_state.viewport = {};
     rendering_state.scissor = {};
+    const uint64_t perf_tpre = perf_t0 ? gfx_perf_now_ns() : 0;
     gfx_run_dl(commands);
     {
         Gfx* overlay = optionsOverlayEmit();
@@ -4101,6 +4122,7 @@ extern "C" void gfx_run(Gfx* commands) {
         }
     }
     gfx_flush();
+    const uint64_t perf_t1 = perf_t0 ? gfx_perf_now_ns() : 0;
     gfxFramebuffer = 0;
 
     if (game_renders_to_framebuffer) {
@@ -4123,13 +4145,41 @@ extern "C" void gfx_run(Gfx* commands) {
     }
 
     gfx_rapi->end_frame();
+    const uint64_t perf_tpost = perf_t0 ? gfx_perf_now_ns() : 0;
     gfx_wapi->swap_buffers_begin();
+    if (perf_t0) {
+        s_perf_pre += (double)(perf_tpre - perf_t0) / 1.0e6;
+        s_perf_post += (double)(perf_tpost - perf_t1) / 1.0e6;
+        s_perf_swap += (double)(gfx_perf_now_ns() - perf_tpost) / 1.0e6;
+        const double f = 1.0e6;
+        const uint64_t t2 = gfx_perf_now_ns();
+        s_perf_dl += (double)(perf_t1 - perf_tpre) / f;
+        s_perf_run += (double)(t2 - perf_t0) / f;
+        if (s_perf_last_start) s_perf_interval += (double)(perf_t0 - s_perf_last_start) / f;
+        s_perf_last_start = perf_t0;
+    }
 }
 
 extern "C" void gfx_end_frame(void) {
+    const uint64_t perf_t0 = gfx_perfstat_on() ? gfx_perf_now_ns() : 0;
     if (!dropped_frame) {
         gfx_rapi->finish_render();
         gfx_wapi->swap_buffers_end();
+    }
+    if (perf_t0) {
+        const double f = 1.0e6;
+        s_perf_present += (double)(gfx_perf_now_ns() - perf_t0) / f;
+        if (++s_perf_frames % 300 == 0) {
+            const double n = 300.0;
+            fprintf(stderr, "PERFSTAT pre=%.2f post=%.2f swap/pace=%.2f | ", s_perf_pre / n, s_perf_post / n, s_perf_swap / n);
+            s_perf_pre = s_perf_post = s_perf_swap = 0;
+            fprintf(stderr, "frames=%llu dl=%.2fms run=%.2fms present=%.2fms interval=%.2fms (%.1f fps) tris=%.0f batches=%.0f\n",
+                    (unsigned long long)s_perf_frames, s_perf_dl / n, s_perf_run / n, s_perf_present / n,
+                    s_perf_interval / n, s_perf_interval > 0 ? 1000.0 * n / s_perf_interval : 0.0,
+                    (double)s_perf_tris / n, (double)s_perf_batches / n);
+            s_perf_dl = s_perf_run = s_perf_present = s_perf_interval = 0;
+            s_perf_tris = s_perf_batches = 0;
+        }
     }
 }
 

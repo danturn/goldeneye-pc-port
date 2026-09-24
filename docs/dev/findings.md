@@ -624,6 +624,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D336 | **Frigate (and any level) "all polygons break except the gun" after turning: Bond's head-bob anim read two never-written placeholder fields (`field_5C0`, `animFlipFlag`) that on N64 are raw-offset aliases into the inline `player.model` (D100 follow-up; A1 class). Likely the D311 upstream anim-poison source.** — full `## D336` entry at file tail | FIXED (src/game/bondhead.c `#ifdef PORT`, ABI/layout); headless repro (Runway → exit → Frigate → turn, D294 2× room pool) clean, D156 0 fires; golden 3/3; Win + Linux builds. **User-confirmed 2026-09-24.** |
 | D337 | **Aim modes folded (user decision): N64 (default) = the N64 aim model with the mouse fed through the game's integrator at PD's damp (D332 made default); CENTRED (PC) opt-in; Q/L and Toggle-aim now route mouse aim like RMB; pad/keyboard aim no longer swallowed by the mouse integration.** — full `## D337` entry at file tail | IMPLEMENTED (port/src/input.c + optionsoverlay.c); headless-measured with new scripted-mouse harness; golden 3/3; Win + Linux builds. Open: N64-range calibration decision. |
 | D338 | **`Input.AimRange` (F10 "Aim range"): PC (default, GEPD/mouse-injector full-screen crosshair) or N64 (original stick limits: 65% of half-width, camera turn from ~49%).** — full `## D338` entry at file tail | IMPLEMENTED + measured (PC 98%/72%, N64 65%/49%); golden 3/3; Win + Linux builds. |
+| D339 | **#92 (low-end ~30 fps, Celeron N3060 / HD 400) — measured CPU budget: game thread ~0.2–0.35 ms/frame, render-thread display-list pass 0.4–1.8 ms/frame on this box; CPU very likely not the bottleneck. New `GE_PERFSTAT=1` probe (render phases, tris/batches, game-thread busy, GPU timer query).** — full `## D339` entry at file tail | INVESTIGATING — probe landed; target-hardware numbers needed before any fix. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13303,4 +13304,23 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 
 **User decision (D337 follow-up):** keep the GEPD / mouse-injector feel (the crosshair reaches the screen edge, edge-scroll from 72%) as the PC default even though it isn't N64-exact, and offer the original behaviour as an option. **`Input.AimRange`** 0 = PC, 1 = N64 (F10 "Aim range", hidden while the aim style is Centred (PC)). N64 derivation: aim turn is `stick × 0.65/80` per tick, so full deflection settles at a drawn offset of 0.65 × half-width regardless of weapon damp (`screen = pos × (1−damp) × W/2`, gunfire.c), and the camera turns past stick 60/80 = 75% of that range. Implementation: the mouse accumulator is unchanged; its screen mapping is scaled by 0.65 (PD turn and legacy GEPD write alike) and the edge-scroll threshold moves to 0.75. The non-aim "adopt" of the game crosshair into the accumulator now converts through the game's screen mapping and the range scale, so aim entry never jumps (it copied raw units before, a small pre-existing mismatch on the PD path). **Measured (GE_AIMLOG harness, 3 px/poll sweep):** PC max drawn x 316/320 (98%, the game's 4 px edge clamp), camera turn from 72%; N64 max 264 (65%), camera turn from 237.9 px (49%); aim entry at 160 (centre) in both. Golden 3/3; Windows + Linux builds clean.
 **D337/D338 user feel check (2026-09-24):** "Seems good." The session exercised the legacy-key migration live: the user's ini had `AimStyle = 2` (Centred) from D333 testing and loaded as `AimMode = 1` as designed. User's ini then set back to `AimMode = 0` (N64, their stated preference), `AimRange = 0` (PC).
+
+## D339 — #92 low-end performance: CPU budget measured, GPU the likely bottleneck; GE_PERFSTAT probe (2026-09-24)
+
+**Report (#92, filed by the maintainer for a user):** Celeron N3060 (2C, 1.6 GHz) + Intel HD 400 (Bay Trail), Windows 10: the port runs ~30 fps, "a bit higher in enclosed areas", while the PD PC port holds 60 on the same machine.
+
+**Probe (`GE_PERFSTAT=1`, env-gated, zero cost when unset):** `port/fast3d/gfx_pc.cpp` averages over 300 frames: `pre` (frame setup), `dl` (display-list pass = software RSP + GL draw submission), `post` (MSAA resolve / end_frame), `swap/pace` (swap_buffers_begin, which contains the D186 frame-pacing wait), triangles and draw batches per frame. `src/boss.c` reports game-thread busy time per scheduler message (~2 messages/frame). `port/fast3d/gfx_opengl.cpp` adds a double-buffered `GL_TIME_ELAPSED` GPU timer (logged with `GL_RENDERER`/`GL_VERSION`).
+
+**Measured (this machine: RTX 5090, fast desktop CPU; 1280×720, defaults):**
+
+| Level | dl (ms) | tris/frame | batches/frame | game thread (ms/frame) |
+|---|---|---|---|---|
+| Bunker 1 | 0.32–0.39 | ~560 | ~99 | ~0.2 |
+| Dam | 1.24 | ~2,700 | ~233 | — |
+| Streets | 1.69–1.71 | ~3,080 | ~411 | ~0.35 |
+| Egypt | 1.77–1.79 | ~3,560 | ~322 | ~0.3 |
+
+`pre`/`post` ≈ 0; `swap/pace` ≈ 2 ms is the pacing wait, not work. **CPU cost scales with scene complexity** (matching the reporter's "higher in enclosed areas"), but totals only ~2.1 ms/frame at the heaviest. Scaled for an N3060 (~5× slower per core, logic and render on separate threads), that's roughly 2 + 9 ms on two cores, which fits in 16.7 ms. CPU is therefore unlikely to be what pins the reporter at 30. **GPU is the prime suspect:** an HD 400 at native resolution with the port's defaults (MSAA 4×, 16× anisotropic, the 3-point filter shader) against the PD port's lighter defaults. **GPU timer caveat:** on this RTX 5090 the query read 1.7 ms at defaults and 4.1 ms at MSAA 1 / aniso 1 / bilinear, an inversion that shows the timer also captures swap-chain back-buffer waits on the direct (non-FBO) path. It is only meaningful on a GPU-bound machine (it would then read close to the frame time).
+
+**Next (needs HD 400-class hardware, not reporter logs):** run `GE_PERFSTAT=1` on a comparable machine at defaults vs MSAA 1 / aniso 1 / bilinear; if GPU-bound, consider a first-run low-end preset (the Steam Deck preset, `da31edaa`, is the precedent) keyed on the GL renderer. CPU-side headroom if ever needed: batches per frame (100–411) is the obvious lever (state-change batching in `gfx_flush`).
 

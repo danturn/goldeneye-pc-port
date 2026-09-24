@@ -216,3 +216,4 @@ D335,?,"Native widescreen, HUD + front end (WIDESCREEN-FOV-PLAN Phase 3):","IMPL
 D336,FIXED,"Frigate (and any level) ""all polygons break except the gun"" after turning:","FIXED (src/game/bondhead.c #ifdef PORT, ABI/layout); headless repro (Runway → exit → Frigate → turn, D294 2× room pool) clean, D156 0 fires; golden 3/3; Win + Linux builds."
 D337,OPEN,Aim modes folded (user decision):,IMPLEMENTED (port/src/input.c + optionsoverlay.c); headless-measured with new scripted-mouse harness; golden 3/3; Win + Linux builds.
 D338,?,"Input.AimRange (F10 ""Aim range""):","IMPLEMENTED + measured (PC 98%/72%, N64 65%/49%); golden 3/3; Win + Linux builds."
+D339,PARTIAL,"#92 (low-end ~30 fps, Celeron N3060 / HD 400) —",INVESTIGATING — probe landed; target-hardware numbers needed before any fix.

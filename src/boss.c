@@ -588,7 +588,27 @@ void bossMainloop(void)
 
         while (g_MainStageNum < 0 || pendingGfx != 0)
         {
+#ifdef PORT
+            /* #92 perf probe (GE_PERFSTAT=1): game-thread busy time between
+             * waking for a message and blocking again (logic + DL build). */
+            {
+                static int pon = -1; static u32 tw = 0; static f64 busy = 0; static s32 n = 0;
+                if (pon < 0) pon = getenv("GE_PERFSTAT") != NULL;
+                if (pon) {
+                    u32 now = osGetCount();
+                    if (tw) { busy += (f64)(u32)(now - tw); n++; }
+                    if (n == 600) {
+                        fprintf(stderr, "PERFSTAT game-thread busy=%.2fms/msg (avg over 600 msgs)\n",
+                                busy / (f64)n / (f64)(OS_CPU_COUNTER / 1000));
+                        busy = 0; n = 0;
+                    }
+                }
+                osRecvMesg(&gfxFrameMsgQ, (OSMesg *)&localGfxFrameMsg, OS_MESG_BLOCK);
+                if (pon) tw = osGetCount();
+            }
+#else
             osRecvMesg(&gfxFrameMsgQ, (OSMesg *)&localGfxFrameMsg, OS_MESG_BLOCK);
+#endif
 
             switch (localGfxFrameMsg->gen.type)
             {

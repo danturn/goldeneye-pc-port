@@ -1095,12 +1095,54 @@ static void gfx_opengl_init(void) {
 static void gfx_opengl_on_resize(void) {
 }
 
+/* #92 perf probe (GE_PERFSTAT=1): GPU time per frame via GL_TIME_ELAPSED,
+ * double-buffered so reading never stalls the pipeline. Skipped when the
+ * driver lacks timer queries. Tells a low-end reporter's log whether frames
+ * are GPU-bound (render/MSAA/filtering cost) or CPU-bound. */
+static int s_gpuq_on = -1;
+static GLuint s_gpuq[2];
+static int s_gpuq_idx = 0, s_gpuq_valid[2] = { 0, 0 };
+static double s_gpuq_ms = 0.0;
+static int s_gpuq_n = 0, s_gpuq_frames = 0;
+
 static void gfx_opengl_start_frame(void) {
     frame_count++;
+    if (s_gpuq_on < 0) {
+        s_gpuq_on = getenv("GE_PERFSTAT") != NULL && glGenQueries != NULL &&
+                    glGetQueryObjectui64v != NULL && glBeginQuery != NULL;
+        if (s_gpuq_on) {
+            glGenQueries(2, s_gpuq);
+            fprintf(stderr, "PERFSTAT gpu timer on: %s | %s\n",
+                    (const char *)glGetString(GL_RENDERER), (const char *)glGetString(GL_VERSION));
+        }
+    }
+    if (s_gpuq_on == 1) {
+        if (s_gpuq_valid[s_gpuq_idx]) {
+            GLuint avail = 0;
+            glGetQueryObjectuiv(s_gpuq[s_gpuq_idx], GL_QUERY_RESULT_AVAILABLE, &avail);
+            if (avail) {
+                GLuint64 ns = 0;
+                glGetQueryObjectui64v(s_gpuq[s_gpuq_idx], GL_QUERY_RESULT, &ns);
+                s_gpuq_ms += (double)ns / 1.0e6;
+                s_gpuq_n++;
+            }
+        }
+        glBeginQuery(GL_TIME_ELAPSED, s_gpuq[s_gpuq_idx]);
+    }
 }
 
 static void gfx_opengl_end_frame(void) {
     glFlush();
+    if (s_gpuq_on == 1) {
+        glEndQuery(GL_TIME_ELAPSED);
+        s_gpuq_valid[s_gpuq_idx] = 1;
+        s_gpuq_idx ^= 1;
+        if (++s_gpuq_frames % 300 == 0 && s_gpuq_n > 0) {
+            fprintf(stderr, "PERFSTAT gpu=%.2fms/frame (avg over %d frames)\n", s_gpuq_ms / s_gpuq_n, s_gpuq_n);
+            s_gpuq_ms = 0.0;
+            s_gpuq_n = 0;
+        }
+    }
 }
 
 /* Frame capture (dev tool, env GE_PCDUMP) — see gfx_opengl.h. TEMP D70: read
