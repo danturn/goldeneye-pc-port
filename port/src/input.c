@@ -392,6 +392,17 @@ static int aimModeGet(void)
  * deflected pad stick (inputComputePad). */
 static int s_aimDevMouse = 0;
 
+/* D338: Input.AimRange -- how far the N64-mode crosshair can travel.
+ *   0 = PC (default, the GEPD/mouse-injector feel): the crosshair reaches the
+ *       screen edge, camera edge-scroll from 72% of the way there.
+ *   1 = N64: the original stick limits. N64 aim turns the crosshair by
+ *       stick*0.65/80 per tick, so full deflection settles at 65% of the
+ *       half-width whatever the weapon damp, and the camera starts turning past
+ *       stick 60/80 -- 75% of that range (~49% of the half-width). */
+static int aimRange = 0;
+static double aimRangeScale(void)   { return aimRange ? 0.65 : 1.0; }
+static double aimEdgeThreshold(void) { return aimRange ? 0.75 : (double)GEPD_EDGE_THRESHOLD; }
+
 static int pdMouseAimEnabled(void)
 {
     const char *e = GE_ENVSTR("GE_PDMOUSEAIM");
@@ -966,8 +977,19 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
              * frame so re-entry starts where the game left it. */
             s_gepdHeldPrev = 0;
             if (g_CurrentPlayer) {
-                s_gepdCrossX = (double) g_CurrentPlayer->crosshair_x_pos;
-                s_gepdCrossY = (double) g_CurrentPlayer->crosshair_y_pos;
+                if (pdMouseAimEnabled()) {
+                    /* D338: the accumulator is in GEPD units (±LIMIT = edge);
+                     * adopt through the game's screen mapping (offset =
+                     * pos*(1-damp), gunfire.c) and the aim-range scale, so aim
+                     * entry starts exactly where the crosshair is drawn. */
+                    double k = (1.0 - (double) g_CurrentPlayer->guncrossdamp) / 0.99
+                             * GEPD_CROSSHAIR_LIMIT / aimRangeScale();
+                    s_gepdCrossX = (double) g_CurrentPlayer->crosshair_x_pos * k;
+                    s_gepdCrossY = (double) g_CurrentPlayer->crosshair_y_pos * k;
+                } else {
+                    s_gepdCrossX = (double) g_CurrentPlayer->crosshair_x_pos / aimRangeScale();
+                    s_gepdCrossY = (double) g_CurrentPlayer->crosshair_y_pos / aimRangeScale();
+                }
             }
         }
         s_aimHeldPrev = aimHeld;
@@ -1643,10 +1665,11 @@ static void aimGepdEdgeScroll(void)
     double rX = s_gepdCrossX / GEPD_CROSSHAIR_LIMIT;
     double rY = s_gepdCrossY / GEPD_CROSSHAIR_LIMIT;
     double aimx = 0.0, aimy = 0.0;
-    if (rX >  GEPD_EDGE_THRESHOLD) aimx = (rX - GEPD_EDGE_THRESHOLD) * GEPD_SCROLL_SPEED / 60.0;
-    else if (rX < -GEPD_EDGE_THRESHOLD) aimx = (rX + GEPD_EDGE_THRESHOLD) * GEPD_SCROLL_SPEED / 60.0;
-    if (rY >  GEPD_EDGE_THRESHOLD) aimy = (rY - GEPD_EDGE_THRESHOLD) * GEPD_SCROLL_SPEED / 60.0;
-    else if (rY < -GEPD_EDGE_THRESHOLD) aimy = (rY + GEPD_EDGE_THRESHOLD) * GEPD_SCROLL_SPEED / 60.0;
+    const double th = aimEdgeThreshold();   /* D338 */
+    if (rX >  th) aimx = (rX - th) * GEPD_SCROLL_SPEED / 60.0;
+    else if (rX < -th) aimx = (rX + th) * GEPD_SCROLL_SPEED / 60.0;
+    if (rY >  th) aimy = (rY - th) * GEPD_SCROLL_SPEED / 60.0;
+    else if (rY < -th) aimy = (rY + th) * GEPD_SCROLL_SPEED / 60.0;
 
     f32 scale = (fov > 0.0f) ? fov / GEPD_BASE_FOV : 1.0f;
     if (aimx != 0.0) {
@@ -1685,8 +1708,8 @@ static int aimGepdCompute(double dxPx, double dyLook)
 
     /* Crosshair + gun/arm pose (GEPD formulas, RATIOFACTOR=1 for our 4:3
      * viewport; failsafe weapon offsets 0.15/0 as in goldeneye.c). */
-    p->crosshair_x_pos = (f32) s_gepdCrossX;
-    p->crosshair_y_pos = (f32) s_gepdCrossY;
+    p->crosshair_x_pos = (f32) (s_gepdCrossX * aimRangeScale());   /* D338 */
+    p->crosshair_y_pos = (f32) (s_gepdCrossY * aimRangeScale());
     p->gun_azimuth_angle   = (f32) (s_gepdCrossX * (1.11f + 0.15f * 1.5f) + fovratio - 1.0f);
     p->gun_azimuth_turning = (f32) (s_gepdCrossY * 1.11f + fovratio - 1.0f);
 
@@ -1804,8 +1827,8 @@ int portMouseAimPdGetTurn(f32 *tx, f32 *ty)
 {
     if (!portMouseAimPdActive() || g_CurrentPlayer == NULL)
         return 0;
-    if (tx) *tx = (f32) (s_gepdCrossX / GEPD_CROSSHAIR_LIMIT);
-    if (ty) *ty = (f32) (s_gepdCrossY / GEPD_CROSSHAIR_LIMIT);
+    if (tx) *tx = (f32) (s_gepdCrossX / GEPD_CROSSHAIR_LIMIT * aimRangeScale());   /* D338 */
+    if (ty) *ty = (f32) (s_gepdCrossY / GEPD_CROSSHAIR_LIMIT * aimRangeScale());
     return 1;
 }
 
@@ -1817,6 +1840,7 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.AimStyle",       &aimStyleLegacy, 0, 2);   /* D333 legacy -> AimMode */
     configRegisterInt("Input.AimMode",        &aimMode,        0, 1);   /* D337 */
     configRegisterInt("Input.AimLegacyGepd",  &aimLegacyGepd,  0, 1);   /* D337 hidden fallback */
+    configRegisterInt("Input.AimRange",       &aimRange,       0, 1);   /* D338 PC / N64 */
     configRegisterInt("Input.AimAbsolute", &aimAbsolute, 0, 1);  /* D194 */
     configRegisterInt("Input.MouseDirectLook", &mouseDirectLook, 0, 1);  /* WI-1 */
     /* D194: renamed Input.GepdSens -> Input.AimModeSens (community name for

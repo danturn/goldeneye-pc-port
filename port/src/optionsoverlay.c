@@ -69,6 +69,7 @@ enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSC
 static const char *const kOnOff[]     = { "OFF", "ON", NULL };
 static const char *const kTexFilter[] = { "NEAREST", "BILINEAR", "3-POINT", NULL };
 static const char *const kAimMode[]   = { "N64", "CENTRED (PC)", NULL };   /* D337 */
+static const char *const kAimRange[]  = { "PC", "N64", NULL };             /* D338 */
 static const int         kMsaaSeq[]   = { 1, 2, 4, 8 };
 /* D186: the sim's own tick pacemaker is hardcoded to the console's native VI
  * rate (60Hz NTSC / 50Hz PAL, port/src/libultra.c) -- Video.FpsCap can only
@@ -183,6 +184,11 @@ static struct Row rows[] = {
      * the default. CENTRED (PC) = opt-in FPS-style aim (#104), not N64. Applies
      * to every aim input (RMB, Shift, Q/L, pad trigger, Toggle mode). */
     { "Input.AimMode",            "Aim style",        ROW_ENUM,   1,    kAimMode,   0, 0, 0,   0,0,0,0,0 },
+    /* D338: how far the N64-style crosshair travels. PC = to the screen edge
+     * (GEPD / mouse-injector feel, default); N64 = the original stick limits
+     * (65% of the half-width, camera turn from ~49%). Hidden while the aim
+     * style is CENTRED (PC), where the crosshair doesn't travel. */
+    { "Input.AimRange",           "Aim range",        ROW_ENUM,   1,    kAimRange,  0, 0, 0,   0,0,0,0,0, "Input.AimMode" },
     { "__HdrPad",                "CONTROLLER",       ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.PadLookInvertY",     "Pad invert look Y",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Input.PadDeadzone",        "Stick deadzone",   ROW_SLIDER, 500,  NULL,       0, 0, 0,   0,0,0,0,0 },
