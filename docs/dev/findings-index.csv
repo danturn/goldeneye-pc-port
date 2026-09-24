@@ -33,7 +33,7 @@ D222,FIXED,High Video.FovScale breaks culling —,"FIXED, awaiting visual verifi
 D223,FIXED,QoL ask: mouse-wheel weapon cycling should be directional like a normal PC shooter —,"FIXED (M-105, port/src/input.c) —…"
 D224,?,"QoL gap (M-87, from a PD-PC-port survey):","DEPRIORITIZED (M-87, user call)."
 D225,FIXED,"Dev-tooling QoL (M-87, user ask):","FIXED (2026-09-18) — GE_DEBUG_UNLOCKALL=1 short-circuits fileGetIsCheatUnlocked() (src/game/file2.c, #ifdef PORT, cached getenv) to always return TRUE; default off, no save mutation."
-D226,OPEN,"QoL ask: player-adjustable HUD scale for the ammo counter, bottom-left pickup/item status text, and top-of-screen dialogue/subtitle text.","OPEN — root cause / call sites identified, not designed or implemented."
+D226,FIXED,"QoL ask: player-adjustable HUD scale for the ammo counter, bottom-left pickup/item status text, and top-of-screen dialogue/subtitle text.",FIXED (2026-09-24): Game.HudScale 75–200% via fast3d G_HUDSCALE_EXT rect scaling about per-element anchors; dialogue/bottom messages width-capped.
 D227,FIXED,Sky renders as two independently-moving halves —,"FIXED (M-100b, PR #43) —"
 D229,FIXED,"IsWater-level water renders green, pulses blue<->green (M-101; Frigate -level_26).","FIXED (port-layer) — ZLIB+CI8 water image now imports via the CI8 palette path (gfx_pc.cpp); Frigate verified live (""looks better""); sweep + Surface 2 by-eye still owed."
 D230,FIXED,In-level music quality:,"FIXED (M-121, v0.2.0) —"
