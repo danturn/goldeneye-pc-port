@@ -545,7 +545,10 @@ void bossMainloop(void)
                         s_firstLevel = g_StageNum;
                     else if (g_StageNum == LEVELID_TITLE && s_firstLevel >= 0 &&
                              g_d235ReloadStage < 0 && g_d235ReloadWait == 0) {
-                        g_d235ReloadStage = s_firstLevel;
+                        /* GE_D235_NEXT=<stage id>: load a DIFFERENT stage
+                         * instead (level A -> title -> level B leaks). */
+                        const char *nx = getenv("GE_D235_NEXT");
+                        g_d235ReloadStage = (nx && *nx) ? (s32)strtol(nx, NULL, 0) : s_firstLevel;
                         g_d235ReloadWait = s_reload + 1;
                     }
                 }
