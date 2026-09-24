@@ -68,7 +68,7 @@ enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSC
 
 static const char *const kOnOff[]     = { "OFF", "ON", NULL };
 static const char *const kTexFilter[] = { "NEAREST", "BILINEAR", "3-POINT", NULL };
-static const char *const kAimStyle[]  = { "N64", "PD DAMP", "CENTRED", NULL };   /* D333 */
+static const char *const kAimMode[]   = { "N64", "CENTRED (PC)", NULL };   /* D337 */
 static const int         kMsaaSeq[]   = { 1, 2, 4, 8 };
 /* D186: the sim's own tick pacemaker is hardcoded to the console's native VI
  * rate (60Hz NTSC / 50Hz PAL, port/src/libultra.c) -- Video.FpsCap can only
@@ -178,11 +178,11 @@ static struct Row rows[] = {
      * (0.01), instead of GEPD's overwrite with the weapon's ~0.8 -- which is
      * what made the reticule step. Changes aim feel, so opt-in. GE_PDMOUSEAIM=0/1
      * overrides it at launch for A/B runs. */
-    /* D333: one selector for what RMB aim does (#104 asked for centred,
-     * FPS-style aim on RMB): N64 = GEPD crosshair + edge scroll (default),
-     * PD DAMP = the PD model above, CENTRED = mouse turns the camera and the
-     * crosshair stays centred. Input.PdMouseAim=1 migrates to PD DAMP. */
-    { "Input.AimStyle",           "RMB aim style",    ROW_ENUM,   1,    kAimStyle,  0, 0, 0,   0,0,0,0,0 },
+    /* D337: N64 = the N64 aim model (crosshair travels, camera edge-scrolls)
+     * with the mouse fed through the game's integrator at PD's mouse damp --
+     * the default. CENTRED (PC) = opt-in FPS-style aim (#104), not N64. Applies
+     * to every aim input (RMB, Shift, Q/L, pad trigger, Toggle mode). */
+    { "Input.AimMode",            "Aim style",        ROW_ENUM,   1,    kAimMode,   0, 0, 0,   0,0,0,0,0 },
     { "__HdrPad",                "CONTROLLER",       ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.PadLookInvertY",     "Pad invert look Y",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Input.PadDeadzone",        "Stick deadzone",   ROW_SLIDER, 500,  NULL,       0, 0, 0,   0,0,0,0,0 },

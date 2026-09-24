@@ -358,38 +358,45 @@ static int mouseDirectLook  = 1;    /* WI-1 (GEPD-INPUT-PLAN.md #89): 1 = hipfir
  * opt-in. */
 static int pdMouseAim = 0;
 
-/* GE_PDMOUSEAIM, when set, overrides the ini for launch-time A/B runs without
- * editing ge007.ini. A process's environment is fixed once it starts, so the
- * lookup is cached (GE_ENVSTR): this runs every input poll and every aim tick
- * (D250/D302 hot-path class). The live, no-restart toggle is the ini key via
- * the F10 "PD mouse aim" row. */
-/* Input.AimStyle (D333, #104 + #96): what RMB aim does with the mouse.
- *   0 = N64/GEPD (default): crosshair moves across the screen, camera
- *       edge-scrolls (D194, GEPD mirror).
- *   1 = PD damp: same N64-style crosshair, driven through the game's own
- *       integrator with PD's mouse damp (D332, PR #96).
- *   2 = Centred: FPS-style -- the mouse turns the camera directly (the
- *       hipfire WI-1 path, FOV-scaled so zoom slows it) and the crosshair
- *       stays centred: with no stick input the game's aim integrator
- *       (pos = pos*damp + turn, gunfire.c) settles at 0. This is what
- *       holding the game's L button (Q) already did; #104 asked for it on RMB.
- * The legacy Input.PdMouseAim=1 (PR #96 builds) is migrated to style 1. */
-enum { AIMSTYLE_GEPD = 0, AIMSTYLE_PD = 1, AIMSTYLE_CENTRED = 2 };
-static int aimStyle = AIMSTYLE_GEPD;
+/* D337 -- aim mode, folded (user decision 2026-09-24):
+ *   Input.AimMode 0 = N64 (default): the N64 aim model -- crosshair travels,
+ *       camera edge-scrolls -- with the mouse fed through the game's own
+ *       crosshair integrator at PD's mouse damp (D332 / PR #96). Same range,
+ *       edge-scroll and bullet mapping as the old GEPD overwrite, without its
+ *       poll-vs-tick step jitter.
+ *   Input.AimMode 1 = Centred (PC, opt-in, #104): the mouse turns the camera
+ *       and the crosshair stays centred. Not an N64 behaviour; kept for players
+ *       who asked for FPS-style aiming.
+ * Input.AimLegacyGepd=1 (hidden, one release) restores the old GEPD overwrite
+ * for the N64 mode. GE_PDMOUSEAIM=0/1 still forces the integration at launch.
+ * Legacy keys: Input.AimStyle 2 (Centred) migrates to AimMode 1; AimStyle 0/1
+ * and Input.PdMouseAim map to the default N64 mode. */
+enum { AIMMODE_N64 = 0, AIMMODE_CENTRED = 1 };
+static int aimMode = AIMMODE_N64;
+static int aimLegacyGepd = 0;
+static int aimStyleLegacy = 0;   /* Input.AimStyle (D333, superseded) */
 
-static int aimStyleGet(void)
+static int aimModeGet(void)
 {
-    if (pdMouseAim && aimStyle == AIMSTYLE_GEPD) {   /* one-time migration */
-        aimStyle = AIMSTYLE_PD;
-        pdMouseAim = 0;
+    if (aimStyleLegacy == 2 && aimMode == AIMMODE_N64) {   /* one-time migration */
+        aimMode = AIMMODE_CENTRED;
     }
-    return aimStyle;
+    aimStyleLegacy = 0;
+    pdMouseAim = 0;
+    return aimMode;
 }
+
+/* D337: which device drove aim last. PD picks its crosshair damp per input
+ * device; the mouse integration must not swallow a gamepad's stick aim just
+ * because the mouse happens to be grabbed. Set by mouse motion, cleared by a
+ * deflected pad stick (inputComputePad). */
+static int s_aimDevMouse = 0;
 
 static int pdMouseAimEnabled(void)
 {
     const char *e = GE_ENVSTR("GE_PDMOUSEAIM");
-    return e ? (atoi(e) != 0) : (aimStyleGet() == AIMSTYLE_PD);
+    if (e) return atoi(e) != 0;
+    return aimModeGet() == AIMMODE_N64 && !aimLegacyGepd;
 }
 
 /* D194 GEPD-aim state. Touched ONLY in inputComputePad (game thread), the
@@ -521,7 +528,8 @@ static void inputOpenPads(void)
 #define INPUTSCRIPT_MAX     64
 #define INPUTSCRIPT_PULSE   6
 
-struct scriptEntry { long frame; unsigned mask; int sx, sy; int hasStick; };
+struct scriptEntry { long frame; unsigned mask; int sx, sy; int hasStick;
+                     int hasMouse, mdx, mdy; int hasHold, hold; };   /* D337 mouse/aim tokens */
 static struct scriptEntry scriptEntries[INPUTSCRIPT_MAX];
 static int  scriptCount   = -1;   /* -1 = not parsed yet, 0 = parsed empty */
 static long scriptFrame   = 0;
@@ -545,6 +553,19 @@ static void scriptApplyToken(struct scriptEntry *e, const char *s, int n)
             return;
         }
     }
+    /* D337: sustained scripted mouse (px per poll) and aim hold, for headless
+     * aim-model measurements: MDX<n> MDY<n> (latest entry wins, 0 stops),
+     * RHOLD / RREL (hold / release the game's R aim button). */
+    if (n > 3 && (SDL_strncasecmp("MDX", s, 3) == 0 || SDL_strncasecmp("MDY", s, 3) == 0)) {
+        char num[16]; int k = n - 3; if (k > 15) k = 15;
+        memcpy(num, s + 3, k); num[k] = 0;
+        e->hasMouse = 1;
+        if (s[2] == 'X' || s[2] == 'x') e->mdx = atoi(num); else e->mdy = atoi(num);
+        return;
+    }
+    if (n == 5 && SDL_strncasecmp("RHOLD", s, 5) == 0) { e->hasHold = 1; e->hold = 1; return; }
+    if (n == 5 && SDL_strncasecmp("LHOLD", s, 5) == 0) { e->hasHold = 1; e->hold = 2; return; }
+    if (n == 4 && SDL_strncasecmp("RREL", s, 4) == 0)  { e->hasHold = 1; e->hold = 0; return; }
     e->hasStick = 1;
     if (n == 3 && SDL_strncasecmp("SUP", s, 3) == 0)      { e->sy =  STICK_MAX; return; }
     if (n == 5 && SDL_strncasecmp("SDOWN", s, 5) == 0)    { e->sy = -STICK_MAX; return; }
@@ -576,6 +597,8 @@ static void scriptParse(void)
         e->mask = 0;
         e->sx = e->sy = 0;
         e->hasStick = 0;
+        e->hasMouse = e->mdx = e->mdy = 0;
+        e->hasHold = e->hold = 0;
         while (*p && *p != ';') {
             const char *tok = p;
             while (*p && *p != ',' && *p != ';') ++p;
@@ -602,6 +625,27 @@ static int scriptIsActive(void)
  * (a relative-mouse SDL window with no focus otherwise spews phantom deltas).
  * Returns the scripted button mask for the current frame; advances the frame
  * counter (call exactly once per controller-0 read). */
+/* D337: current sustained scripted mouse delta / aim hold (latest entry). */
+static int s_scriptMouseOn = 0, s_scriptMDX = 0, s_scriptMDY = 0, s_scriptHold = 0;
+static void scriptPreMouse(void)
+{
+    long bestM = -1, bestH = -1;
+    for (int i = 0; i < scriptCount; ++i) {
+        long d = scriptFrame - scriptEntries[i].frame;
+        if (d < 0) continue;
+        if (scriptEntries[i].hasMouse && scriptEntries[i].frame > bestM) {
+            bestM = scriptEntries[i].frame;
+            s_scriptMouseOn = 1;
+            s_scriptMDX = scriptEntries[i].mdx;
+            s_scriptMDY = scriptEntries[i].mdy;
+        }
+        if (scriptEntries[i].hasHold && scriptEntries[i].frame > bestH) {
+            bestH = scriptEntries[i].frame;
+            s_scriptHold = scriptEntries[i].hold;
+        }
+    }
+}
+
 static unsigned scriptApply(unsigned button)
 {
     if (!scriptIsActive()) {
@@ -621,6 +665,8 @@ static unsigned scriptApply(unsigned button)
             scriptCurSY = scriptEntries[i].sy;
         }
     }
+    if (s_scriptHold == 1) m |= GE_CONT_R;   /* D337 RHOLD */
+    if (s_scriptHold == 2) m |= GE_CONT_L;   /* D337 LHOLD (Q / "LeanLeft") */
     scriptFrame++;
     return m;
 }
@@ -848,6 +894,16 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
          * pre-D194. */
         s_absAimSuspend = 0;
         reconcileGrab(menuMode);
+        /* D337 harness: scripted sustained mouse replaces the real deltas and
+         * behaves as a grabbed mouse (headless windows are never focused). */
+        if (scriptIsActive()) {
+            scriptPreMouse();
+            if (s_scriptMouseOn) {
+                mouseDX = (double)s_scriptMDX;
+                mouseDY = (double)s_scriptMDY;
+                mouseGrabbed = 1;
+            }
+        }
         /* D196: the F10 options overlay forces the OS cursor visible via
          * inputSuspendForOverlay() but nothing re-hides it on close unless
          * reconcileGrab() happens to re-grab (only true if you had already
@@ -885,11 +941,22 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         if (actHeld(ks, IA_STRAFE_R)) button |= GE_CONT_F;   /* strafe right */
         if (actHeld(ks, IA_TURN_L))   sx = -STICK_MAX;       /* keyboard turn */
         if (actHeld(ks, IA_TURN_R))   sx =  STICK_MAX;
+        if (sx) s_aimDevMouse = 0;   /* D337: keyboard stick turn is the active aim device */
 
         if ((mb & SDL_BUTTON(SDL_BUTTON_LEFT)) || actHeld(ks, IA_FIRE))
             button |= GE_CONT_G;
-        int aimHeld = (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0 ||
-                      actHeld(ks, IA_AIM);
+        /* aimButton = the physical RMB / Aim bind (emits the game's R);
+         * aimHeld = "the game is in aim mode" for routing the mouse. D337: the
+         * game's aim buttons in 1.1/1.2 are L|R (bondview2.c aimButtons), so Q
+         * ("LeanLeft", sends L) is a second aim button -- it used to leave the
+         * mouse on the hipfire camera path, the accidental "centred aim" #104
+         * found. Routing also follows the game's own insightaimmode, which
+         * covers the Aim Control "Toggle" option and gamepad aim. The R emit
+         * stays tied to the physical button so Toggle still sees edges. */
+        int aimButton = (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0 ||
+                        actHeld(ks, IA_AIM);
+        int aimHeld = aimButton || actHeld(ks, IA_LEAN_L) ||
+                      (g_CurrentPlayer != NULL && g_CurrentPlayer->insightaimmode);
         int aimRisingEdgeAim = aimHeld && !s_aimHeldPrev;
         if (aimRisingEdgeAim && g_CurrentPlayer && g_CurrentPlayer->docentreupdown)
             s_centreClearTicks = 2;   /* see D194 centre-spring note above */
@@ -909,7 +976,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             sysLogPrintf(LOG_NOTE,
                 "GE_INPUTLOG absaim centre-spring armed at aim entry; nudging to clear");
         }
-        if (aimHeld)
+        if (aimButton)
             button |= GE_CONT_R;
         if (actHeld(ks, IA_ACTION))
             button |= GE_CONT_A;
@@ -967,6 +1034,8 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             edy *= mouseYScale / 100.0;
 
             double dyLook = edy * invert;   /* >0 => look down */
+            if (!menuMode && (fabs(edx) > 0.01 || fabs(dyLook) > 0.01))
+                s_aimDevMouse = 1;          /* D337: mouse is the active aim device */
 
             /* D194(b): gameplay-look-only dt normalization -- see the
              * MOUSE_DT_REF comment above. Computed unconditionally (so the
@@ -1102,7 +1171,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                  * look stick (see aimGepdCompute). Keyboard turn (sx/sy set
                  * above) still works. Otherwise fall through to the legacy
                  * velocity stick below. */
-                if (aimStyleGet() == AIMSTYLE_CENTRED) {
+                if (aimModeGet() == AIMMODE_CENTRED) {
                     /* D333: FPS-style centred aim -- the camera takes the
                      * mouse (same path as hipfire, which also declines on
                      * the watch/pause/cutscene gates) and no stick is
@@ -1245,6 +1314,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             if (lx >  RSTICK_THRESHOLD) button |= GE_CONT_F;   /* strafe right       */
 
             int rxs = scaleAxis(rx);
+            if (rxs || scaleAxis(ry)) s_aimDevMouse = 0;   /* D337: pad aim active */
             int rys = -scaleAxis(ry);   /* SDL up = negative -> N64 up = positive */
             if (padLookInvertY) rys = -rys;
             if (rxs) sx = rxs;
@@ -1254,6 +1324,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             int py = -scaleAxis(ly);       /* SDL up = negative -> N64 up = positive */
             if (px) sx = px;
             if (py) sy = py;
+            if (px || py) s_aimDevMouse = 0;   /* D337: pad aim active */
 
             if (padLookInvertY) ry = -ry;
             if (rx >  RSTICK_THRESHOLD) button |= GE_CONT_F;
@@ -1330,6 +1401,16 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
     if (stick_x) *stick_x = (signed char)sx;
     if (stick_y) *stick_y = (signed char)sy;
 
+    /* D337: GE_AIMLOG=1 -- per-poll aim-model trace (the game's own crosshair
+     * state), for measuring jitter / range / edge-scroll headlessly. */
+    if (idx == 0 && g_CurrentPlayer != NULL && GE_ENVFLAG("GE_AIMLOG") &&
+        (current_menu == GE_MENU_RUN_STAGE || current_menu == GE_MENU_INVALID)) {
+        sysLogPrintf(LOG_NOTE, "AIMLOG f=%ld aim=%d dev=%d drawx=%.3f cx=%.5f cy=%.5f theta=%.4f verta=%.4f acc=%.4f",
+                     scriptFrame, (int)g_CurrentPlayer->insightaimmode, s_aimDevMouse,
+                     (double)g_CurrentPlayer->crosshair_angle.f[0],
+                     (double)g_CurrentPlayer->crosshair_x_pos, (double)g_CurrentPlayer->crosshair_y_pos,
+                     (double)g_CurrentPlayer->vv_theta, (double)g_CurrentPlayer->vv_verta, s_gepdCrossX);
+    }
     if (configGetInputLog() && (button || sx || sy)) {
         sysLogPrintf(LOG_NOTE, "GE_INPUTLOG cont%d: btn=%04x stick=(%d,%d)",
                      idx, button, sx, sy);
@@ -1714,7 +1795,9 @@ static int hipDirectCompute(double dxPx, double dyLook)
  * edge in its own units, so dividing by it gives PD's units. */
 int portMouseAimPdActive(void)
 {
-    return pdMouseAimEnabled() && mouseGrabbed;
+    /* D337: only while the mouse is the device driving aim -- otherwise the
+     * pad's stick turn (the N64 path, weapon damp) must reach the game. */
+    return pdMouseAimEnabled() && mouseGrabbed && s_aimDevMouse;
 }
 
 int portMouseAimPdGetTurn(f32 *tx, f32 *ty)
@@ -1731,7 +1814,9 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.MouseEnabled", &mouseEnabled, 0, 1);
     configRegisterInt("Input.MouseAimSpeed", &mouseAimSpeed, 1, 500);
     configRegisterInt("Input.PdMouseAim",     &pdMouseAim,     0, 1);   /* legacy -> AimStyle 1 */
-    configRegisterInt("Input.AimStyle",       &aimStyle,       0, 2);   /* D333 */
+    configRegisterInt("Input.AimStyle",       &aimStyleLegacy, 0, 2);   /* D333 legacy -> AimMode */
+    configRegisterInt("Input.AimMode",        &aimMode,        0, 1);   /* D337 */
+    configRegisterInt("Input.AimLegacyGepd",  &aimLegacyGepd,  0, 1);   /* D337 hidden fallback */
     configRegisterInt("Input.AimAbsolute", &aimAbsolute, 0, 1);  /* D194 */
     configRegisterInt("Input.MouseDirectLook", &mouseDirectLook, 0, 1);  /* WI-1 */
     /* D194: renamed Input.GepdSens -> Input.AimModeSens (community name for
