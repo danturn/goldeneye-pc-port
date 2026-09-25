@@ -1244,6 +1244,13 @@ GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphfram
 
 ## E. Process / method notes
 
+- **Periodic audio glitches: measure the host audio device before touching
+  the pipeline (D322).** A clock-regular overflow/garble pattern (~5 min period,
+  ~45 s bursts, independent of level and load) looked like a port timing beat
+  and cost several game runs to chase. `tools_pc/sdl_drain_monitor.c` opens SDL
+  exactly like `port/src/audio.c` with no game and no window; on the
+  maintainer's Focusrite USB interface it showed the same ~312 s drain dips
+  (to 88 %) outright. Run it first on any "audio gets garbled" report.
 - Investigation loop is: reproduce → env-gated capped probe → root-cause
   → narrow `#ifdef PORT` fix → visual verify (`GE_PCDUMP` +
   `tools_pc/pixcount.py` vs `docs/reference/n64-footage-*`).

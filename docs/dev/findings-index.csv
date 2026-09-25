@@ -200,7 +200,7 @@ D318,OPEN,Facility (regular play path):,"OPEN — re-classified 2026-09-23 by D3
 D319,FIXED,"Frame cap slider was mostly a dead zone; replaced with a plain 30/60 toggle (user ask, 2026-09-18).",FIXED — new ROW_FPSCAP cycle (30/60 only) in port/src/optionsoverlay.c; default changed to 60 in port/src/video.c.
 D320,OPEN,"D318-class sweep: aim-hold → _update AI lists in 8 levels carry the same as-authored softlock race (static analysis, 2026-09-20).","OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
 D321,OPEN,D318 trigger chain fully mapped:,"OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
-D322,OPEN,Long-session audio degradation:,OPEN — 2026-09-25 capture:
+D322,OPEN,Long-session audio degradation:,OPEN — 2026-09-25: pools healthy (voice-leak hypothesis REFUTED).
 D323,OPEN,G_TL_LOD bindings of explicit-LOD textures:,"OPEN / parked — mechanism confirmed in code; census (tools_pc/bg_lod_audit.py) shows 15 levels with explicit-LOD textures bound under TEXTLOD-on classes (stat 378, azt 806 binds heaviest); overwhelmi…"
 D324,FIXED,"GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes —",FIXED (2026-09-22) — proven impact:
 D325,CLOSED,ROM-mod (xdelta) compatibility:,CLOSED as a question —
