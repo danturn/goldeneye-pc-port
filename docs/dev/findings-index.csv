@@ -132,7 +132,7 @@ D130,RESOLVED,"crash class C2 (Facility -level_34, Runway -level_35):",resolved 
 D164,FIXED,"Disclaimer / legal screen only draws the first line (D76 root cause, M-31).",FIXED — corrected 2026-09-18:
 D165,FIXED,"Front-end menu cursor doesn't feel like a mouse pointer (M-31, user bug B5 follow-up).","FIXED (port/src/input.c; Input.MenuPointerMode, Input.HipfirePitchSpeed added)."
 D166,FIXED,Hipfire mouse pitch is digital while yaw is analog —,FIXED (port/src/input.c).…
-D235,OPEN,Wrong textures load after dying/restarting a level —,"OPEN — fix wired, headless reload clean (2026-09-23); bug NOT reproduced even with the fix off (GE_D235_OFF)."
+D235,OPEN,Wrong textures load after dying/restarting a level —,"OPEN — fix wired, headless reload clean (2026-09-23); NOT reproduced with the fix off (headless) nor in the 2026-09-25 user playtest (die → mission select → restart)."
 D236,CLOSED,"Surface 1: 2D billboard trees render as a wall/sheet of tree texture instead of discrete camera-facing tree sprites (M-106, user QA report).","CLOSED (M-198, pass 26, 425237f9; probes stripped 0503d335):"
 D237,FIXED,"QoL ask (M-106, user QA):","FIXED (2026-09-23): category headers + 5 more settings (SkipIntro, Show FPS, pad invert/deadzone/trigger); wheel scroll already existed."
 D238,OPEN,"QoL ask (M-106, user QA):",OPEN — not designed; port-only (port/src/input.c + config.c)
@@ -166,13 +166,13 @@ D284,FIXED,port/src/random.c's MIPS64 dsll32/dsrl32 shift helpers were backwards
 D285,PARTIAL,Steam Deck SIGSEGV during D255 live-testing = SEPARATE bug:,"PARTIALLY FIXED, RECURRED PAST THE FIX (see D305, 2026-09-18)."
 D286,OPEN,"User-confirmed real ~8s frame freeze on Caverns, Steam Deck —","OPEN — one confirmed occurrence, no repro trigger identified, not root-caused; distinct from D255/D285."
 D287,OPEN,"User-confirmed real, non-self-recovering freeze on Windows (M-141, 2026-09-15/16) after ~15-20 minutes with no input, triggered by clicking back into the… —","OPEN — one confirmed occurrence, real (not self-recovering), not root-caused; gfxFrameMsgQ full is a lead, not a confirmed cause."
-D288,OPEN,"Silo intro: a huge, flat-shaded, untextured brown/tan triangle sweeps across the frame during the camera pan down the missile shaft (M-141, user report —… —",OPEN — does NOT reproduce on the current build (2026-09-23:
+D288,CLOSED,"Silo intro: a huge, flat-shaded, untextured brown/tan triangle sweeps across the frame during the camera pan down the missile shaft (M-141, user report —… —","CLOSED — not reproduced on the current build (2026-09-23 capture) and the 2026-09-25 user Silo playtest confirms it gone (""silo fixed"")."
 D289,OPEN,"Dam: a crash in the computer room, not reproducible on a second attempt (M-141, Steam Deck user playtest).","OPEN — needs a human re-test specifically on a build with the D255 fix (this session's release/v0.3.0, not any earlier build) to see if it still happens.…"
 D290,FIXED,"Watch's in-game ""controller"" section shows no control-pad graphic (M-141, Steam Deck user playtest).","FIXED (2026-09-23): D264-pattern template read in watchRenderController (flags read 0), plus 3 pointer-width/raw-Gfx sites on the same path; controller model verified rendering on Windows."
 D291,OPEN,"Dam: texture glitches when the truck drives past (M-141, Steam Deck user playtest).","OPEN — observed, not investigated."
 D292,FIXED,Death animations are glitched —,"MOSTLY FIXED as a side effect of D243 (2026-09-18, user-confirmed alongside D173) —"
 D293,FIXED,"QoL ask: no discoverable way to quit the game from the UI (M-141, Steam Deck user playtest —","FIXED (M-141) — ""Quit to desktop"" row added to the F10 overlay; build-verified Win+Linux, not yet live-confirmed.…"
-D294,FIXED,"Statue: ground geometry near the large CCCP/hammer-and-sickle monument briefly renders solid black over a wide area, then self-recovers 10-30 seconds later… —",FIXED pending user playtest (2026-09-22) —
+D294,FIXED,"Statue: ground geometry near the large CCCP/hammer-and-sickle monument briefly renders solid black over a wide area, then self-recovers 10-30 seconds later… —","FIXED, user playtest confirmed (2026-09-25:"
 D295,FIXED,"Campaign-halting crash at the end of Control Center on 00 Agent difficulty, then a crash on every subsequent relaunch/resume (GitHub #87, user campaign playtes…",FIXED (M-149) — M-148 root-caused + reproduced on HEAD; fix landed:
 D296,OPEN,"Control Center, 00 Agent:","OPEN — single live report, un-triaged; observed only under a gdb-attached debug-harness launch (tools_pc/debug.ps1), not the packaged release artifact —"
 D297,FIXED,v0.3.0 silently wipes ALL pre-fix player saves on first launch (D284 side effect; found during D295/M-148).,FIXED (M-150) — migration shim landed:
@@ -189,7 +189,7 @@ D307,OPEN,"In-level security camera entities can be flipped facing the wrong dir
 D308,OPEN,"Occasional z-fighting confirmed on some levels' geometry, general/broader than the D306 truck-wheel instance (user QA, 2026-09-18).","OPEN — investigated: PC depth precision == N64 (24-bit both sides; RSP writes full 16.16), so level-authored coincident geometry is the prime suspect; GE_ZF flicker probe in-tree."
 D309,FIXED,Complete non-self-recovering freeze (Windows) returning from Caverns to the intro screen —,FIXED via D310 — user-playtest-confirmed 2026-09-18 (Caverns→intro clean; the spin record itself observed resuming correctly in the post-fix probe log).
 D310,FIXED,"RULE-2-SIGNOFF: chraiitemsize() mis-sizes 1-byte AI_PRINT records (NUL-scans forward), corrupting AI execution for any list containing an active PRINT —",FIXED — user-playtest-confirmed 2026-09-18 (v2:
-D311,PARTIAL,Complete freeze in modelSetAnimFrame2WithChrStuff root-motion loop —,"GUARDED (#ifdef PORT, D156-guard extension in the same file) —"
+D311,FIXED,Complete freeze in modelSetAnimFrame2WithChrStuff root-motion loop —,FIXED — root cause D336 (bheadAdjustAnimation read never-written placeholder fields); the #ifdef PORT guard is retained as a safety net.
 D312,FIXED,"Throwable items (mines, grenades, etc.) can clip through walls in certain spots (user report, v0.3.0 pre-release playtest, 2026-09-18).",FIXED — bgBuildRoomVtxBounds mis-reads the G_VTX vertex count on PC (Gfx_le.dma.par bit-layout shift):
 D313,FIXED,Bullet impacts do not appear on some walls/surfaces —,"FIXED — same root cause as D312, merged diagnosis; same one-line fix."
 D314,OPEN,"F10 menu items flicker randomly/intermittently (reported on the main-menu context, user report, v0.3.0 playtest build, 2026-09-18).",OPEN — confirmed still present post-D316 fix (2026-09-18); user deprioritized chasing it further for now.
@@ -200,7 +200,7 @@ D318,OPEN,Facility (regular play path):,"OPEN — re-classified 2026-09-23 by D3
 D319,FIXED,"Frame cap slider was mostly a dead zone; replaced with a plain 30/60 toggle (user ask, 2026-09-18).",FIXED — new ROW_FPSCAP cycle (30/60 only) in port/src/optionsoverlay.c; default changed to 60 in port/src/video.c.
 D320,OPEN,"D318-class sweep: aim-hold → _update AI lists in 8 levels carry the same as-authored softlock race (static analysis, 2026-09-20).","OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
 D321,OPEN,D318 trigger chain fully mapped:,"OPEN — re-classified 2026-09-23 by D329 (tick-granularity divergence at 1 tick/frame, not a platform-invariant lock); fix decision pending, watchdog stays shipped."
-D322,OPEN,Long-session audio degradation:,"OPEN — static triage done (teardown audit, mixer statelessness, D202-coverage check); ranked hypotheses:"
+D322,OPEN,Long-session audio degradation:,OPEN — 2026-09-25 capture:
 D323,OPEN,G_TL_LOD bindings of explicit-LOD textures:,"OPEN / parked — mechanism confirmed in code; census (tools_pc/bg_lod_audit.py) shows 15 levels with explicit-LOD textures bound under TEXTLOD-on classes (stat 378, azt 806 binds heaviest); overwhelmi…"
 D324,FIXED,"GE's <stdlib.h> stub declares nothing, so TUs that include it get NO CRT prototypes —",FIXED (2026-09-22) — proven impact:
 D325,CLOSED,ROM-mod (xdelta) compatibility:,CLOSED as a question —
@@ -208,7 +208,7 @@ D326,CLOSED,Random Eye randomizer repacks the ROM too —,CLOSED as a question �
 D327,RESOLVED,"Mod support, resolved plan:",RESOLVED — superseded by D328; approach (a) is NOT ruled out (these scans missed the 1172-compressed data segment).
 D328,CLOSED,"Mod support is viable and D327's ""ruled out"" was wrong:",CLOSED as a question —
 D329,FIXED,The D318/D320 guard anim pin is a tick-granularity divergence:,"FIXED — Rule-2 high-FPS fix in model.c; clk=1 no longer pins (WSL + native Windows), 0 triggers at clk=2; bunker1 golden failure predates it (on/off A/B); user playtest confirms N64-matching Ourumov…"
-D330,FIXED,"#103 (v0.3.0, Win 11):","FIXED (port/src/input.c), build clean, bunker1 golden 3/3; mouse feel-check owed (a human must run it:"
+D330,FIXED,"#103 (v0.3.0, Win 11):",FIXED (port/src/input.c) —
 D331,FIXED,Ejected shell casings never rendered on PC:,"FIXED (gunfire.c #ifdef PORT, explicit template); PP7 casing verified on native Windows (before:"
 D332,FIXED,Reticule jitter in aim mode (RMB) —,FIXED (fix/mouse-pd-model) —
 D333,OPEN,"#104 (v0.3.0, Linux):","IMPLEMENTED (port/src/input.c + optionsoverlay.c, port-only); default N64 = unchanged; build + golden clean; feel check owed."
