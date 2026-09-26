@@ -60,7 +60,7 @@ D175,OPEN,In-game stutter / brief hang during normal play —,"OPEN (user, 2026-
 D176,FIXED,"Surface exterior renders wrong (-level_36), two independent defects.","(a) scroll-speed FIXED (fidelity pass; HIGH confidence on root cause, MODERATE on N64 parity); M-93 playtest + M-98 Defect-2 starburst screenshot in the sections."
 D177,FIXED,Ladders non-functional —,FIXED (M-36) — high confidence; interactive climb test owed
 D172,FIXED,"Bullet-impact / blood / spark particles render magenta or cyan instead of dark red (M-82, ROOT CAUSE FOUND + FIXED).",FIXED (port/fast3d/gfx_pc.cpp gfx_lod_tile_offset)…
-D174,OPEN,"""No blood effect"" (user QA report).","Blood renders (user, 2026-09-26); OPEN only for an N64-accuracy comparison on 1964."
+D174,CLOSED,"""No blood effect"" (user QA report).","CLOSED — faithful (2026-09-26, user side-by-side on 1964:"
 D183,CLOSED,"M-36 Family A (""texture line/pitch shear"") is DISPROVEN for the Surface repro (-level_36).","CLOSED (2026-09-26, user-approved:"
 D173,FIXED,Third-person Bond model spawns too high —,"MOSTLY FIXED as a side effect of D243 (2026-09-18, user-confirmed)."
 D179,FIXED,Packaged build crashes after the logos —,"Diagnosed, not fixed —"
@@ -139,9 +139,9 @@ D238,FIXED,"QoL ask (M-106, user QA):",FIXED (2026-09-26: covered by D337/D338 a
 D239,CLOSED,"QoL ask (M-106, user QA):",CLOSED — executed in the v0.2.0 prep pass (port-only)…
 D240,OPEN,"Player gunshot SFX timing/cadence reportedly does not match the N64 original's rate (M-106, user QA report).","OPEN — not root-caused; static call-site tracing only, no runtime verification possible in this environment."
 D241,OPEN,Player gunshot SFX goes silent under some conditions —,"OPEN — not newly root-caused; high confidence this is D207 reproduced, not an independent bug."
-D242,OPEN,Player-death sequence UX regression vs N64 original:,"OPEN — 1964 comparison owed (2026-09-26, user)."
+D242,OPEN,Player-death sequence UX regression vs N64 original:,"OPEN — N64 reference obtained (2026-09-26, user on 1964:"
 D243,FIXED,"Dam end-of-level cutscene (the abseil/bungee sequence, D148/D160's subject):","FIXED, live-confirmed by the user (M-189/M-190, 2026-09-18)."
-D245,OPEN,IsWater water: two competing patterns with a visible seam that moves as the player looks around (mouse/aim) —,"OPEN — REOPENED, M-142 headless probe found the tc-shift k measurably flips during ordinary view rotation (new root-cause evidence); an opt-in GE_D245_FIXEDSHIFT candidate is build-verified but needs…"
+D245,OPEN,IsWater water: two competing patterns with a visible seam that moves as the player looks around (mouse/aim) —,"OPEN — CONFIRMED PORT BUG (2026-09-26, user vs 1964:"
 D246,FIXED,"Tiny pixel strips at the left and right edges of the screen, ""like overscan"" —","FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
 D247,FIXED,Black bars top and bottom of screen —,"FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
 D248,FIXED,"Port runs a stable 30 FPS instead of 60 FPS game-wide (M-117, user asked to verify FPS after the D209 timing-keystone fixes).","FIXED, root-caused to a genuine pointer-width ABI bug in src/sched.c (compiled for the PC build, not excluded)."
@@ -181,12 +181,12 @@ D299,FIXED,Game.SkipIntro crashed selecting any save slot except one —,"FIXED 
 D300,FIXED,Hipfire look feels non-uniform (issue #89):,"FIXED, user-confirmed live —"
 D301,FIXED,"fileGetIsCheatUnlocked() NULL-deref, unguarded on every call site, not just the D299/SkipIntro one (GitHub #87, two reports with an identical crash PC/fault ad…",FIXED locally on release/v0.3.0 (not pushed) —
 D302,FIXED,"Render FPS regression to ~40-45fps on release/v0.3.0 (user QA on the local v0.3.0 pre-release build, 2026-09-18) —","FIXED — 4 uncached getenv() calls added by D236 passes 10/12/14/16 directly inside gfx_sp_tri1 (port/fast3d/gfx_pc.cpp, per-triangle) cached with the same static int x = -1 pattern D250 established e…"
-D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") draw wrong —",OPEN — 1964 comparison owed; absorbs D220 (user 2026-09-26:
+D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") draw wrong —","OPEN — CONFIRMED PORT BUG (2026-09-26, user vs 1964:"
 D304,FIXED,"Mouse sensitivity menu overhaul (user request, 2026-09-18):","FIXED — see full entry for both the range/parity pass and the same-day follow-up (collapsed to a single Input.MouseSensitivity menu row + fixed overlayUpdateScroll()'s unconditional bottom-anchor, th…"
 D305,FIXED,"Steam Deck SIGSEGV on the v0.3.0 pre-release build (Cavern, early in the level, Game.AllUnlocked previously enabled on the session/save) —",FIXED (defensive guard) —
 D306,CLOSED,"Dam intro/truck wheels render with odd transparent-looking areas, possibly z-fighting (user QA, 2026-09-18).","CLOSED — faithful, confirmed on 1964 (M-201):"
-D307,OPEN,"In-level security camera entities can be flipped facing the wrong direction (backwards) on some levels, e.g.",OPEN (investigated 2026-09-21) —
-D308,OPEN,"Occasional z-fighting confirmed on some levels' geometry, general/broader than the D306 truck-wheel instance (user QA, 2026-09-18).","OPEN (user, 2026-09-26:"
+D307,OPEN,"In-level security camera entities can be flipped facing the wrong direction (backwards) on some levels, e.g.","OPEN — CONFIRMED PORT BUG (2026-09-26, user vs 1964:"
+D308,CLOSED,"Occasional z-fighting confirmed on some levels' geometry, general/broader than the D306 truck-wheel instance (user QA, 2026-09-18).","CLOSED — faithful (2026-09-26, user:"
 D309,FIXED,Complete non-self-recovering freeze (Windows) returning from Caverns to the intro screen —,FIXED via D310 — user-playtest-confirmed 2026-09-18 (Caverns→intro clean; the spin record itself observed resuming correctly in the post-fix probe log).
 D310,FIXED,"RULE-2-SIGNOFF: chraiitemsize() mis-sizes 1-byte AI_PRINT records (NUL-scans forward), corrupting AI execution for any list containing an active PRINT —",FIXED — user-playtest-confirmed 2026-09-18 (v2:
 D311,FIXED,Complete freeze in modelSetAnimFrame2WithChrStuff root-motion loop —,FIXED — root cause D336 (bheadAdjustAnimation read never-written placeholder fields); the #ifdef PORT guard is retained as a safety net.
