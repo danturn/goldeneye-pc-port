@@ -610,6 +610,9 @@ through a converter or a runtime bswap fixup reads scrambled.
   Headless `-level_XX` boots hide this class (the first stage is the level
   itself): repro through a real boot → title → level sequence.
 
+- **A texture re-declared in another format must be normalised with the geometry it was IMPORTED with (D245).** GE's sky water loads a CI8 image and draws it through an RGBA16 tile; fast3d imports it as CI8 (D229) but its triangle path computed the UV divisor from the RGBA16 tile (half the width) and the whole mip-chain height (43 rows, not the 32-row mask period). Anything that changes the importer's format/extent must change the tri-path `tex_width/tex_height` with it, and wrap must equal the N64 mask period.
+- **CPU-built RDP triangles need float vertices, not `Vtx` (D245).** Where GE builds RDP edge/texture coefficients on the CPU (sky/water), 32-bit S/T and positions are normal; squeezing them through s16 `tc`/`ob` costs visible precision on horizon-scale geometry. Use `G_FLOATVTX_EXT` (`port/include/floatvtx.h`).
+
 ## D. N64 hardware idioms fast3d does not emulate
 
 - **Appending a port-owned 2D overlay to the game frame: hook inside

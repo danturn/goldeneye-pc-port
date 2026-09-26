@@ -1,5 +1,6 @@
 #define NOMINMAX
 
+#include "floatvtx.h" /* D245 */
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -1336,7 +1337,23 @@ static void import_texture(int i, int tile, bool importReplacement) {
         if (siz_eff == G_IM_SIZ_4b) {
             import_texture_ci4(tile, loaded_texture, rdp.tex_lod);
         } else if (siz_eff == G_IM_SIZ_8b) {
-            import_texture_ci8(tile, loaded_texture, rdp.tex_lod);
+            /* D245 (M-201): for the D229 case (RGBA16 tile over a CI8 load --
+             * the IsWater sky water), upload only the base level: the load
+             * carries the whole mip chain (32x32 base + mips = 1400 B), which
+             * made a 32x43 image whose GL REPEAT period (43 rows) differs from
+             * the N64's mask period (32). See the tri-path counterpart. */
+            static int d245_oldtex = -1;
+            if (d245_oldtex < 0) d245_oldtex = getenv("GE_D245_OLDTEX") != NULL;
+            const uint8_t maskt = rdp.texture_tile[tile].maskt;
+            if (!d245_oldtex && fmt == G_IM_FMT_RGBA && siz == G_IM_SIZ_16b && maskt > 0 && maskt < 12 &&
+                loaded_texture.line_size_bytes > 0 &&
+                loaded_texture.size_bytes > loaded_texture.line_size_bytes * (1u << maskt)) {
+                LoadedTexture lt = loaded_texture;
+                lt.size_bytes = loaded_texture.line_size_bytes * (1u << maskt);
+                import_texture_ci8(tile, lt, rdp.tex_lod);
+            } else {
+                import_texture_ci8(tile, loaded_texture, rdp.tex_lod);
+            }
         } else {
             sysFatalError("Bad size for CI texture in tile %d: %02x", tile, siz);
         }
@@ -2415,6 +2432,22 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
                     break;
             }
             tex_width[i] = line_size;
+            /* D245 (M-201): D229 water (RGBA16 tile over a CI8 load) is
+             * imported as CI8 -- one byte per texel, base level only -- so the
+             * UV normalisation must use that geometry: width = line bytes
+             * (32, not 32/2 = 16, which doubled the S frequency) and height =
+             * the mask period (32, not 1400/32 = 43 rows of mip chain). */
+            {
+                static int d245_oldtex2 = -1;
+                if (d245_oldtex2 < 0) d245_oldtex2 = getenv("GE_D245_OLDTEX") != NULL;
+                const auto& ltx = rdp.loaded_texture[rdp.texture_tile[tile].tmem];
+                if (!d245_oldtex2 && rdp.texture_tile[tile].fmt == G_IM_FMT_RGBA &&
+                    rdp.texture_tile[tile].siz == G_IM_SIZ_16b && ltx.src_fmt == G_IM_FMT_CI) {
+                    const uint8_t mkt = rdp.texture_tile[tile].maskt;
+                    tex_width[i] = rdp.texture_tile[tile].line_size_bytes;
+                    if (mkt > 0 && mkt < 12 && tex_height[i] > (1u << mkt)) tex_height[i] = 1u << mkt;
+                }
+            }
 
             tex_width2[i] = (rdp.texture_tile[tile].lrs - rdp.texture_tile[tile].uls + 4) / 4;
             tex_height2[i] = (rdp.texture_tile[tile].lrt - rdp.texture_tile[tile].ult + 4) / 4;
@@ -3662,6 +3695,38 @@ static void gfx_dp_set_other_mode(uint32_t h, uint32_t l) {
     rdp.other_mode_l = l;
 }
 
+/* D245 (M-201): G_FLOATVTX_EXT loader -- gfx_sp_vertex for pre-transformed
+ * clip-space float vertices with float S/T (see port/include/floatvtx.h).
+ * Only the unlit, unfogged path the sky/water fans use is supported. */
+static void gfx_sp_vertex_float(size_t n_vertices, size_t dest_index, const PortFloatVtx* vertices) {
+    if (!fast3d_ptr_ok(vertices) || dest_index + n_vertices > MAX_VERTICES) {
+        return;
+    }
+    for (size_t i = 0; i < n_vertices; i++, dest_index++) {
+        const PortFloatVtx* v = &vertices[i];
+        struct LoadedVertex* d = &rsp.loaded_vertices[dest_index];
+        float x = gfx_adjust_x_for_aspect_ratio(v->x, v->w);
+        float y = v->y, z = v->z, w = v->w;
+        d->u = v->s * (float)rsp.texture_scaling_factor.s / 65536.0f;
+        d->v = v->t * (float)rsp.texture_scaling_factor.t / 65536.0f;
+        d->color.r = v->r;
+        d->color.g = v->g;
+        d->color.b = v->b;
+        d->color.a = v->a;
+        d->clip_rej = 0;
+        if (x < -w) d->clip_rej |= 1;
+        if (x > w) d->clip_rej |= 2;
+        if (y < -w) d->clip_rej |= 4;
+        if (y > w) d->clip_rej |= 8;
+        if (z > w) d->clip_rej |= 32;
+        d->x = x;
+        d->y = y;
+        d->z = z;
+        d->w = w;
+        d->fog = rdp.fog_color.a;
+    }
+}
+
 static inline void *seg_addr(uintptr_t w1) {
     // GE model files reference GDLs (gSPDisplayList) and vertex arrays by raw
     // VMA 0x05xxxxxx WITHOUT the LSB set; segment 5 is set per-render to the
@@ -3779,6 +3844,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 break;
             case (uint8_t)G_CLEARGEOMETRYMODE:
                 gfx_sp_geometry_mode(cmd->words.w1, 0);
+                break;
+            case G_FLOATVTX_EXT: /* D245 */
+                gfx_sp_vertex_float(C0(0, 16), C0(16, 8), (const PortFloatVtx*)seg_addr(cmd->words.w1));
                 break;
             case 0x46: /* G_HUDSCALE_EXT (D226): w0 low16 = scale*256 (0/256 = off), w1 = ax4<<16 | ay4 */
             {

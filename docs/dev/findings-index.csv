@@ -139,9 +139,9 @@ D238,FIXED,"QoL ask (M-106, user QA):",FIXED (2026-09-26: covered by D337/D338 a
 D239,CLOSED,"QoL ask (M-106, user QA):",CLOSED — executed in the v0.2.0 prep pass (port-only)…
 D240,OPEN,"Player gunshot SFX timing/cadence reportedly does not match the N64 original's rate (M-106, user QA report).","OPEN — not root-caused; static call-site tracing only, no runtime verification possible in this environment."
 D241,OPEN,Player gunshot SFX goes silent under some conditions —,"OPEN — not newly root-caused; high confidence this is D207 reproduced, not an independent bug."
-D242,OPEN,Player-death sequence UX regression vs N64 original:,"OPEN — N64 reference obtained (2026-09-26, user on 1964:"
+D242,FIXED,Player-death sequence UX regression vs N64 original:,"FIXED/CLOSED (2026-09-26, user:"
 D243,FIXED,"Dam end-of-level cutscene (the abseil/bungee sequence, D148/D160's subject):","FIXED, live-confirmed by the user (M-189/M-190, 2026-09-18)."
-D245,OPEN,IsWater water: two competing patterns with a visible seam that moves as the player looks around (mouse/aim) —,"OPEN — CONFIRMED PORT BUG (2026-09-26, user vs 1964:"
+D245,FIXED,IsWater water: two competing patterns with a visible seam that moves as the player looks around (mouse/aim) —,"FIXED (M-201, 2026-09-26, user-verified vs 1964):"
 D246,FIXED,"Tiny pixel strips at the left and right edges of the screen, ""like overscan"" —","FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
 D247,FIXED,Black bars top and bottom of screen —,"FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
 D248,FIXED,"Port runs a stable 30 FPS instead of 60 FPS game-wide (M-117, user asked to verify FPS after the D209 timing-keystone fixes).","FIXED, root-caused to a genuine pointer-width ABI bug in src/sched.c (compiled for the PC build, not excluded)."

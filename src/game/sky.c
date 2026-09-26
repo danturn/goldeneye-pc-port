@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #endif
 #include "sky.h"
+#ifdef PORT
+#include "floatvtx.h" /* D245: G_FLOATVTX_EXT */
+#include "envflag.h"
+#endif
 #include "player.h"
 #include "unk_092E50.h"
 #include "bondview.h"
@@ -1994,6 +1998,53 @@ static Gfx *skyPortRenderPoly(Gfx *gdl, SkyRelated38 **v, s32 nverts)
             if (aw > maxAbsW) maxAbsW = aw;
         }
         wScale = (maxAbsW > 30000.0f) ? (maxAbsW / 30000.0f) : 1.0f;
+    }
+
+    /* D245 (M-201): full-precision path. Hand fast3d the clip-space position
+     * (ndcX*w, ndcY*w, 0, w) and the folded S/T as floats (G_FLOATVTX_EXT,
+     * port/include/floatvtx.h) instead of squeezing them through s16 Vtx
+     * ob/tc: no wScale position quantisation, no 2^k tc shift. The fold is
+     * still applied (a multiple of the repeat period, exact under wrapping)
+     * to keep the float magnitudes small. GE_D245_OLDVTX=1 restores the old
+     * s16 route for A/B. */
+    if (!GE_ENVFLAG("GE_D245_OLDVTX"))
+    {
+        PortFloatVtx *fv = (PortFloatVtx *) dynAllocateVertices(2 * (nverts < 3 ? 3 : nverts));
+
+        for (i = 0; i < nverts; i++)
+        {
+            f32 screenX = v[i]->unk28 * 0.25f;
+            f32 screenY = v[i]->unk2c * 0.25f;
+            f32 ndcX = 2.0f * ((screenX - l) / (r - l)) - 1.0f;
+            f32 ndcY = 1.0f - 2.0f * ((screenY - t) / (b - t));
+            f32 w = v[i]->unk0c;
+
+            fv[i].x = ndcX * w;
+            fv[i].y = ndcY * w;
+            fv[i].z = 0.0f;
+            fv[i].w = w;
+            fv[i].s = v[i]->unk20 - foldS;
+            fv[i].t = v[i]->unk24 - foldT;
+            fv[i].r = (u8) v[i]->r;
+            fv[i].g = (u8) v[i]->g;
+            fv[i].b = (u8) v[i]->b;
+            fv[i].a = (u8) v[i]->a;
+        }
+
+        gSPClearGeometryMode(gdl++, G_LIGHTING | G_CULL_BOTH | G_FOG);
+        gSPSetGeometryMode(gdl++, G_SHADE | G_SHADING_SMOOTH);
+        gSPFloatVertexExt(gdl++, fv, nverts, 0);
+
+        if (nverts >= 4)
+        {
+            gSP2Triangles(gdl++, 0, 1, 3, 0, 3, 2, 0, 0);
+        }
+        else
+        {
+            gSP1Triangle(gdl++, 0, 1, 2, 0);
+        }
+
+        return gdl;
     }
 
     guMtxIdentF(projf.m);
