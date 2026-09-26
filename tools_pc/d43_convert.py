@@ -154,9 +154,10 @@ for r in rows:
             if nv and puo:
                 dstpos = add_region(puo, 2*nv, dstpos)   # PointUsage s16 x numVertices
         elif op == 22:
+            # D303: op-22 count = star-flash arms; 4 vertices each (see d43_emit).
             nv = struct.unpack_from(">i", src, data)[0]; vo = be32o(src, data+4)
             if nv and vo:
-                vtx_regions.append((vo, nv)); dstpos = add_region(vo, 16*nv, dstpos)
+                vtx_regions.append((vo, 4*nv)); dstpos = add_region(vo, 16*4*nv, dstpos)
 
     # zero-count vertex arrays: size up to the next higher object offset
     obj_offs_now = sorted(set([no for no,_ in nodes]) | set(rec_newoff.keys()) |

@@ -397,6 +397,25 @@ void bondviewLoadSetupIntroSection(void)
     }
 
     bondinvAddInvItem(ITEM_FIST);
+#ifdef PORT
+    /* TEMP D303 (M-201): test-only start weapon, GE_STARTWEAPON=<ITEM_IDS>,
+     * so headless repros can hold a specific gun (pair with GE_D320R
+     * cheat=3 for ammo). Inert unset. */
+    {
+        extern char *getenv(const char *name);
+        extern int atoi(const char *s);
+        const char *sw = getenv("GE_STARTWEAPON");
+        if (sw) {
+            bondinvAddInvItem(atoi(sw));
+            {
+                extern void add_ammo_to_weapon(ITEM_IDS weapon, s32 ammo);
+                add_ammo_to_weapon(atoi(sw), 400);
+            }
+            starting_weapon[GUNRIGHT] = atoi(sw);
+            set_starting_weapon = 1;
+        }
+    }
+#endif
 
     if (set_starting_weapon == 0)
     {

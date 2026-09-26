@@ -343,9 +343,14 @@ def process(name):
                 dstpos = add_region(puo, 2 * nv, dstpos)
                 op24_pointusage[puo] = nv
         elif op == 22:
+            # D303 (M-201): the op-22 count is the number of star-flash ARMS
+            # (quads), not vertices -- dorottex (model.c) and PD's
+            # modelRenderNodeStarGunfire read count*4 vertices. Sizing this as
+            # 16*nv copied only the first quarter, so the rest of each muzzle
+            # star rendered from neighbouring bytes (long spikes, M16 etc.).
             nv = struct.unpack_from(">i", src, data)[0]; vo = be32o(src, data + 4)
             if nv and vo:
-                vtx_regions.append((vo, nv)); dstpos = add_region(vo, 16 * nv, dstpos)
+                vtx_regions.append((vo, 4 * nv)); dstpos = add_region(vo, 16 * 4 * nv, dstpos)
 
     # All record-referenced GDLs (needed before zero-vtx/blob layout so the
     # "next object" boundaries include them).
