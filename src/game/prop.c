@@ -646,17 +646,30 @@ void setupCctv(s32 arg0, CCTVRecord *arg1, s32 cmdindex)
 
     domakedefaultobj(arg0, (struct ObjectRecord*)arg1, cmdindex);
 
-    if (arg1->pad >= 0)
+#ifdef PORT
+    /* D307 (M-201): on N64, CCTVRecord's own s32 `pad` @0x80 (the LOOK-AT
+     * pad) shadows the inherited ObjectRecord s16 `pad` @0x08 (the mount pad),
+     * so `arg1->pad` here is the look-at pad. The PC struct renames the
+     * duplicate to `lookpad` (GCC rejects duplicate members), which silently
+     * re-pointed these reads at the MOUNT pad: the look vector became the
+     * lens's own offset from its mount and every camera faced backwards.
+     * Read the correctly named field (A1 class: layout/naming only; PD's
+     * setupCreateCctv uses cctv->lookatpadnum for the same step). */
+#define CCTV_LOOKPAD (arg1->lookpad)
+#else
+#define CCTV_LOOKPAD (arg1->pad)
+#endif
+    if (CCTV_LOOKPAD >= 0)
     {
         temp_a2 = (struct coord3d*)arg1->model->obj->Switches[0]->Data;
 
-        if (isNotBoundPad(arg1->pad))
+        if (isNotBoundPad(CCTV_LOOKPAD))
         {
-            sp50 = &g_CurrentSetup.pads[arg1->pad];
+            sp50 = &g_CurrentSetup.pads[CCTV_LOOKPAD];
         }
         else
         {
-            sp50 = (struct PadRecord *)&g_CurrentSetup.boundpads[getBoundPadNum(arg1->pad)];
+            sp50 = (struct PadRecord *)&g_CurrentSetup.boundpads[getBoundPadNum(CCTV_LOOKPAD)];
         }
 
         sp44.f[0] = temp_a2->f[0];

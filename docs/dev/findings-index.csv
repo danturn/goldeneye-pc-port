@@ -185,7 +185,7 @@ D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") dra
 D304,FIXED,"Mouse sensitivity menu overhaul (user request, 2026-09-18):","FIXED — see full entry for both the range/parity pass and the same-day follow-up (collapsed to a single Input.MouseSensitivity menu row + fixed overlayUpdateScroll()'s unconditional bottom-anchor, th…"
 D305,FIXED,"Steam Deck SIGSEGV on the v0.3.0 pre-release build (Cavern, early in the level, Game.AllUnlocked previously enabled on the session/save) —",FIXED (defensive guard) —
 D306,CLOSED,"Dam intro/truck wheels render with odd transparent-looking areas, possibly z-fighting (user QA, 2026-09-18).","CLOSED — faithful, confirmed on 1964 (M-201):"
-D307,OPEN,"In-level security camera entities can be flipped facing the wrong direction (backwards) on some levels, e.g.","OPEN — CONFIRMED PORT BUG (2026-09-26, user vs 1964:"
+D307,FIXED,"In-level security camera entities can be flipped facing the wrong direction (backwards) on some levels, e.g.","FIXED (M-201, 2026-09-26, user-verified):"
 D308,CLOSED,"Occasional z-fighting confirmed on some levels' geometry, general/broader than the D306 truck-wheel instance (user QA, 2026-09-18).","CLOSED — faithful (2026-09-26, user:"
 D309,FIXED,Complete non-self-recovering freeze (Windows) returning from Caverns to the intro screen —,FIXED via D310 — user-playtest-confirmed 2026-09-18 (Caverns→intro clean; the spin record itself observed resuming correctly in the post-fix probe log).
 D310,FIXED,"RULE-2-SIGNOFF: chraiitemsize() mis-sizes 1-byte AI_PRINT records (NUL-scans forward), corrupting AI execution for any list containing an active PRINT —",FIXED — user-playtest-confirmed 2026-09-18 (v2:

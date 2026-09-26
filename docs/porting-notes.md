@@ -269,6 +269,10 @@ framing — it never looked like game logic to begin with.
   Diagnostic tell: a hardware watchpoint on the "poisoned" field sees *no
   writes at all*.
 
+### A-dup. Renaming an IDO duplicate member re-points every read of it (D307)
+
+IDO accepts a struct that redeclares an inherited member name (`inherits ObjectRecord;` then its own `pad`); GCC rejects it, so the port renames one. **The rename changes which field existing code reads**: on N64 the later declaration shadows the inherited one, so `rec->pad` meant the derived record's own field. After renaming it (`lookpad`), unchanged game code silently binds to the inherited field instead. D307: `setupCctv` read the mount pad as the look-at pad and every security camera faced its wall. When a port rename resolves a duplicate, grep every `->name` on that struct type and decide per site which field N64 meant (PD's named-field sources are the tie-breaker).
+
 ## B. 16-byte PC `Gfx` / `Vtx` vs 8-byte N64
 
 Any buffer reservation, `memcpy` size, slot stride, or pool budget
