@@ -281,6 +281,55 @@ static int padSelectPrev = 0;           /* Select (BACK) edge: overlay toggle */
 static int mouseEnabled   = 1;
 static int mouseGrabbed    = 1;     /* released while the window is unfocused */
 
+/* D287: SDL's mouse-mode and cursor calls belong on the window's thread (the
+ * host thread that created it and pumps its events). Controller polls run on
+ * the scheduler thread (osContStartReadData -> inputComputePad ->
+ * reconcileGrab), so they called SDL_SetRelativeMouseMode / SDL_ShowCursor
+ * concurrently with the host thread's own focus/click handling. On Windows
+ * relative mode starts/stops SDL's raw-input thread and re-clips the cursor;
+ * two threads flipping it at once (clicking back into the window after being
+ * unfocused) can wedge. Callers now only record the wanted state; the host
+ * thread applies it in inputApplyMouseRequests() from videoPumpEvents(). The
+ * logical state (mouseGrabbed, deltas) still updates immediately. */
+static SDL_SpinLock s_mouseReqLock;
+static int s_reqRelative = -1, s_reqCursor = -1;    /* -1: nothing pending */
+static int s_appRelative = -1, s_appCursor = -1;    /* host thread only */
+
+static void mouseRequestRelative(int on)
+{
+    SDL_AtomicLock(&s_mouseReqLock);
+    s_reqRelative = on ? 1 : 0;
+    SDL_AtomicUnlock(&s_mouseReqLock);
+}
+
+static void mouseRequestCursor(int show)
+{
+    SDL_AtomicLock(&s_mouseReqLock);
+    s_reqCursor = show ? 1 : 0;
+    SDL_AtomicUnlock(&s_mouseReqLock);
+}
+
+/* Host thread only (videoPumpEvents, inputInit). */
+void inputApplyMouseRequests(void)
+{
+    SDL_AtomicLock(&s_mouseReqLock);
+    const int rel = s_reqRelative, cur = s_reqCursor;
+    s_reqRelative = s_reqCursor = -1;
+    SDL_AtomicUnlock(&s_mouseReqLock);
+
+    if (rel >= 0 && rel != s_appRelative) {
+        s_appRelative = rel;
+        SDL_SetRelativeMouseMode(rel ? SDL_TRUE : SDL_FALSE);
+        if (rel) {
+            SDL_GetRelativeMouseState(NULL, NULL);   /* drain the accumulated jump */
+        }
+    }
+    if (cur >= 0 && cur != s_appCursor) {
+        s_appCursor = cur;
+        SDL_ShowCursor(cur ? SDL_ENABLE : SDL_DISABLE);
+    }
+}
+
 /* WI-1: Quake-style click-to-lock cursor capture. The cursor is free until
  * you click in the game window; ESC (or focus loss, or opening a menu) frees
  * it again. Re-entering a stage while still "armed" re-locks automatically so
@@ -712,12 +761,11 @@ int inputInit(void)
             SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "0");
             sysLogPrintf(LOG_INFO, "input: raw mouse input (no OS pointer accel)");
         }
-        SDL_SetRelativeMouseMode(mouseGrabbed ? SDL_TRUE : SDL_FALSE);
-        /* Drain the initial jump. */
-        SDL_GetRelativeMouseState(NULL, NULL);
+        mouseRequestRelative(mouseGrabbed);
     }
 
     applyCursorVisibility();   /* hide the OS cursor if we start focused */
+    inputApplyMouseRequests(); /* inputInit runs on the host thread */
 
     sysLogPrintf(LOG_INFO, "input: ready (mask=0x%x, %d controller(s), aimSpeed=%d)",
                  connectedMask, numControllers, mouseAimSpeed);
@@ -743,7 +791,10 @@ void inputUpdate(void)
 {
     SDL_GameControllerUpdate();
 
-    if (!mouseEnabled || !mouseGrabbed) {
+    /* D287: skip until the host thread has actually enabled relative mode
+     * (a benign racy read of a host-thread int), so the few ms between the
+     * logical grab and its application do not read absolute cursor motion. */
+    if (!mouseEnabled || !mouseGrabbed || s_appRelative != 1) {
         return;
     }
 
@@ -1448,10 +1499,7 @@ static void applyGrab(int want)
         return;
     }
     mouseGrabbed = want;
-    SDL_SetRelativeMouseMode(want ? SDL_TRUE : SDL_FALSE);
-    if (want) {
-        SDL_GetRelativeMouseState(NULL, NULL);   /* drain the accumulated jump */
-    }
+    mouseRequestRelative(want);   /* D287: applied on the host thread */
     mouseDX = mouseDY = 0.0;
 }
 
@@ -1477,7 +1525,7 @@ static void applyCursorVisibility(void)
     /* D194: while an aim hold has the cursor out for absolute aim, show it --
      * the user is pointing with it and needs to see where. */
     int hide = windowFocused && mouseEnabled && !s_absAimSuspend;
-    SDL_ShowCursor(hide ? SDL_DISABLE : SDL_ENABLE);
+    mouseRequestCursor(!hide);    /* D287: applied on the host thread */
 }
 
 /* video.c focus events. Records focus and lets reconcileGrab() decide. */
@@ -1531,10 +1579,10 @@ void inputSuspendForOverlay(void)
 {
     if (mouseGrabbed) {
         mouseGrabbed = 0;
-        SDL_SetRelativeMouseMode(SDL_FALSE);
+        mouseRequestRelative(0);
         mouseDX = mouseDY = 0.0;
     }
-    SDL_ShowCursor(SDL_ENABLE);
+    mouseRequestCursor(1);
 }
 
 void inputPostWheel(int notches)

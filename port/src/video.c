@@ -646,6 +646,7 @@ void videoPumpEvents(void)
     /* Apply any window/fullscreen change the F10 overlay posted from the
      * scheduler thread (must run here, on the window's creating thread). */
     videoDrainWindowRequests();
+    inputApplyMouseRequests();   /* D287: mouse mode/cursor, same rule */
 
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
@@ -726,6 +727,9 @@ void videoPumpEvents(void)
             wmAPI->set_window_title(title);
         }
     }
+
+    /* D287: apply anything the events above (click-to-lock, focus) queued. */
+    inputApplyMouseRequests();
 }
 
 void videoSubmitCommands(Gfx *cmds)

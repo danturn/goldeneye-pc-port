@@ -43,6 +43,8 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y);
  * also suspends mouse-aim reads until re-grabbed. No-op if the mouse is
  * disabled in config. */
 void inputSetMouseGrab(int on);
+/* D287: apply queued mouse-mode/cursor changes; host (window) thread only. */
+void inputApplyMouseRequests(void);
 
 /* WI-1 click-to-lock cursor capture. The host event pump calls
  * inputNotifyClick() when a mouse button goes down inside the game window
