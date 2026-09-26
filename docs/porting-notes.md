@@ -1089,6 +1089,12 @@ silently disappears.
   upstream. This class isn't limited to display-list cursors; audit any
   `-O2`-only "quietly broken but not crashing" symptom for the same shape.
   Fix: `return` under `#ifdef AVOID_UB` (`#else` keeps the N64 body).
+- Instances (latent, 2026-09-25 Q7 warning audit): `constructor_menu07_missionsel()` and
+  `constructor_menu0D_missioncomplete()` (`src/game/front.c`), both `DL = f(DL)` at the
+  caller. Currently harmless: old/new objects disassemble identically at `-O2` (GCC
+  keeps `frontDrawCursor()`'s result in `rax`), but a clang/arm64 build is not bound
+  by that. `return DL;` under `#ifdef AVOID_UB`. A `-Wreturn-type` sweep lists the
+  remaining candidates; the other 7 current hits have callers that ignore the value.
 - The one flagged in-source with an explicit comment is
   `grep -rn "missing a \"return\"" src/` (`gunfire.c`). Others (like D77's)
   exist without the banner; suspect this class whenever an `-O2` build

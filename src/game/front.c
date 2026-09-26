@@ -3464,6 +3464,13 @@ Gfx *constructor_menu07_missionsel(Gfx *DL)
 
     DL = frontAddPreviousTabText(DL);
     DL = frontDrawCursor(DL);
+#ifdef AVOID_UB
+    /* porting-notes D6: the decomp falls off the end of this Gfx*-returning
+     * function and the caller uses the result; N64 and x86-64 GCC -O2 return
+     * frontDrawCursor()'s result by accident of the return register (verified:
+     * identical machine code with and without this line). */
+    return DL;
+#endif
 }
 
 
@@ -7503,6 +7510,13 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
     DL = frontAddNextTabText(DL);
     DL = frontAddPreviousTabText(DL);
     DL = frontDrawCursor(DL);
+#ifdef AVOID_UB
+    /* porting-notes D6: the decomp falls off the end of this Gfx*-returning
+     * function and the caller uses the result; N64 and x86-64 GCC -O2 return
+     * frontDrawCursor()'s result by accident of the return register (verified:
+     * identical machine code with and without this line). */
+    return DL;
+#endif
 }
 
 
