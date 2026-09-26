@@ -1250,7 +1250,10 @@ GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphfram
   and cost several game runs to chase. `tools_pc/sdl_drain_monitor.c` opens SDL
   exactly like `port/src/audio.c` with no game and no window; on the
   maintainer's Focusrite USB interface it showed the same ~312 s drain dips
-  (to 88 %) outright. Run it first on any "audio gets garbled" report.
+  (to 88 %) outright, and running it on several SDL backends at once showed the
+  culprit was SDL2's WASAPI path, not the device (DirectSound was clean; the
+  port now prefers it on Windows). Run it first on any "audio gets garbled"
+  report, and compare backends with `SDL_AUDIODRIVER` before blaming the hardware.
 - Investigation loop is: reproduce → env-gated capped probe → root-cause
   → narrow `#ifdef PORT` fix → visual verify (`GE_PCDUMP` +
   `tools_pc/pixcount.py` vs `docs/reference/n64-footage-*`).
