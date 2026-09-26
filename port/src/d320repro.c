@@ -29,6 +29,10 @@
  *                                      seed is deterministic, so vary this
  *                                      between runs to sample different
  *                                      aim-variant branches)
+ *   explode=<type>,<dist>           -- D252: explosionCreate(<type>) <dist>
+ *                                      units in front of Bond (headless
+ *                                      explosion-particle capture)
+ *   cheat=gl|rl|inv|<id>            -- D252: cheatButtonHandleCheatsTurnedOn
  *   trace=<chr>                     -- from this tick on, log the chr's
  *                                      off/act/atk/ent/frame/endframe on
  *                                      any change + a 120-tick heartbeat
@@ -47,6 +51,10 @@
 #include "chraction.h"
 #include "lv.h"
 #include "model.h"
+#include "explosion.h"
+#include "player.h"
+#include "cheat.h"
+extern void cheatButtonHandleCheatsTurnedOn(CHEAT_ID cheat_id);
 
 #ifdef PORT
 
@@ -256,6 +264,25 @@ void d320ReproTick(void)
                         a->kind     = 4;
                     }
                 }
+                else if (strncmp(colon + 1, "cheat=", 6) == 0)
+                {
+                    const char *q = colon + 7;
+
+                    a->listid = (strcmp(q, "gl") == 0)    ? CHEAT_2X_GRENADE_LAUNCHER
+                              : (strcmp(q, "rl") == 0)    ? CHEAT_2X_ROCKET_LAUNCHER
+                              : (strcmp(q, "inv") == 0)   ? CHEAT_INVINCIBILITY
+                              : (s32)strtol(q, NULL, 0);
+                    a->kind   = 7;
+                }
+                else if (strncmp(colon + 1, "explode=", 8) == 0)
+                {
+                    const char *q  = colon + 9;
+                    char       *cm = strchr(q, ',');
+
+                    a->listid = (s32)strtol(q, NULL, 0);                 /* type */
+                    a->bit    = cm ? (u32)strtol(cm + 1, NULL, 0) : 400; /* dist */
+                    a->kind   = 6;
+                }
                 else if (strncmp(colon + 1, "seed=", 5) == 0)
                 {
                     const char *q  = colon + 6;
@@ -329,6 +356,23 @@ void d320ReproTick(void)
                 }
                 break;
             }
+            case 7: /* cheat (D252) */
+                cheatButtonHandleCheatsTurnedOn((CHEAT_ID)a->listid);
+                osSyncPrintf("D320R: t=%d CHEAT %d\n",(int)g_GlobalTimer, (int)a->listid);
+                break;
+            case 6: /* explode (D252) */
+                if (g_CurrentPlayer && g_CurrentPlayer->prop)
+                {
+                    struct coord3d pos = g_CurrentPlayer->prop->pos;
+
+                    pos.f[0] += -g_CurrentPlayer->vv_sintheta * (f32)a->bit;
+                    pos.f[2] += g_CurrentPlayer->vv_costheta * (f32)a->bit;
+                    explosionCreate(0, &pos, g_CurrentPlayer->prop->stan, (s16)a->listid,
+                                    0, 0, g_CurrentPlayer->prop->rooms, 0);
+                    osSyncPrintf("D320R: t=%d EXPLODE type=%d dist=%u\n",
+                                 (int)g_GlobalTimer, (int)a->listid, (unsigned)a->bit);
+                }
+                break;
             case 2: /* bit */
                 objectiveregisters1 |= a->bit;
                 osSyncPrintf("D320R: t=%d BIT |= 0x%08x (now 0x%08x)\n",

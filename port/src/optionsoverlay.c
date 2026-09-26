@@ -235,6 +235,7 @@ static int  s_sel = 0;        /* selection, index into s_visIdx (visible list) *
 static int  s_visIdx[NUM_ROWS];
 static int  s_visN = 0;
 static int  s_scroll = 0;
+static SDL_atomic_t s_wheelPending;   /* D314: host-thread wheel notches */
 
 /* D213: optional on-screen FPS readout (PD parity: Video.DisplayFPS). Drawn
  * top-right whenever enabled, independent of the F10 panel. Config-only knob
@@ -696,10 +697,24 @@ void optionsOverlayScroll(int dir)
     if (!s_open || dir == 0) {
         return;
     }
-    overlayUpdateVisible();
-    /* wheel-up -> move up the list; clamps at both ends like a normal PC
-     * settings list (wrapping read as a duplicate) and skips D237 headers. */
-    s_sel = overlayStepSel(s_sel, (dir > 0) ? -1 : 1);
+    /* D314: this runs on the host thread (SDL wheel event), while HandleInput
+     * and Emit rebuild s_visIdx/s_visN/s_scroll on the scheduler thread; the
+     * old direct overlayUpdateVisible() + s_sel write here could leave Emit
+     * drawing a half-rebuilt list. Queue the notches instead (D287 pattern);
+     * optionsOverlayHandleInput() applies them on the scheduler thread. */
+    SDL_AtomicAdd(&s_wheelPending, dir);
+}
+
+/* Scheduler thread: apply wheel notches queued by optionsOverlayScroll().
+ * wheel-up -> move up the list; clamps at both ends like a normal PC settings
+ * list (wrapping read as a duplicate) and skips D237 headers. */
+static void overlayApplyWheel(void)
+{
+    int n = SDL_AtomicSet(&s_wheelPending, 0);
+    while (n != 0) {
+        s_sel = overlayStepSel(s_sel, (n > 0) ? -1 : 1);
+        n += (n > 0) ? -1 : 1;
+    }
 }
 
 /* Set a slider row from an overlay-space x inside its value bar, snapped to
@@ -738,6 +753,7 @@ void optionsOverlayHandleInput(void)
     if (!s_open) {
         prevUp = prevDn = prevLf = prevRt = prevLmb = prevRmb = 0;
         dragRow = -1;
+        SDL_AtomicSet(&s_wheelPending, 0);
         return;
     }
 
@@ -754,6 +770,7 @@ void optionsOverlayHandleInput(void)
     inputSuspendForOverlay();
 
     overlayUpdateVisible();   /* % rows may have appeared/vanished (auto toggles) */
+    overlayApplyWheel();      /* D314: wheel notches queued by the host thread */
     overlayUpdateScroll();
 
     const Uint8 *ks = SDL_GetKeyboardState(NULL);
