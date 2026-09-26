@@ -591,6 +591,17 @@ through a converter or a runtime bswap fixup reads scrambled.
   fallback silently reset Auto-Aim/Look-Ahead to OFF. The direct-write
   look paths already gate on this; the fallbacks must too.
 
+- **A port-side shadow of game data must be re-synced every time the game
+  re-derives the original, not just the first time.** D252: `texReset()`
+  re-resolves the global image DLs' texture pointers on *every* stage load;
+  the compiled shadow copies (`gimgSyncCompiledGlobalDLs`, D68) only accepted
+  a write while a slot still held its unresolved marker, so every stage after
+  the title kept pointers into freed memory. It looked fine until the new
+  stage overwrote that region (rainbow explosions mid-level). Key a sync on
+  *which slots* are synced (learned once), never on "still unresolved".
+  Headless `-level_XX` boots hide this class (the first stage is the level
+  itself): repro through a real boot → title → level sequence.
+
 ## D. N64 hardware idioms fast3d does not emulate
 
 - **Appending a port-owned 2D overlay to the game frame: hook inside

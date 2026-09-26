@@ -769,6 +769,8 @@ static void videoPreSwapCapture(void)
 
     if (screenshotReq) {
         screenshotReq = 0;
+        extern void gfxD157Burst(void); /* D252 TEMP, inert without GE_D157 */
+        gfxD157Burst();
         static int shotNum = 0;
         char path[128];
         GE_MKDIR("ppm");

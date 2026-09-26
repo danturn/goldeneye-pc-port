@@ -1771,6 +1771,12 @@ static void d75d_note_emit_z(uint32_t f, struct LoadedVertex* const* v_arr, int 
     d75d_env[0]=rdp.env_color.r; d75d_env[1]=rdp.env_color.g; d75d_env[2]=rdp.env_color.b; d75d_env[3]=rdp.env_color.a;
 }
 
+/* D252 TEMP (2026-09-26): F12 with GE_D157 set opens a full-detail D157T
+ * burst (every small-texture vertex, no sampling) for ~90 frames, so a live
+ * sighting is captured even after the continuous cap has dropped to 1-in-50.
+ * Armed from videoEndFrame's screenshot path via gfxD157Burst(). */
+static volatile uint32_t s_d157BurstUntil = 0;
+
 static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
     const size_t d75_di0 = dest_index; /* D75 probe: loop below mutates dest_index */
     SUPPORT_CHECK(n_vertices <= MAX_VERTICES);
@@ -1917,8 +1923,15 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
             static const uint8_t known[][4] = {
                 {0xFF,0xFF,0xFF,0xFF}, {0xFF,0xFF,0xC8,0xFF}, {0xFF,0x00,0x00,0xFF},
             };
-            for (const auto& k : known) {
+            /* 2026-09-26: this match was uncapped and white (255,255,255,255)
+             * hits every HUD/text/effect vertex -> ~200k lines in 18 s, 4-6 fps
+             * in live play. Now: first 500 hits, then only inside an F12 burst. */
+            extern uint32_t num_dls;
+            static int d157m_n = 0;
+            const bool d157m_on = d157m_n < 500 || num_dls <= s_d157BurstUntil;
+            if (d157m_on) for (const auto& k : known) {
                 if (v->v.cn[0] == k[0] && v->v.cn[1] == k[1] && v->v.cn[2] == k[2] && v->v.cn[3] == k[3]) {
+                    d157m_n++;
                     sysLogPrintf(LOG_NOTE,
                         "D157: bulletspark-color-match cn=(%d,%d,%d,%d) geometry_mode=%08x LIGHTING=%s -> shaded=(%d,%d,%d)",
                         v->v.cn[0], v->v.cn[1], v->v.cn[2], v->v.cn[3], rsp.geometry_mode,
@@ -1963,11 +1976,17 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
                          * so a real, minutes-long play session doesn't drop
                          * to sparse 1-in-200 sampling before the player
                          * actually triggers the bug. */
-                        if (d157b_n <= 20000 || (d157b_n % 50) == 0) {
+                        static int d157burst_n = 0;
+                        const bool burst = num_dls <= s_d157BurstUntil && d157burst_n < 60000;
+                        if (burst) d157burst_n++;
+                        /* 2026-09-26: continuous logging cut to a 2000-line baseline;
+                         * the 20000 + 1-in-50 tail was a big share of the
+                         * live-play slowdown. Full detail now comes from F12. */
+                        if (burst || d157b_n <= 2000) {
                             sysLogPrintf(LOG_NOTE,
-                                "D157T: frame=%u cn=(%d,%d,%d,%d) shaded=(%d,%d,%d) LIGHTING=%s geom=%08x combine=%llx | "
+                                "D157T%s: frame=%u cn=(%d,%d,%d,%d) shaded=(%d,%d,%d) LIGHTING=%s geom=%08x combine=%llx | "
                                 "tile0=%u tmem=%u fmt=%u siz=%u addr=%p size=%u line=%u | uv=(%d,%d)",
-                                num_dls,
+                                burst ? "B" : "", num_dls,
                                 v->v.cn[0], v->v.cn[1], v->v.cn[2], v->v.cn[3],
                                 (int)d->color.r, (int)d->color.g, (int)d->color.b,
                                 (rsp.geometry_mode & G_LIGHTING) ? "ON" : "off", rsp.geometry_mode,
@@ -4107,6 +4126,16 @@ extern "C" void gfx_start_frame(void) {
 }
 
 uint32_t num_dls = 0;
+
+/* D252 TEMP: see s_d157BurstUntil. No-op unless GE_D157 is set. */
+extern "C" void gfxD157Burst(void) {
+    static int on = -1;
+    if (on < 0) on = getenv("GE_D157") != NULL;
+    if (!on) return;
+    s_d157BurstUntil = num_dls + 90;
+    sysLogPrintf(LOG_NOTE, "D157 burst: F12 at frame=%u, full logging to frame=%u",
+                 num_dls, (uint32_t)s_d157BurstUntil);
+}
 
 /* F10 port-layer options overlay (port/src/optionsoverlay.c). Returns a
  * self-contained 2D display list to draw on top of the game's frame, or NULL
