@@ -45,7 +45,7 @@ D228,FIXED,AK47 white missing-texture patches after D217's texpool fix —,"FIXE
 D204,FIXED,PC audio ran ~2 % below real time permanently (AI feedback loop's 3 ms setpoint vs PC jitter).,"FIXED (port/src/audio.c, port/src/libultra.c, port/include/audio.h) —"
 D203,CLOSED,"Steam Deck (SteamOS, x86_64 Linux) v0.1.0 release bundle:",CLOSED — root cause + fix in D253.
 D201,FIXED,"src/libultra/audio/bnkf.c bank/instrument/sound/wavetable relocation offsets were s32, truncating the real 64-bit base pointer.",FIXED (src/libultra/audio/bnkf.c) —
-D202,OPEN,"Silenced PPK ""slap"" + broader real-time mixer corruption (M-52→M-67).",OPEN — by-ear check owed (2026-09-26):
+D202,FIXED,"Silenced PPK ""slap"" + broader real-time mixer corruption (M-52→M-67).","FIXED (2026-09-26, user by-ear:"
 D206,FIXED,PC played every SFX one bank slot too high —,"FIXED (M-76, src/snd.c:1001, #ifdef PORT) —"
 D207,FIXED,"Alarm klaxon starves combat SFX and doesn't recover after it stops (surfaced by D206, M-77).",MONITORING — user 2026-09-26:
 D208,FIXED,Player weapon-fire sound goes permanently silent mid-firefight (all other SFX unaffected) —,FIXED + user playtest-verified (M-78d) —
@@ -61,7 +61,7 @@ D176,FIXED,"Surface exterior renders wrong (-level_36), two independent defects.
 D177,FIXED,Ladders non-functional —,FIXED (M-36) — high confidence; interactive climb test owed
 D172,FIXED,"Bullet-impact / blood / spark particles render magenta or cyan instead of dark red (M-82, ROOT CAUSE FOUND + FIXED).",FIXED (port/fast3d/gfx_pc.cpp gfx_lod_tile_offset)…
 D174,OPEN,"""No blood effect"" (user QA report).","Blood renders (user, 2026-09-26); OPEN only for an N64-accuracy comparison on 1964."
-D183,OPEN,"M-36 Family A (""texture line/pitch shear"") is DISPROVEN for the Surface repro (-level_36).",Hypothesis DISPROVEN + diagnostics shipped; D176(b)/D182(2) still OPEN
+D183,CLOSED,"M-36 Family A (""texture line/pitch shear"") is DISPROVEN for the Surface repro (-level_36).","CLOSED (2026-09-26, user-approved:"
 D173,FIXED,Third-person Bond model spawns too high —,"MOSTLY FIXED as a side effect of D243 (2026-09-18, user-confirmed)."
 D179,FIXED,Packaged build crashes after the logos —,"Diagnosed, not fixed —"
 D180,FIXED,"Native-PC input pass (M-XX QoL run, qol/native-pc-input-menu, port-only).",FIXED (2026-09-26 bookkeeping:
@@ -76,7 +76,7 @@ D216,FIXED,"Game.SkipIntro — boot straight to the file-select menu (M-83, port
 D217,FIXED,1P weapon viewmodel + 3P Bond model textures garbled —,FIXED + merged (PR #47 + PR #49); white residual split out as D228.
 D218,FIXED,Wide FOV exposes the per-level draw-distance / fog boundary —,FIXED (2026-09-26 reclassified:
 D219,RESOLVED,"PPK explosions render purple on Dam (M-87, user QA, ""not 3D but noting"").","RESOLVED (M-115, 2026-09-12) for the original PPK-purple symptom."
-D220,PARTIAL,"1P muzzle flash position shifts upward at higher Video.FovScale (M-87, user QA, Jungle/M16).","ANALYZED (M-91) — the suspected unscaled-viewmodel root does NOT hold; this is correct perspective behavior, likely cosmetic/QoL."
+D220,CLOSED,"1P muzzle flash position shifts upward at higher Video.FovScale (M-87, user QA, Jungle/M16).","CLOSED — merged into D303 (2026-09-26, user:"
 D85,CLOSED,Room primary/secondary DL → texLoadFromGdl garbage.,"CLOSED (2026-09-26, user-approved:"
 D86 · D87,RESOLVED,modelInitRwData truncated ptr · attract-demo BE ramromfilestructure.,resolved
 D88.4,RESOLVED,propDefs polymorphic record stream not byteswapped → setupDoor crash.,resolved (d88_propdefs.py); layout audit M-20 → D132
@@ -139,7 +139,7 @@ D238,FIXED,"QoL ask (M-106, user QA):",FIXED (2026-09-26: covered by D337/D338 a
 D239,CLOSED,"QoL ask (M-106, user QA):",CLOSED — executed in the v0.2.0 prep pass (port-only)…
 D240,OPEN,"Player gunshot SFX timing/cadence reportedly does not match the N64 original's rate (M-106, user QA report).","OPEN — not root-caused; static call-site tracing only, no runtime verification possible in this environment."
 D241,OPEN,Player gunshot SFX goes silent under some conditions —,"OPEN — not newly root-caused; high confidence this is D207 reproduced, not an independent bug."
-D242,?,Player-death sequence UX regression vs N64 original:,NOT A PORT-LOGIC BUG as far as static analysis can tell.
+D242,OPEN,Player-death sequence UX regression vs N64 original:,"OPEN — 1964 comparison owed (2026-09-26, user)."
 D243,FIXED,"Dam end-of-level cutscene (the abseil/bungee sequence, D148/D160's subject):","FIXED, live-confirmed by the user (M-189/M-190, 2026-09-18)."
 D245,OPEN,IsWater water: two competing patterns with a visible seam that moves as the player looks around (mouse/aim) —,"OPEN — REOPENED, M-142 headless probe found the tc-shift k measurably flips during ordinary view rotation (new root-cause evidence); an opt-in GE_D245_FIXEDSHIFT candidate is build-verified but needs…"
 D246,FIXED,"Tiny pixel strips at the left and right edges of the screen, ""like overscan"" —","FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
@@ -176,12 +176,12 @@ D294,FIXED,"Statue: ground geometry near the large CCCP/hammer-and-sickle monume
 D295,FIXED,"Campaign-halting crash at the end of Control Center on 00 Agent difficulty, then a crash on every subsequent relaunch/resume (GitHub #87, user campaign playtes…",FIXED (M-149) — M-148 root-caused + reproduced on HEAD; fix landed:
 D296,CLOSED,"Control Center, 00 Agent:","CLOSED (2026-09-26, user-approved:"
 D297,FIXED,v0.3.0 silently wipes ALL pre-fix player saves on first launch (D284 side effect; found during D295/M-148).,FIXED (M-150) — migration shim landed:
-D298,?,Full HUD (not just the aim-mode crosshair) missing in a v0.3.0 dev build —,"s — regression reported 2026-09-16 during v0.3.0 work (build ce8427cf); user says ""don't fix, just for context""; not yet investigated —"
+D298,CLOSED,Full HUD (not just the aim-mode crosshair) missing in a v0.3.0 dev build —,"CLOSED (2026-09-26, user:"
 D299,FIXED,Game.SkipIntro crashed selecting any save slot except one —,"FIXED — fileValidateSaves() (only called from the skipped legal screen) never ran under SkipIntro, leaving saves[] all-zero; added the missing call to the SkipIntro shortcut (src/game/lv.c, #ifdef PO…"
 D300,FIXED,Hipfire look feels non-uniform (issue #89):,"FIXED, user-confirmed live —"
 D301,FIXED,"fileGetIsCheatUnlocked() NULL-deref, unguarded on every call site, not just the D299/SkipIntro one (GitHub #87, two reports with an identical crash PC/fault ad…",FIXED locally on release/v0.3.0 (not pushed) —
 D302,FIXED,"Render FPS regression to ~40-45fps on release/v0.3.0 (user QA on the local v0.3.0 pre-release build, 2026-09-18) —","FIXED — 4 uncached getenv() calls added by D236 passes 10/12/14/16 directly inside gfx_sp_tri1 (port/fast3d/gfx_pc.cpp, per-triangle) cached with the same static int x = -1 pattern D250 established e…"
-D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") draw wrong —","OPEN — investigated: pipeline + weapon stats + model conversion ruled out; GE_D303 capture probe in-tree (port/fast3d/gfx_pc.cpp), blocked on a live firing repro."
+D303,OPEN,"Some muzzle flashes (M16 named specifically, ""and some others"") draw wrong —",OPEN — 1964 comparison owed; absorbs D220 (user 2026-09-26:
 D304,FIXED,"Mouse sensitivity menu overhaul (user request, 2026-09-18):","FIXED — see full entry for both the range/parity pass and the same-day follow-up (collapsed to a single Input.MouseSensitivity menu row + fixed overlayUpdateScroll()'s unconditional bottom-anchor, th…"
 D305,FIXED,"Steam Deck SIGSEGV on the v0.3.0 pre-release build (Cavern, early in the level, Game.AllUnlocked previously enabled on the session/save) —",FIXED (defensive guard) —
 D306,CLOSED,"Dam intro/truck wheels render with odd transparent-looking areas, possibly z-fighting (user QA, 2026-09-18).","CLOSED — faithful, confirmed on 1964 (M-201):"
@@ -193,7 +193,7 @@ D311,FIXED,Complete freeze in modelSetAnimFrame2WithChrStuff root-motion loop �
 D312,FIXED,"Throwable items (mines, grenades, etc.) can clip through walls in certain spots (user report, v0.3.0 pre-release playtest, 2026-09-18).",FIXED — bgBuildRoomVtxBounds mis-reads the G_VTX vertex count on PC (Gfx_le.dma.par bit-layout shift):
 D313,FIXED,Bullet impacts do not appear on some walls/surfaces —,"FIXED — same root cause as D312, merged diagnosis; same one-line fix."
 D314,FIXED,"F10 menu items flicker randomly/intermittently (reported on the main-menu context, user report, v0.3.0 playtest build, 2026-09-18).",FIXED (user playtest 2026-09-26) —
-D315,OPEN,Menu scaling differs between main menu and in-game —,"OPEN — disclosed as a known issue, deferred to v0.3.1 (bigger design question, not a mechanical fix)."
+D315,CLOSED,Menu scaling differs between main menu and in-game —,"CLOSED (2026-09-26, user:"
 D316,FIXED,"Mouse-clicking some menu items glitches and lands on the item below instead (user report, v0.3.0 playtest build, 2026-09-18).",FIXED — root-caused to two compounding bugs (naive mouse->logical mapping ignoring the safe-area crop; asymmetric row hit-test band) in port/src/optionsoverlay.c + port/fast3d/gfx_pc.cpp.
 D317,CLOSED,"Crash when toggling Game.AllUnlocked back and forth in-game (user report, v0.3.0 playtest build, 2026-09-18) —","CLOSED — symptom of D316 (confirmed instant window close, no WER report; the D316 hit-band bias let a click on ""All unlocked"" fall through to the adjacent ""Quit to desktop"" row)."
 D318,FIXED,Facility (regular play path):,FIXED via D329 (2026-09-26 bookkeeping:
