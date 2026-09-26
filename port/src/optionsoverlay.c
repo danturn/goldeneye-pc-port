@@ -47,6 +47,11 @@
 #include "optionsoverlay.h"
 #include "../fast3d/gfx_api.h"
 
+/* D324 class: -Iinclude resolves <math.h> to GE's N64 stub, which does not
+ * declare lround; without this the call is an implicit `int lround()`
+ * (GCC only rescued it via its builtin signature). */
+long lround(double x);
+
 /* ---- game symbols (rendering/UI only; see input.c for the same pattern) ---- */
 struct font;
 struct fontchar;

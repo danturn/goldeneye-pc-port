@@ -589,7 +589,8 @@ static void inputOpenPads(void)
 #define INPUTSCRIPT_PULSE   6
 
 struct scriptEntry { long frame; unsigned mask; int sx, sy; int hasStick;
-                     int hasMouse, mdx, mdy; int hasHold, hold; };   /* D337 mouse/aim tokens */
+                     int hasMouse, mdx, mdy; int hasHold, hold;    /* D337 mouse/aim tokens */
+                     int hasZHold, zhold; };                        /* D207: sustained fire */
 static struct scriptEntry scriptEntries[INPUTSCRIPT_MAX];
 static int  scriptCount   = -1;   /* -1 = not parsed yet, 0 = parsed empty */
 static long scriptFrame   = 0;
@@ -626,6 +627,10 @@ static void scriptApplyToken(struct scriptEntry *e, const char *s, int n)
     if (n == 5 && SDL_strncasecmp("RHOLD", s, 5) == 0) { e->hasHold = 1; e->hold = 1; return; }
     if (n == 5 && SDL_strncasecmp("LHOLD", s, 5) == 0) { e->hasHold = 1; e->hold = 2; return; }
     if (n == 4 && SDL_strncasecmp("RREL", s, 4) == 0)  { e->hasHold = 1; e->hold = 0; return; }
+    /* D207: ZHOLD / ZREL hold / release fire (Z) for automatic weapons;
+     * independent of RHOLD so aim + fire can be held together. */
+    if (n == 5 && SDL_strncasecmp("ZHOLD", s, 5) == 0) { e->hasZHold = 1; e->zhold = 1; return; }
+    if (n == 4 && SDL_strncasecmp("ZREL", s, 4) == 0)  { e->hasZHold = 1; e->zhold = 0; return; }
     e->hasStick = 1;
     if (n == 3 && SDL_strncasecmp("SUP", s, 3) == 0)      { e->sy =  STICK_MAX; return; }
     if (n == 5 && SDL_strncasecmp("SDOWN", s, 5) == 0)    { e->sy = -STICK_MAX; return; }
@@ -659,6 +664,7 @@ static void scriptParse(void)
         e->hasStick = 0;
         e->hasMouse = e->mdx = e->mdy = 0;
         e->hasHold = e->hold = 0;
+        e->hasZHold = e->zhold = 0;
         while (*p && *p != ';') {
             const char *tok = p;
             while (*p && *p != ',' && *p != ';') ++p;
@@ -686,10 +692,10 @@ static int scriptIsActive(void)
  * Returns the scripted button mask for the current frame; advances the frame
  * counter (call exactly once per controller-0 read). */
 /* D337: current sustained scripted mouse delta / aim hold (latest entry). */
-static int s_scriptMouseOn = 0, s_scriptMDX = 0, s_scriptMDY = 0, s_scriptHold = 0;
+static int s_scriptMouseOn = 0, s_scriptMDX = 0, s_scriptMDY = 0, s_scriptHold = 0, s_scriptZHold = 0;
 static void scriptPreMouse(void)
 {
-    long bestM = -1, bestH = -1;
+    long bestM = -1, bestH = -1, bestZ = -1;
     for (int i = 0; i < scriptCount; ++i) {
         long d = scriptFrame - scriptEntries[i].frame;
         if (d < 0) continue;
@@ -703,6 +709,10 @@ static void scriptPreMouse(void)
             bestH = scriptEntries[i].frame;
             s_scriptHold = scriptEntries[i].hold;
         }
+        if (scriptEntries[i].hasZHold && scriptEntries[i].frame > bestZ) {
+            bestZ = scriptEntries[i].frame;
+            s_scriptZHold = scriptEntries[i].zhold;
+        }
     }
 }
 
@@ -711,6 +721,7 @@ static unsigned scriptApply(unsigned button)
     if (!scriptIsActive()) {
         return button;
     }
+    scriptPreMouse();   /* D207: refresh sustained holds even off the mouse path (idempotent) */
     unsigned m = 0;
     long bestStickFrame = -1;
     for (int i = 0; i < scriptCount; ++i) {
@@ -727,6 +738,7 @@ static unsigned scriptApply(unsigned button)
     }
     if (s_scriptHold == 1) m |= GE_CONT_R;   /* D337 RHOLD */
     if (s_scriptHold == 2) m |= GE_CONT_L;   /* D337 LHOLD (Q / "LeanLeft") */
+    if (s_scriptZHold) m |= GE_CONT_G;       /* D207 ZHOLD (fire) */
     scriptFrame++;
     return m;
 }

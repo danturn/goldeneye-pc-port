@@ -20,7 +20,7 @@ Two classes:
 | Env var | File:line | What it does | Status |
 |---|---|---|---|
 | `GE_PCDUMP` | `port/fast3d/gfx_opengl.cpp:1079` (`is_pcdump`), `gfx_opengl.cpp:700`, `port/src/video.c:188`, `port/src/config.c:46` (`configGetFrameDump`) | Per-frame framebuffer PPM dump to `$PCDUMP` dir (verification-ritual golden captures, `tools_pc/framediff.py`/`pixcount.py`). Also settable via `[Debug] FrameDump` ini (env wins). **M-33/D168: the writer now emits rows top-to-bottom — captures before that fix are vertically flipped.** | **live** |
-| `GE_INPUTSCRIPT` | `port/src/input.c:306` | Headless scripted controller-0 input: `"<frame>:<tok>,…;…"` (`SUP/SDOWN/SLEFT/SRIGHT/SNONE` sustain, buttons pulse). Sole input source when set. | **live** |
+| `GE_INPUTSCRIPT` | `port/src/input.c:306` | Headless scripted controller-0 input: `"<frame>:<tok>,…;…"` (`SUP/SDOWN/SLEFT/SRIGHT/SNONE` sustain, buttons pulse; `ZHOLD`/`ZREL` sustain fire, D207 M-201). Sole input source when set. | **live** |
 | `GE_INPUTLOG` | `port/src/input.c:329`, `port/src/config.c:53` (`configGetInputLog`) | Logs computed pad state (buttons + stick) each poll when non-zero. Also `[Debug] InputLog` ini. Also traces D165 `menuptr est/tgt/eff/stick`. | **live** |
 | `GE_STARTMENU` (+ `GE_STARTMENU_PAGE`, `GE_STARTMENU_DIFF`) | `src/game/lv.c:398-402` (`#ifdef PORT`) | Boot straight into a front-end menu id (13=MISSION_COMPLETE, 10=BRIEFING, 7=MISSION_SELECT, 12=MISSION_FAILED, 6=MODE_SELECT); `_PAGE`=folder row (def 1=Dam), `_DIFF`=0..3. Crash-test a screen fast. | **live** |
 | `GE_UNLOCK_ALL` | `src/game/debugmenu_handler.c:1098` (`get_debug_enable_all_levels_flag`, `#ifdef PORT`) | Mission-select shows every solo level (playtest jump-to-any-level aid). Cached in a `static int c`. | **live** |

@@ -27,6 +27,7 @@
 extern double atof();
 extern double strtod();
 extern long int strtol();
+extern int atoi();
 extern int atexit();
 /* D324: getenv was previously declared only on non-Windows, on the (wrong)
  * assumption that MinGW's other CRT headers leak a prototype -- config.c gets
