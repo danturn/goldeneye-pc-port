@@ -915,6 +915,10 @@ through a converter or a runtime bswap fixup reads scrambled.
   (ginit.s is missing from this repo; the expansion lives there), not UV,
   shade, or the combiner.
 
+## D14. LOD tile selection is a 2-cycle-only RDP feature; stale `G_TL_LOD` must not affect 1-cycle texture rectangles (D341)
+
+`G_TL_LOD` is sticky other-mode state. Game code that draws a 1-cycle texture rectangle after an LOD-textured draw never clears it, because on the RDP it is irrelevant outside 2-cycle mode. fast3d's LOD/detail tile folding (D107/D236) must therefore not run for 1-cycle texrects, or they sample a neighbouring tile's stale declaration. Related: textures the CPU rewrites in place at recurring addresses (dyn pool) need a content-hashed cache key, and remember game code reaches them through the 0x80000000 KSEG0 mirror.
+
 ## D12. "Collapse an LOD binding to tile 0" is wrong for a two-texture DETAIL binding (D236)
 
 **M-198 (finding D236 pass 26).** GE's `texLoadFromGdl` resolves a room DL's

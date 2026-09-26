@@ -583,6 +583,8 @@ extern "C" int gfx_texture_cache_count(void) {
     return (int)gfx_texture_cache.map.size();
 }
 
+extern "C" u8 *g_VtxBuffers[3]; /* dyn.c per-frame pool (dynamic-texture cache key) */
+
 static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
     TextureCacheMap::iterator it = gfx_texture_cache.map.find(key);
     TextureCacheNode** n = &rendering_state.textures[i];
@@ -1101,6 +1103,34 @@ static void import_texture(int i, int tile, bool importReplacement) {
                 loaded_texture.size_bytes, rdp.palette_hash }; // D217: key on palette content
     } else {
         key = { orig_addr, {}, fmt, siz, palette_index, loaded_texture.size_bytes, 0u };
+    }
+
+    /* Intro blood (M-201): textures the game regenerates IN PLACE in the
+     * per-frame dynamic pool (dynAllocate, [g_VtxBuffers[0], g_VtxBuffers[2]))
+     * -- e.g. the gun-barrel / death blood-drip image rebuilt by
+     * die_blood_image_routine -- reuse the same addresses frame after frame,
+     * so an address-only key returns a stale GL texture from an earlier frame.
+     * Key those on a content hash (FNV-1a) instead; static textures keep the
+     * free address key. GE_DYNTEXHASH_OFF=1 disables for A/B. */
+    {
+        static int dynhash_off = -1;
+        if (dynhash_off < 0) dynhash_off = getenv("GE_DYNTEXHASH_OFF") != NULL;
+        /* Game code often reaches this memory through OS_K0_TO_PHYSICAL,
+         * which fast3d resolves into the byte-identical KSEG0 mirror at
+         * 0x80000000 (port/src/dram.c V2) -- normalise to the V1 view the
+         * dyn pool pointers use before the range test. */
+        const uint8_t* v1addr = orig_addr;
+        if ((uintptr_t)v1addr >= 0x80000000UL && (uintptr_t)v1addr < 0x80800000UL) {
+            v1addr -= 0x10000000UL;
+        }
+        if (!dynhash_off && g_VtxBuffers[0] && v1addr >= g_VtxBuffers[0] && v1addr < g_VtxBuffers[2]) {
+            uint32_t h = 2166136261u;
+            const uint32_t n = loaded_texture.size_bytes;
+            for (uint32_t b = 0; b < n; b++) {
+                h = (h ^ orig_addr[b]) * 16777619u;
+            }
+            key.palette_hash = h ? h : 1u;
+        }
     }
 
     if (gfx_texture_cache_lookup(i, key)) {
@@ -2119,7 +2149,18 @@ static void gfx_sp_modify_vertex(uint16_t vtx_idx, uint8_t where, uint32_t val) 
     v->v = t;
 }
 
+/* Intro blood (M-201): set while a texture rectangle is being drawn. */
+static bool s_in_texrect = false;
+
 static inline int gfx_lod_tile_offset(const int i) {
+    /* Intro blood (M-201): a texture rectangle outside 2-cycle mode samples
+     * exactly the tile its command names -- the RDP only selects LOD tiles in
+     * 2-cycle mode. The title leaves G_TL_LOD set from earlier draws, and the
+     * D236 detail-base rule below then sent the 1-cycle gun-barrel blood
+     * rectangle to a stale tile-1 CI8 declaration (static garbage instead of
+     * the drip). Scoped to texrects so 3D LOD/detail paths are untouched. */
+    if (s_in_texrect && (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) != G_CYC_2CYCLE)
+        return i;
     if (gfx_detail_textures_enabled)
         return ((rdp.tex_lod && !rdp.tex_detail) ? 0 : i);
     // D107: GE has no true detail textures (gfx_detail_textures_enabled is
@@ -3566,7 +3607,9 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
     }
     rdp.first_tile_index = tile;
 
+    s_in_texrect = true;
     gfx_draw_rectangle(ulx, uly, lrx, lry);
+    s_in_texrect = false;
     if (saved_tile != tile) {
         rdp.textures_changed[0] = true;
         rdp.textures_changed[1] = true;
@@ -3612,7 +3655,9 @@ static void gfx_dp_image_rectangle(int32_t tile, int32_t w, int32_t h,
     }
     rdp.first_tile_index = tile;
 
+    s_in_texrect = true;
     gfx_draw_rectangle(ulx, uly, lrx, lry);
+    s_in_texrect = false;
     if (saved_tile != tile) {
         rdp.textures_changed[0] = true;
         rdp.textures_changed[1] = true;
