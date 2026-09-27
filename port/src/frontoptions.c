@@ -42,13 +42,13 @@
 #include "envflag.h"
 #include "optionsoverlay.h"
 #include "frontoptions.h"
+#include "input.h"
 
 /* front.c functions this screen shares with the cheat screen (not all are in
  * front.h). */
 extern Gfx *frontSetupMenuBackground(Gfx *DL);
 extern Gfx *frontAddPreviousTabText(Gfx *DL);
 extern s32  frontCheckCursorOnPreviousTab(void);
-extern void frontUpdateControlStickPosition(void);
 extern Gfx *frontDrawCursor(Gfx *DL);
 extern Gfx *frontPrintText(Gfx *gdl, s32 *x, s32 *y, s8 *text, s32 second_font_table,
                            s32 first_font_table, s32 arg6, s32 view_x, s32 view_y,
@@ -69,7 +69,11 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 #define TITLE_Y    0x2B
 #define ROW_X      0x37          /* the cheat list's x */
 #define ROW_Y0     0x41          /* cheat list starts 0x35; +12 for the title line */
-#define ROW_DY     0x14          /* the cheat list's row pitch */
+/* D346b: 20 -> 18 px so the merged Video section (14 rows default, 15 with
+ * "Draw dist. follows FOV" off) fits the paper on one page. Hit bands stay
+ * contiguous at any pitch >= 6; the 22px highlight box still clears the next
+ * row (y+14 < y+17). */
+#define ROW_DY     18
 #define NUM_X      0x37          /* "1." on the section list */
 #define SEC_X      0x4B
 #define VAL_R      372           /* values right-aligned here */
@@ -85,7 +89,7 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 #define HIT_PAD     4
 
 #define MAX_PAGES  8
-#define MAX_PROWS  12            /* the paper fits 12 rows, like the cheat list */
+#define MAX_PROWS  15            /* D346b: 12 -> 15 for the merged Video section (see ROW_DY) */
 
 static const char kLabel[]   = "PC Options";  /* ASCII only: issue #87 / D295 */
 static const char kLabelNL[] = "PC Options\n";
@@ -96,6 +100,9 @@ static int s_page = 0;           /* current section */
 static int s_hl = -1;            /* highlighted row / section, -1 = none */
 static int s_dragRow = -1;       /* global row index being dragged */
 static int s_repeatDir = 0, s_repeatTimer = 0;
+/* D345(e): hold-to-repeat state for vertical row stepping (separate from
+ * the left/right value-adjust repeat; both can be held at once). */
+static int s_vrepeatDir = 0, s_vrepeatTimer = 0;
 
 static int s_pageHdr[MAX_PAGES];
 static int s_pageN = 0;
@@ -174,11 +181,29 @@ static int itemCount(void)
     return s_level == 0 ? s_pageN : s_rowN;
 }
 
+/* Put the crosshair on item k, unconditionally. */
+static void cursorToItemRaw(int k)
+{
+    /* D345(g): snap into the left gutter (x=44), not onto the row text
+     * (the old ROW_X+20 centred the sprite over the label/highlight box).
+     * 44 stays inside [ROW_HIT_X0..1] so the highlight hit-test still
+     * resolves row k, and clears the number column (NUM_X=55) / highlight
+     * boxes (from x=53/73). The PREVIOUS-tab hitbox (x>390 && y>223) is
+     * far away. Mouse users are unaffected: the pointer sits under the
+     * real mouse, never at this snap position. */
+    cursor_h_pos = 44.0f;
+    cursor_v_pos = (f32)(rowY(k) + 6);
+}
+
 /* Put the crosshair on item k (entering a page / going back). */
 static void cursorToItem(int k)
 {
-    cursor_h_pos = (f32)(ROW_X + 20);
-    cursor_v_pos = (f32)(rowY(k) + 6);
+    /* D345(b): while the 1:1 pointer owns the crosshair (mouse recently
+     * used), it is already under the OS pointer -- snapping would yank it
+     * to the top-left item and it would stay there until the next mouse
+     * movement. Keyboard/D-pad users (stale mouse) keep the snap. */
+    if (inputMenuPointerLive()) return;
+    cursorToItemRaw(k);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -209,6 +234,7 @@ void frontOptionsMenuInit(void)
     s_hl = -1;
     s_dragRow = -1;
     s_repeatDir = 0;
+    s_vrepeatDir = 0;
     buildPages();
     cursorToItem(0);
     sysLogPrintf(LOG_INFO, "frontoptions: opened");
@@ -241,6 +267,11 @@ void frontOptionsMenuInterface(void)
     viSetUseZBuf(0);
 
     buildPages();   /* an auto toggle may have hidden or shown % rows */
+
+    /* D345(f): NO raw stick integration on this screen (the D345(c) call to
+     * frontUpdateControlStickPosition() was removed): vertical input is the
+     * discrete row stepper below, horizontal is the left/right block -- F10
+     * model. Raw drift fought the pointer over cursor_h/v_pos. */
 
     /* Highlight: as the cheat screen, recomputed while A is not held. */
     if (joyGetButtons(PLAYER_1, A_BUTTON | Z_TRIG) == 0) {
@@ -298,8 +329,11 @@ void frontOptionsMenuInterface(void)
      * with hold-to-repeat. */
     if (s_level == 1 && s_hl >= 0 && s_hl < s_rowN) {
         int dir = 0;
-        if (joyGetButtons(PLAYER_1, L_JPAD | L_CBUTTONS)) dir = -1;
-        if (joyGetButtons(PLAYER_1, R_JPAD | R_CBUTTONS)) dir = +1;
+        /* D345(f): stick X joins the D-pad/C-buttons, so Left/Right arrows
+         * (and the pad's left stick) adjust values like F10's left/right. */
+        s8 vsx = joyGetStickX(PLAYER_1);
+        if (joyGetButtons(PLAYER_1, L_JPAD | L_CBUTTONS) || vsx < -5) dir = -1;
+        if (joyGetButtons(PLAYER_1, R_JPAD | R_CBUTTONS) || vsx > 5) dir = +1;
         if (dir != 0) {
             int fire = 0;
             if (dir != s_repeatDir) {
@@ -323,7 +357,47 @@ void frontOptionsMenuInterface(void)
     set_item_visibility_in_objinstance(walletinst[0], SW_TABS, 1);
     set_item_visibility_in_objinstance(walletinst[0], SW_BLANK, 1);
     set_item_visibility_in_objinstance(walletinst[0], SW_CLASSIFIED, 1);
-    frontUpdateControlStickPosition();
+
+    /* D345(e): F10-style discrete vertical navigation. W/S / Up-Down arrows
+     * (stick via D345(d)) or the pad's stick/D-pad step the highlight one
+     * row at a time -- clamped at the ends, hold-to-repeat with the same
+     * 18/4-frame cadence as left/right -- and snap the crosshair onto the
+     * new row (ungated: explicit keyboard navigation owns the cursor even
+     * right after mouse use). Replaces the raw stick drift of D345(c),
+     * which fought the pointer over cursor_v_pos. The mouse is untouched:
+     * any movement re-owns the cursor and the highlight hit-test above
+     * follows it next frame. Skipped while a slider drag holds A. */
+    if (s_dragRow < 0) {
+        int vdir = 0;
+        s8 vsy = joyGetStickY(PLAYER_1);
+        if (joyGetButtons(PLAYER_1, U_JPAD) || vsy > 5)      vdir = -1;  /* up   */
+        else if (joyGetButtons(PLAYER_1, D_JPAD) || vsy < -5) vdir = +1;  /* down */
+        if (vdir != 0) {
+            int fire = 0;
+            if (vdir != s_vrepeatDir) {
+                fire = 1;
+                s_vrepeatTimer = 18;
+            } else if (--s_vrepeatTimer <= 0) {
+                fire = 1;
+                s_vrepeatTimer = 4;
+            }
+            if (fire) {
+                int n = itemCount();
+                if (n > 0) {
+                    int q = (s_hl < 0 ? 0 : s_hl) + vdir;
+                    if (q < 0) q = 0;
+                    if (q >= n) q = n - 1;
+                    if (q != s_hl) {
+                        s_hl = q;
+                        cursorToItemRaw(q);
+                    }
+                }
+            }
+        }
+        s_vrepeatDir = vdir;
+    } else {
+        s_vrepeatDir = 0;
+    }
 }
 
 Gfx *frontOptionsMenuDraw(Gfx *DL)
@@ -381,7 +455,7 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
 
             optionsRowValueText(i, buf, sizeof(buf) - 1);
             if (buf[0]) {
-                u32 col = (strcmp(buf, "ON") == 0) ? INK_ON : INK;
+                u32 col = (strcmp(buf, "On") == 0) ? INK_ON : INK;   /* D346: kOnOff is now title-case */
                 strcat(buf, "\n");
                 DL = inkR(DL, VAL_R, y, buf, col);
             }

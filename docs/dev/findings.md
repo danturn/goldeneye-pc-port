@@ -630,6 +630,8 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D342 | **File select: folder bodies and Bond photos vanish after selecting a file and backing out (user, v0.4.0, 2026-09-26).** — full `## D342` entry at file tail | FIXED (M-201, user-verified): scratch placed at the N64 offset +0xA000 of `ptr_logo_and_walletbond_DL` landed inside the larger PC wallet model; moved past its 0x17000 reservation. |
 | D343 | **File select: PC "Options" label opens the settings overlay (v0.4.0 feature, M1 of the route-B options screen, 2026-09-27); also fixes F10 on file select jumping to the legal screen after 30 s.** — full `## D343` entry at file tail | LANDED (M1): one Rule-2 `#ifdef PORT` draw hook (user sign-off 2026-09-27); headless + user-verified (mouse, F10, >30 s, widescreen); physical controller check owed. |
 | D344 | **Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during game test runs; probable cause: quit called exit() while the render thread could be inside the GL driver (2026-09-27).** — full `## D344` entry at file tail | FIXED (probable cause; orderly quit + GE_QUITFRAME), headless + user-verified; no dump, watch for recurrence. |
+| D345 | **Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select `setCursorPOSforMode(0)`, front.c:2516; every `MENU_PC_OPTIONS` page hop), and the options screen's keyboard navigation was missing/mis-modelled (2026-09-27).** — full `## D345` entry at file tail | Port-only, user-verified (parts a–g): (a) `input.c` re-assert window on menu change; (b) `cursorToItem` skips its snap while the pointer is live; (d) W/S emit stick in menus under NaturalPitch; (e/f) F10-style discrete row stepping + arrow left/right value adjust replace raw drift (first pass shipped broken, fixed); (g) screen-placed cursor parks in the left gutter, off the row text. Game-side one-liner (pad users) parked pending Rule-2 sign-off. |
+| D346 | **PC-settings wording pass: option labels/values aligned to Nightdive/Turok + PD-port conventions (title-case On/Off, "Frame rate cap", "Anti-aliasing"/"None", units in values not labels, self-explanatory auto-FOV toggles); VIEW section merged into VIDEO (2026-09-27).** — full `## D346` entry at file tail | Port-only display change landed (`optionsoverlay.c` rows[]/valueText + one colour match in `frontoptions.c`); both UIs (F10 overlay + options screen) share the table. Config keys/values untouched. Deadzone % display uses raw-step grid (cosmetic follow-up noted). |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13607,3 +13609,96 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 
 **Status: FIXED (probable cause), user-verified.**
 
+
+## D345 — File select → mode select: crosshair snaps to the Agent row and stays there until the mouse moves (2026-09-27)
+
+**Report:** with mouse input, entering a folder page (file select → mode select) resets the crosshair away from the pointer; it stays at the snapped position until the next mouse movement.
+
+**Evidence:** `front.c:2516` — the file-select→mode-select entry path calls `setCursorPOSforMode(0)` unconditionally, teleporting `cursor_h/v_pos` to (126, 226), the first row. Its two sibling re-entry paths (`front.c:4502`, `:4646`) already use `setCursorPOSforMode(gamemode)`. The port's 1:1 menu pointer (`port/src/input.c`, D165/D169) writes `cursor_h/v_pos` from the absolute mouse position **only on frames where the OS mouse moved** (idle-mouse cede so WASD/arrow navigation can drive the cursor through the game's integrator). A click-to-enter leaves the mouse idle, so the game's snap persists until the next movement. `menuPrevActive` (`input.c:1359`) tracks menu-vs-not only, so the "just entered a menu" baseline-adopt branch does not fire on menu-to-menu transitions. Poll order is input → interface (D343), so the same-frame snap wins over any same-frame re-assert.
+
+**Fix (port-only, `port/src/input.c`):** carry pointer ownership across front-end screen changes.
+- New statics: `menuPointerLastMenuId`, `menuPointerTransitionFrames`, `menuPointerLastAbsWrite` (perf-counter stamp of the last absolute write).
+- Every pad-0 poll: if `current_menu` changed, open a 3-poll re-assert window (the transition poll's write loses to the game's same-frame snap; poll+1 sticks).
+- In the 1:1 pointer block, force the absolute write when `(mouse moved) OR (window open AND mouse used within MENU_POINTER_REASSERT_MS = 1500 ms)`. Click-to-enter → cursor lands back under the pointer on the new page. Stale idle mouse (WASD navigation) → no yank; the cede-to-keyboard behaviour is preserved.
+- The F10 overlay does not change `current_menu`, so opening/closing it opens no window (correct: same screen, pointer already under the mouse). Entering `MENU_PC_OPTIONS` does change it and re-asserts — desirable, flagged for playtest.
+
+**D345(b) — the new PC options screen (user report: "doesn't work on our new PC settings menu").** `MENU_PC_OPTIONS` has its own cursor teleporter: `cursorToItem()` (`port/src/frontoptions.c:178`) snaps the crosshair to a page's first item, called from screen-entry init, section entry, and back. The section/back hops happen *inside* frontoptions.c (no `current_menu` change), so the D345(a) window never sees them; every page hop re-snapped the crosshair away from the pointer. Fix (port-only): input.c now exports `inputMenuPointerLive()` (in a menu + abs pointer available + mouse used within `MENU_POINTER_REASSERT_MS`; refreshed every pad-0 poll, forced 0 while the F10 overlay owns the mouse), and `cursorToItem()` skips its snap when it is set — the cursor is already under the OS pointer. Keyboard/D-pad users (stale mouse) keep the snap. Also added `#include <SDL.h>` to `port/include/input.h` (its API uses SDL types; previously only includers that had SDL already compiled — cf. video.h).
+
+**D345(c) — options screen: W/S did not move through the lists (user playtest).** Cheat-screen-style menus integrate stick input into `cursor_h/v_pos` by calling `frontUpdateControlStickPosition()` from their interface (`interface_menu15_cheat`, front.c:7700); `frontOptionsMenuInterface()` never did, so keyboard/D-pad vertical input had nothing to drive the cursor (A/D worked because frontoptions.c reads those as buttons directly). Fix (port-only): `frontOptionsMenuInterface()` now calls `frontUpdateControlStickPosition()` after `buildPages()`, before the highlight reads the cursor — mirroring the cheat screen. No-op while the 1:1 pointer owns the cursor (it emits a zero stick).
+
+**D345(d) — W/S still dead after (c): NaturalPitch mode starves the stick (user playtest via playtest_v040.bat, confirmed running the fixed binary by exe/log timestamps).** With `NaturalPitch = 1` (default; in the user's ini), the keyboard forward/back mapping emits **C-up/C-down buttons** instead of stick (`input.c:1037-1042`, the D194/D238 in-stage aim scheme) -- and no front-end screen navigates on C-buttons, so W/S (and Up/Down arrows) produced zero stick in every menu. Fix (port-only): the natural-pitch branch now requires `!menuMode`, so menus always get the stick mapping (N64 front end is stick-driven). Watch/pause is unaffected: it runs at `current_menu == RUN_STAGE` (menuMode 0) and keeps the C-button mapping, N64-style. This also restores W/S vertical navigation on file select / cheat screen for NaturalPitch users (mouse users never noticed).
+
+**D345(e) — user preference: F10-style discrete keyboard navigation on the options screen ("behave like the F10 menu but keep the mouse option").** Replaced the D345(c) raw stick drift with one-row-at-a-time stepping in `frontOptionsMenuInterface()`: W/S / Up-Down arrows (stick, via D345(d)) or pad stick/D-pad (`U_JPAD`/`D_JPAD`) move the highlight ±1 row, clamped at the ends, hold-to-repeat on the screen's existing 18/4-frame cadence (separate `s_vrepeatDir/Timer` state so it can run alongside left/right value adjust). Each step snaps the crosshair via new ungated `cursorToItemRaw()` (explicit keyboard nav owns the cursor even right after mouse use); `cursorToItem()` keeps the D345(b) pointer-live gate for page transitions. Mouse is untouched: any movement re-owns the cursor and the highlight hit-test follows it next frame. Stepper is skipped while a slider drag holds A. The D345(c) `frontUpdateControlStickPosition()` call is removed (it fought the pointer over `cursor_v_pos`).
+
+**D345(f) — D345(e) shipped broken (user: "W/S still just move the crosshair").** The D345(e) edit added the stepper but its two *removals* never landed: the D345(c) `frontUpdateControlStickPosition()` call (after `buildPages()`) and its extern stayed in `frontoptions.c`, so W/S ran raw cursor drift on top of the row stepper. The build didn't catch it: with the extern gone from my intended edit but present in the file, compilation only produced an implicit-declaration warning, which this project compiles through. Fix: removed the call + extern (verified by grep, not just the edit tool's success message), and added stick-X to the left/right value block so Left/Right arrows adjust values like F10 (A/D letters already worked via C-buttons). Lesson recorded: after any edit that both adds and removes, grep-verify the removals against the file.
+
+**Not changed:** the game-side snap itself (`front.c:2516`) is untouched — no Rule-2 sign-off needed for this fix. The optional one-liner `setCursorPOSforMode(gamemode >= 0 ? gamemode : 0)` (matching its siblings) remains a separate parked item; its main beneficiary is pad users, who have no re-assert at all.
+
+**User-verified (2026-09-27):** folder-page snap gone (mouse); options screen entry/section hops keep the pointer under the mouse; sliders/toggles fine; F10-style W/S + arrow navigation with hold-to-repeat works; left/right arrows adjust values; crosshair parks in the gutter off the row text. Resolved for time being.
+
+**Verification:** builds clean (`build-pc.sh ntsc-final`; only pre-existing warnings). Headless smoke: `GE_STARTMENU=5 GE_INPUTLOG=1 GE_QUITFRAME=400` — 412 `menuptr` lines, cursor stable, orderly self-quit (`render parked after 3 ms`). The playtest items listed here were subsequently covered by the user verification above.
+
+## D346 — PC-settings wording pass: Nightdive/Turok + PD-port conventions (2026-09-27)
+
+User request: make all PC setting labels/values consistent with the PD port and
+Nightdive remasters (Turok) where possible. Both settings UIs (the F10 overlay
+and `MENU_PC_OPTIONS`) share one table — `rows[]` in `port/src/optionsoverlay.c`
+— so a single pass covers both. Display-only: config keys, stored values, and
+adjustment behavior are untouched (existing inis read/write identically).
+
+**Label changes** (`rows[]`, optionsoverlay.c):
+
+| Before | After | Rationale |
+|---|---|---|
+| `DISPLAY` (section) | `VIDEO` | Nightdive section naming ("Video"); pairs with the existing `VIEW` section |
+| `Frame cap` | `Frame rate cap` | Turok 3's exact wording; values already Nightdive-style (`Uncapped` / `120 FPS`) |
+| `MSAA` | `Anti-aliasing` | Nightdive standard; jargon-free |
+| `Anisotropic` | `Anisotropic filtering` | Nightdive standard |
+| `FOV scale %` / `Draw distance %` / `LOD distance %` / `HUD scale %` / `Trigger threshold %` | `%` dropped from labels, moved to the value (`100%`, `150%`, …) | Nightdive shows units in the value column, not the label |
+| `Crop overscan bars` | `Crop overscan` | trimmed; "bars" was internal phrasing |
+| `Draw dist. auto` / `LOD dist. auto` | `Draw dist. follows FOV` / `LOD dist. follows FOV` | the old labels didn't say what follows what (they couple the distance to `Video.FovScale`, video.c:203-231) |
+| `Mouse invert Y` / `Pad invert look Y` | `Invert look (mouse)` / `Invert look (controller)` | Nightdive per-device convention; now a consistent pair |
+
+**Value changes:** `OFF/ON` → `Off/On` (kOnOff); `NEAREST/BILINEAR/3-POINT` →
+`Nearest/Bilinear/3-Point`; `CENTRED (PC)` → `Centred (PC)`; MSAA `OFF` →
+`None` (Nightdive AA vocabulary). The options screen's ON-colour match in
+`frontoptions.c:454` updated `"ON"` → `"On"` to follow.
+
+**Mechanism:** two display-only fields appended to `struct Row` (`unit`,
+`dispDiv`; C zero-fill keeps every existing positional initializer valid) and a
+small branch at the integer-slider tail of `valueText()`: optional raw→display
+divide, then unit suffix. Used by: FovScale/DrawDistance/LodDistance/HudScale/
+PadTriggerPct (`%`), Anisotropy (`x`), PadDeadzone (`%`, dispDiv 300 — raw
+0..30000 stick units → % of full travel; default 7000 now reads "23%" instead
+of "7000").
+
+**Kept deliberately:** `VSync`, `Fullscreen`, `Resolution`, `Texture filter`
+(universal); `Aim style`/`Aim range` + their `N64`/`PC` values (GE-specific,
+already clear); `No hit flash` (community-mod name; inverting the polarity to
+"Hit flash: Off" would change what On means — not a wording fix); `Skip intro`,
+`Show FPS`, `All unlocked`, `Quit to desktop` (plain English, no reference
+counterpart worth matching).
+
+**Known cosmetic follow-up (not done):** the deadzone slider's raw step is 500
+stick units, so its % display advances ~1.7% per press (23→24→25→27…). A clean
+1%-per-press grid would mean changing `step` to 300 — a behavior change to the
+adjustment feel, out of scope for a wording pass; flagged for a future input-QoL
+item.
+
+**D346b — VIEW section merged into VIDEO (user request, same day).** The old
+`VIEW` header row was deleted from `rows[]`; its rows (FOV scale, Native
+widescreen, Widescreen auto FOV, Crop overscan, draw/LOD distance pairs) now
+follow the display/quality rows in one Nightdive-style "Video" section. The
+options screen's page model is one-header-one-page with a row cap, so the cap
+moved 12→15 (`MAX_PROWS`) and the row pitch 20→18 px (`ROW_DY`, frontoptions.c)
+to keep the worst case (15 rows: "Draw dist. follows FOV" off reveals both its
+toggle and the slider) on one page — last row text at y=317, inside the 330
+paper; its 22px highlight box overflows by 1px in that state only (clipped,
+invisible). Hit bands stay contiguous at the tighter pitch (band = [y-3, y+15),
+next starts y+15). F10 overlay unaffected (own pitch, scrolls). Section list is
+now 4 entries: Video / Mouse / Aim / Controller / Game.
+
+**Verification:** `build-pc.sh ntsc-final` clean (no new warnings); headless
+boot into the options screen (`GE_STARTMENU=26 GE_QUITFRAME=300`) orderly
+self-quit, zero crash lines. All strings plain ASCII (JP-region safe, #87).
+Port-only: no `src/game` edits, N64 build untouched.

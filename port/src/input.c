@@ -265,6 +265,9 @@ extern s32 lvlGetCurrentStageToLoad(void);
 #define MENU_CURSOR_LO      20.0
 #define MENU_CURSOR_HI_H    300.0
 #define MENU_CURSOR_HI_V    220.0
+/* D345: after a front-end screen change, re-assert the 1:1 pointer for a few
+ * frames if the mouse was used within this many ms (see inputComputePad). */
+#define MENU_POINTER_REASSERT_MS 1500.0
 #define MENU_CURSOR_MID_H   160.0
 #define MENU_CURSOR_MID_V   120.0
 
@@ -538,6 +541,20 @@ static int    hipfirePitchSpeed = 100; /* D166: hipfire pitch pulse rate, percen
 static int    menuPrevActive = 0;
 static double hipPitchPhase = 0.0;              /* D166: hipfire pitch pulse phase 0..1     */
 static int    lastMenuMouseX = -1, lastMenuMouseY = -1;  /* WI-2: last abs cursor seen in a menu */
+/* D345: carry pointer ownership across front-end screen changes. The game
+ * teleports cursor_h/v_pos on some transitions (file select -> mode select
+ * calls setCursorPOSforMode(0), front.c:2516); the absolute write below only
+ * fires while the OS mouse moves, so with an idle mouse the snap persists
+ * until the next movement. lastMenuId detects the change; transitionFrames is
+ * a short countdown during which a recent-mouse re-assert is allowed;
+ * lastAbsWrite is the perf-counter stamp of the last absolute write (mouse
+ * recency). */
+static int    menuPointerLastMenuId = -1;
+static int    menuPointerTransitionFrames = 0;
+static Uint64 menuPointerLastAbsWrite = 0;
+/* D345(b): 1 while the 1:1 pointer can own cursor_h/v_pos this poll
+ * (menu, mouse enabled + grabbed). Refreshed every pad-0 poll. */
+static int    s_menuPointerLive = 0;
 
 
 /* ------------------------------------------------------------------------ */
@@ -949,6 +966,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         optionsOverlayHandleInput();
         if (stick_x) *stick_x = 0;
         if (stick_y) *stick_y = 0;
+        s_menuPointerLive = 0;   /* D345(b): the overlay owns the mouse */
         return 0;
     }
 
@@ -958,6 +976,17 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         Uint32 mb = mouseEnabled ? SDL_GetMouseState(NULL, NULL) : 0;
         int menuMode = (current_menu != GE_MENU_RUN_STAGE &&
                         current_menu != GE_MENU_INVALID);
+
+        /* D345: detect front-end screen changes (any current_menu flip,
+         * including into MENU_PC_OPTIONS / the F10 overlay's parent state)
+         * and open a short re-assert window. Runs every poll so the
+         * countdown drains even when the pointer block below is skipped
+         * (mouse disabled, unfocused window, legacy velocity mode). */
+        if ((int)current_menu != menuPointerLastMenuId) {
+            menuPointerLastMenuId = (int)current_menu;
+            menuPointerTransitionFrames = 3;   /* this poll + two more */
+        }
+        if (menuPointerTransitionFrames > 0) menuPointerTransitionFrames--;
 
         /* D194: aim mode drives the view from GRABBED relative deltas (see
          * aimAbsCompute) -- the cursor stays hidden and clipped to the window
@@ -1005,7 +1034,13 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
          * because the stick's Y axis is what carries continuous analog
          * pitch there instead. Strafe and turn are unchanged -- both
          * schemes read them the same way. */
-        if (naturalPitchMode) {
+        /* D345(d): natural pitch is an in-stage aim scheme -- the N64 front
+         * end navigates on the analog stick only, so in menus W/S (and the
+         * Up/Down arrows) must emit stick even with NaturalPitch=1, or no
+         * front-end screen (file select, cheat, MENU_PC_OPTIONS) can be
+         * driven vertically from the keyboard. Watch/pause keeps the C-button
+         * mapping: it is current_menu==RUN_STAGE (menuMode 0), N64-style. */
+        if (naturalPitchMode && !menuMode) {
             if (actHeld(ks, IA_FORWARD)) button |= GE_CONT_E;   /* C-up = forward   */
             if (actHeld(ks, IA_BACK))    button |= GE_CONT_D;   /* C-down = back    */
         } else {
@@ -1205,7 +1240,17 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                             lastMenuMouseX = mx;
                             lastMenuMouseY = my;
                         }
-                        if (mx != lastMenuMouseX || my != lastMenuMouseY) {
+                        /* D345: re-assert right after a screen change when the
+                         * mouse was the recent navigation device (click-to-
+                         * enter). A stale idle mouse (WASD/arrow navigation)
+                         * keeps the cede-to-keyboard behaviour: no yank. */
+                        Uint64 pcNow = SDL_GetPerformanceCounter();
+                        int mouseRecent = (menuPointerLastAbsWrite != 0) &&
+                            ((double)(pcNow - menuPointerLastAbsWrite) /
+                             (double)SDL_GetPerformanceFrequency() * 1000.0) <
+                            MENU_POINTER_REASSERT_MS;
+                        if ((mx != lastMenuMouseX || my != lastMenuMouseY) ||
+                            (menuPointerTransitionFrames > 0 && mouseRecent)) {
                             double fx = (double)mx / (double)ww;
                             /* D335: under native widescreen the front end is
                              * pillarboxed to a centred 4:3 region
@@ -1226,6 +1271,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                             cursor_v_pos = (float)(loV + fy * (hiV - loV));
                             sx = 0;   /* pointer owns the cursor this poll */
                             sy = 0;
+                            menuPointerLastAbsWrite = pcNow;
                         }
                         lastMenuMouseX = mx;
                         lastMenuMouseY = my;
@@ -1357,6 +1403,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             if (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) button |= GE_CONT_B;
         }
         menuPrevActive = menuMode;
+        s_menuPointerLive = (menuMode && mouseEnabled && !mouseGrabbed) ? 1 : 0;
 
         mouseDX = 0.0;
         mouseDY = 0.0;
@@ -1504,6 +1551,20 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
     }
 
     return button;
+}
+
+int inputMenuPointerLive(void)
+{
+    /* D345(b): true while the 1:1 menu pointer owns cursor_h/v_pos -- in a
+     * menu, the abs pointer is available, and the mouse was used recently.
+     * Port screens that teleport the crosshair (frontoptions.c cursorToItem)
+     * skip their snap when this is set: the cursor is already under the OS
+     * pointer. Keyboard/D-pad users (stale mouse) still get the snap. */
+    if (!s_menuPointerLive || menuPointerLastAbsWrite == 0) return 0;
+    Uint64 now = SDL_GetPerformanceCounter();
+    return ((double)(now - menuPointerLastAbsWrite) /
+            (double)SDL_GetPerformanceFrequency() * 1000.0) <
+           MENU_POINTER_REASSERT_MS;
 }
 
 static void applyGrab(int want)

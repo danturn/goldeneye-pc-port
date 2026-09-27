@@ -71,9 +71,11 @@ extern s16   viGetY(void);
 enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSCAP,
        ROW_HEADER /* D237: non-selectable category label */ };
 
-static const char *const kOnOff[]     = { "OFF", "ON", NULL };
-static const char *const kTexFilter[] = { "NEAREST", "BILINEAR", "3-POINT", NULL };
-static const char *const kAimMode[]   = { "N64", "CENTRED (PC)", NULL };   /* D337 */
+/* D346: wording pass -- Nightdive/Turok + PD-port conventions: title-case
+ * On/Off, no all-caps value strings. Display-only; config stores 0/1 either way. */
+static const char *const kOnOff[]     = { "Off", "On", NULL };
+static const char *const kTexFilter[] = { "Nearest", "Bilinear", "3-Point", NULL };
+static const char *const kAimMode[]   = { "N64", "Centred (PC)", NULL };   /* D337 */
 static const char *const kAimRange[]  = { "PC", "N64", NULL };             /* D338 */
 static const int         kMsaaSeq[]   = { 1, 2, 4, 8 };
 /* D186: the sim's own tick pacemaker is hardcoded to the console's native VI
@@ -123,29 +125,36 @@ struct Row {
      * disappears while its "auto" toggle is on). Resolved to hidePtr at init. */
     const char        *hiddenIfOn;
     int               *hidePtr;
+
+    /* D346: value-text decoration (display only). unit is appended to integer
+     * slider values ("%"/"x"); dispDiv>0 divides the raw value before display
+     * (e.g. deadzone raw 0..30000 -> % of full stick). NULL/0 = plain int. */
+    const char        *unit;
+    int                dispDiv;
 };
 
 static struct Row rows[] = {
-    { "__HdrDisplay",            "DISPLAY",          ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "__HdrDisplay",            "VIDEO",            ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Video.Fullscreen",         "Fullscreen",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "__Resolution",             "Resolution",       ROW_RES,    0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Video.VSync",              "VSync",            ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.FpsCap",             "Frame cap",        ROW_FPSCAP, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Video.MSAA",               "MSAA",             ROW_MSAA,   0,    NULL,       1, 0, 0,   0,0,0,0,0 },
+    { "Video.FpsCap",             "Frame rate cap",   ROW_FPSCAP, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Video.MSAA",               "Anti-aliasing",    ROW_MSAA,   0,    NULL,       1, 0, 0,   0,0,0,0,0 },
     { "Video.TextureFilter",      "Texture filter",   ROW_ENUM,   1,    kTexFilter, 0, 0, 0,   0,0,0,0,0 },
-    { "Video.Anisotropy",         "Anisotropic",      ROW_SLIDER, 1,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "__HdrView",               "VIEW",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Video.FovScale",           "FOV scale %",      ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Video.Anisotropy",         "Anisotropic filtering",ROW_SLIDER, 1, NULL,      0, 0, 0,   0,0,0,0,0, NULL, "x" },
+    /* D346b: the old VIEW section (FOV / widescreen / draw distance) is merged
+     * into VIDEO -- one Nightdive-style "video" section; rows keep order. */
+    { "Video.FovScale",           "FOV scale",        ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%" },
     /* D334: native widescreen (world projected at the window aspect, Hor+).
      * While on, "Widescreen auto FOV" has no effect (it was the stretch-era
      * vertical-FOV compensation). */
     { "Video.NativeWidescreen",   "Native widescreen",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Video.WidescreenAuto",     "Widescreen auto FOV",ROW_TOGGLE,1,   kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.SafeAreaCrop",       "Crop overscan bars", ROW_TOGGLE,1,   kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.DrawDistance",       "Draw distance %",  ROW_SLIDER, 25,   NULL,       0, 0, 0,   0,0,0,0,0, "Video.DrawDistanceAutoFov" },
-    { "Video.DrawDistanceAutoFov","Draw dist. auto",  ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.LodDistance",        "LOD distance %",   ROW_SLIDER, 25,   NULL,       0, 0, 0,   0,0,0,0,0, "Video.LodDistanceAutoFov" },
-    { "Video.LodDistanceAutoFov", "LOD dist. auto",   ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { "Video.SafeAreaCrop",       "Crop overscan",    ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { "Video.DrawDistance",       "Draw distance",    ROW_SLIDER, 25,   NULL,       0, 0, 0,   0,0,0,0,0, "Video.DrawDistanceAutoFov", "%" },
+    { "Video.DrawDistanceAutoFov","Draw dist. follows FOV",ROW_TOGGLE,1,kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { "Video.LodDistance",        "LOD distance",     ROW_SLIDER, 25,   NULL,       0, 0, 0,   0,0,0,0,0, "Video.LodDistanceAutoFov", "%" },
+    { "Video.LodDistanceAutoFov", "LOD dist. follows FOV",ROW_TOGGLE,1,kOnOff,      0, 0, 0,   0,0,0,0,0 },
     /* Aim row edits Input.AimModeSens -- the knob the default GEPD aim path
      * actually uses (Input.MouseAimSpeed only feeds the legacy velocity-stick
      * fallback, so it was inert here). D304: both this row and the turn-speed
@@ -177,7 +186,7 @@ static struct Row rows[] = {
     /* { "Input.SensLink",           "Link aim/turn sens",ROW_TOGGLE,1, kOnOff, 0, 0, 0, 0,0,0,0,0 }, */
     { "__HdrMouse",              "MOUSE / AIM",      ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.MouseSensitivity",   "Mouse sensitivity",ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Input.MouseInvertY",       "Mouse invert Y",   ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { "Input.MouseInvertY",       "Invert look (mouse)",ROW_TOGGLE, 1,  kOnOff,     0, 0, 0,   0,0,0,0,0 },
     /* Input.PdMouseAim (findings D332): the Perfect Dark port's mouse-aim
      * model. The port only accumulates the mouse; the game's own crosshair
      * integrator is driven by the port-supplied turn with PD's near-zero damp
@@ -195,9 +204,9 @@ static struct Row rows[] = {
      * style is CENTRED (PC), where the crosshair doesn't travel. */
     { "Input.AimRange",           "Aim range",        ROW_ENUM,   1,    kAimRange,  0, 0, 0,   0,0,0,0,0, "Input.AimMode" },
     { "__HdrPad",                "CONTROLLER",       ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Input.PadLookInvertY",     "Pad invert look Y",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Input.PadDeadzone",        "Stick deadzone",   ROW_SLIDER, 500,  NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Input.PadTriggerPct",      "Trigger threshold %",ROW_SLIDER,1,   NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Input.PadLookInvertY",     "Invert look (controller)",ROW_TOGGLE,1,kOnOff,   0, 0, 0,   0,0,0,0,0 },
+    { "Input.PadDeadzone",        "Stick deadzone",   ROW_SLIDER, 500,  NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%", 300 },
+    { "Input.PadTriggerPct",      "Trigger threshold",ROW_SLIDER, 1,    NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%" },
     /* D181/Game.ScreenShakeIntensity: user testing (v0.2.1) found the slider
      * "basically useless" -- viShake() is only called from explosion.c, so it
      * scales explosion shake alone; it never touches the always-on walking
@@ -210,7 +219,7 @@ static struct Row rows[] = {
     { "__HdrGame",               "GAME",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     /* D226: scales the ammo counter, pickup / status messages and dialogue
      * about their screen anchors. 100% = original, nothing emitted. */
-    { "Game.HudScale",            "HUD scale %",      ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { "Game.HudScale",            "HUD scale",        ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%" },
     { "Game.SkipIntro",           "Skip intro",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Video.DisplayFPS",         "Show FPS",         ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Game.NoHitFlash",          "No hit flash",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
@@ -922,7 +931,7 @@ static void valueText(const struct Row *r, char *out, int n)
         }
     }
     if (r->kind == ROW_MSAA) {
-        if ((int)lround(v) <= 1) snprintf(out, n, "OFF");
+        if ((int)lround(v) <= 1) snprintf(out, n, "None");
         else                     snprintf(out, n, "%dx", (int)lround(v));
         return;
     }
@@ -940,7 +949,15 @@ static void valueText(const struct Row *r, char *out, int n)
         else          snprintf(out, n, "%d FPS", fps);
         return;
     }
-    snprintf(out, n, "%d", (int)lround(v));
+    /* D346: integer sliders -- optional raw->display divide + unit suffix. */
+    if (r->dispDiv > 0) {
+        v = (double)(int)lround(v / (double)r->dispDiv);
+    }
+    if (r->unit) {
+        snprintf(out, n, "%d%s", (int)lround(v), r->unit);
+    } else {
+        snprintf(out, n, "%d", (int)lround(v));
+    }
 }
 
 static Gfx *drawText(Gfx *gdl, s32 x, s32 y, const char *str, u32 colour)
