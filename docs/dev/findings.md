@@ -643,6 +643,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D355 | **F10/options Music slider inaudible in-stage: the slider drives only the X-track (track 2) via `set_mTrack2Vol`, but in-stage BGM is track 1, which the game pins to `VOLUME_MAX` at level start (lv.c:364) and never rescales from `mTrack2Vol` in solo -- so neither the N64 watch nor the F10 could change the music the player was hearing; maintainer-reported (2026-09-27).** — full `## D355` entry at file tail | FIXED (port-only, `port/src/watchsettings.c`): the Music commit now also calls `musicTrack1ApplySeqpVol(v)` (the exact resync the MP path already does, mpmenu.c:354) and a once-per-activation resync runs on stage entry; by-ear confirmed by the maintainer. N64 watch path untouched. |
 | D356 | **Settings regroup: Turok-style pages renamed to functional sections (INPUT/GAMEPLAY/GRAPHICS/AUDIO/VIDEO) with PD-style "(File N)" scoping annotations, the redundant N64-watch rows (`Bond.Look`, `Bond.AimControl`) off the menu surface, and a real per-section Reset-to-defaults (two-step arm->confirm, watch rows to BLANKSAVEDATA via the D352 commit path, ini rows to the port's C initializers; `__Resolution` a documented exclusion) replacing the Turok reset rows the PC build never honored (2026-09-27).** — full `## D356` entry at file tail | FIXED (port-only, `port/src/optionsoverlay.{h,c}` + `port/src/watchsettings.{h,c}` + `port/src/frontoptions.c`; plan `docs/dev/D356-SETTINGS-REGROUP-PLAN.md`): 5 sections all below MAX_PROWS, hidden rows D181/D216-style (keys + watch paths stay live), edge-triggered reset with 3 s arm window + maintain/clear disarm, GE_WSPROBE_RESET front + in-stage probes headless-verified (all sections failures=0, scope isolation OK, saved bytes 0xFF), GE_WSPROBE/GE_WSPROBE_FRONT regressions clean. |
 | D358 | **D356 level-1 overlap: the front options save-file row (item 0) painted under the first content row, and `s_hl` (item-numbered) was indexed straight into `s_rowIdx` (content-numbered) -- wrong-row adjusts, a dead last row, a one-past read, wrong highlight (2026-09-27).** — full `## D358` entry at file tail | FIXED (port-only, `port/src/frontoptions.c`): content rows draw at `rowY(k+1)`; all `s_hl` -> `s_rowIdx` uses take `s_hl-1`; A-press guards `s_hl >= 1 && s_hl <= s_rowN`; hit-test/cursor untouched (already item-numbered). Companion: "(save)" tag -> "(profile)". |
+| D359 | **Settings UI file terminology settled on the end-user term "Profile": the screen mixed five terms ("Save file"/"File N"/"(profile)"/"Select file"/"(no file)"), and the manual's "game file" reads as the program's own files in modern PC usage (2026-09-27).** — full `## D359` entry at file tail | LANDED (port-only, `frontoptions.c` + `optionsoverlay.c` + comments): top row `Profile`/`N`, annotation `(Profile N)`/`(none)`, per-file row tag `(per profile)`, F10 value `Select a profile`; identifiers/ini keys unchanged (display-layer only). Manual "game file" -> "profile" sync TODO (port-owned doc, not in repo). |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13965,7 +13966,34 @@ and are untouched. Verified by build + headless boot smoke; visual check
 of the screen owed (D357 plan gate 4).
 
 **Companion change (same commit):** the per-file row tag now reads
-"(profile)" (was "(save)", maintainer request), both UIs. (Later the same
-day the tag and the rest of the file terminology were anchored on the
-instruction manual's "game file" term: "(game file)" tag, "Game file" top
-row, "Select game file" -- D357 plan §4.)
+"(profile)" (was "(save)", maintainer request), both UIs. (Full term
+history: "(save)" -> "(profile)" -> "(game file)" -> the final
+"(per profile)" set anchored on the end-user "Profile" term -- D357
+plan section 4.)
+
+## D359 — Settings UI file terminology settled on the end-user term "Profile" (2026-09-27)
+
+**Reported:** maintainer English/terminology review of the settings UI:
+the screen mixed five terms for the same thing ("Save file" label,
+"File N" values, "(profile)" tag, "Select file" fallback, "(no file)"
+state), and the instruction manual's "game file" was questioned for
+clarity.
+
+**Decision:** the end-user term is **"Profile"** — a per-player bundle
+of progress + per-file settings. "Game file" rejected: in modern PC
+usage it reads as the program's own files (Steam's "Verify integrity of
+game files"), not the user's save. "Save" was the fallback but reads as
+a verb in the row tag and implies progress-only. Rationale + the full
+string table: `docs/dev/D357-SETTINGS-VALUES-PLAN.md` §4.
+
+**Landed (port-only, `frontoptions.c` + `optionsoverlay.c`, both draw
+paths + comments):** top row `Profile` / value `N` (was `Save file` /
+`File N`); section-title annotation `(Profile N)` / `(none)` (was
+`(File N)` / `(no file)`); per-file row tag `(per profile)` (was
+`(save)` -> `(profile)` -> `(game file)`); F10 unavailable value
+`Select a profile` (was `Select file`). Code identifiers and ini keys
+(`Bond.*` rows, `watchSettings*`, ini) are unchanged — terminology is a
+display-layer concern only (principle 3).
+
+**TODO:** update the instruction manual's "game file" to "profile"
+(port-owned doc, not in this repo).

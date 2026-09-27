@@ -8,10 +8,11 @@ user notes, not checked independently*), and the N64 watch (ground truth for
 the `Bond.*` rows only). Triggered by maintainer report: the current values
 are "a bit confusing".
 
-Companion change landed with this doc's review: the dim per-file row tag is
-now **"(game file)"** (was "(save)"); the front top row reads **"Game
-file"** and the F10 unavailable value reads **"Select game file"** — the
-instruction manual's term (§4).
+Companion change landed with this doc's review: the terminology settled on
+**"Profile"** as the end-user term for a per-player game file -- the
+front top row reads **Profile**, the per-file row tag reads
+**"(per profile)"** and the F10 unavailable value reads **"Select a
+profile"** (§4).
 
 ## 1. Problem
 
@@ -113,23 +114,31 @@ ranges (2026-09-27). "Display" = what the value column shows today.
 | Frame rate cap | 60 · 0–1000 · 1 · `Uncapped/N FPS` | Turok: "up to 120 FPS" / uncapped | **Preset grid**: 0/30/60/120/144 (step = next preset, wraps to Uncapped); value text already `N FPS`/`Uncapped`. Decision: preset grid vs free 1-step (recommend presets; 117 FPS has no purpose). |
 | Show FPS | Off/On | both | Keep. |
 
-## 4. Terminology (instruction manual = "game file")
+## 4. Terminology (end-user term = "Profile")
 
-The instruction manual calls the per-player save a **"game file"**; the
-settings UI anchors on that term (2026-09-27, maintainer request). Final
-string set:
+Decision (2026-09-27, UX review): the end-user term for a per-player
+game file is **"Profile"** — the per-player bundle of progress +
+per-file settings. Rejected: **"game file"** (the instruction manual's
+current term) reads, in modern PC usage, as the *program's* own files
+("Verify integrity of game files"), not the user's save; **"Save"** was
+the fallback (universally understood) but reads as a verb in the row tag
+and as progress-only, which these files are not. "Profile" covers both
+and fits the dossier styling of the screen.
 
-| String | Where | State |
-|---|---|---|
-| **"Game file"** | front options top-row label (was "Save file") | changed |
-| **"(game file)"** | per-file row tag, both UIs (was "(save)", briefly "(profile)") | changed |
-| **"Select game file"** | F10 unavailable value (was "Select file") | changed |
-| `File N` | row values + the `(File N)` section annotation | kept (value-column short form, PD "Player N" pattern) |
-| `(no file)` | unavailable state, dim annotation | kept |
+Final string set (both UIs: front options + F10 overlay):
+
+| String | Where |
+|---|---|
+| **"Profile"** + value `N` | front options top row (was "Save file: File N") |
+| **"(Profile N)"** / **"(none)"** | section-title annotation on save-scoped sections (was "(File N)"/"(no file)") |
+| **"(per profile)"** | per-file row tag (was "(save)", then "(profile)", then "(game file)") |
+| **"Select a profile"** | F10 unavailable value (was "Select file") |
+
+**Manual sync TODO:** the instruction manual's "game file" should be
+updated to "profile" (the manual is a port document we own).
 
 "Bond file" remains in code identifiers/config keys (`Bond.*` rows,
-`watchSettingsChooseFile`, ini keys) only -- never user-visible; the manual
-and UI say "game file".
+`watchSettingsChooseFile`, ini keys) only -- never user-visible.
 
 ## 5. Gates
 

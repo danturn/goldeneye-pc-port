@@ -146,7 +146,7 @@ struct Row {
     int                dispDiv;
 
     /* D356: 1 = this row's value lives in the selected save file (per-file
-     * watch rows). Carries the dim "(game file)" tag on the only section that
+     * watch rows). Carries the dim "(per profile)" tag on the only section that
      * mixes scopes (GAMEPLAY); on headers the flag is recomputed at init to
      * mean "this section contains per-file rows" (drives the "(File N)"
      * title annotation in both UIs). */
@@ -158,7 +158,7 @@ static struct Row rows[] = {
      * GAMEPLAY, GRAPHICS, AUDIO, VIDEO; docs/dev/D356-SETTINGS-REGROUP-PLAN.md).
      * The D353 "BOND FILE" section -- the one named after WHERE a value is
      * saved -- is gone: its surviving rows split into GAMEPLAY (the per-file
-     * watch toggles, dim "(game file)" tagged since the section mixes scopes) and
+     * watch toggles, dim "(per profile)" tagged since the section mixes scopes) and
      * AUDIO (the per-file volume sliders, homogeneous so title annotation
      * only), and the "Edit file" chooser row is retired in favour of the
      * single top save-file row on the front options screen (frontoptions.c).
@@ -198,7 +198,7 @@ static struct Row rows[] = {
      *   Bond.AimControl  collides with Input.AimMode (two rows fighting over
      *                    the same N64-vs-PC aim model).
      * The four surviving per-file toggles move here from the D353 BOND FILE
-     * section and carry .saveScoped (dim "(game file)" tag, the only mixed-scope
+     * section and carry .saveScoped (dim "(per profile)" tag, the only mixed-scope
      * section). */
     /* { .key="Bond.Look", .label="Look up/down (watch; stacks)", .kind=ROW_TOGGLE,
        .names=kReverse, .found=1, .uiMax=1, .cfgMax=1 }, */
@@ -1231,12 +1231,12 @@ static void valueText(int i, char *out, int n)
     double v = rowGet(r);
     if (r->kind == ROW_BOND_FILE) {
         int f = watchSettingsFolder();
-        if (f < 0) snprintf(out, n, "Select game file");
-        else snprintf(out, n, "File %d", f + 1);
+        if (f < 0) snprintf(out, n, "Select a profile");
+        else snprintf(out, n, "%d", f + 1);
         return;
     }
     if (watchSettingsFieldForKey(r->key) >= 0 && !watchSettingsAvailable()) {
-        snprintf(out, n, "Select game file");
+        snprintf(out, n, "Select a profile");
         return;
     }
     if (r->kind == ROW_RES) {
@@ -1428,8 +1428,8 @@ Gfx *optionsOverlayEmit(void)
             if (r->saveScoped) {
                 int f = watchSettingsActiveFolder();
                 char note[16];
-                if (f < 0) snprintf(note, sizeof(note), "(no file)");
-                else       snprintf(note, sizeof(note), "(File %d)", f + 1);
+                if (f < 0) snprintf(note, sizeof(note), "(none)");
+                else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
                 gdl = drawText(gdl, OV_X0 + measureText(r->label) + 6, rowY, note, 0x909090ff);
             }
             continue;
@@ -1437,10 +1437,11 @@ Gfx *optionsOverlayEmit(void)
         gdl = drawText(gdl, OV_LABEL_X, rowY, (char *)r->label,
                        r->found ? col : 0x808080ff);
         /* D357: per-file rows in the mixed-scope section carry a dim
-         * "(game file)" tag (the section title already says which file). */
+         * "(per profile)" tag -- "stored separately in each profile";
+         * the section title says which one is active. */
         if (r->saveScoped && r->kind != ROW_HEADER) {
             gdl = drawText(gdl, OV_LABEL_X + measureText(r->label) + 5, rowY,
-                           "(game file)", 0x909090ff);
+                           "(per profile)", 0x909090ff);
         }
         if (!r->found) {
             gdl = drawTextR(gdl, right, rowY, "(n/a)", 0x808080ff);
@@ -1520,7 +1521,7 @@ int optionsRowIsBondChooser(int i)
 
 /* D356: content rows carry the literal per-file flag from the table; header
  * rows were recomputed at init to "this section contains per-file rows".
- * Both drive UI decoration (the "(game file)" tag, the "(File N)" annotation).
+ * Both drive UI decoration (the "(per profile)" tag, the "(Profile N)" annotation).
  * The F10 overlay and the front options screen are the only consumers. */
 int optionsRowIsSaveScoped(int i)
 {

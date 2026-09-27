@@ -495,16 +495,17 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
         if (optionsRowIsSaveScoped(s_pageHdr[s_page])) {
             int f = watchSettingsActiveFolder();
             char note[16];
-            if (f < 0) snprintf(note, sizeof(note), "(no file)");
-            else       snprintf(note, sizeof(note), "(File %d)", f + 1);
+            if (f < 0) snprintf(note, sizeof(note), "(none)");
+            else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
             DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
         }
 
-        /* D356: the top game-file row (item 0, not in the row table; the
-         * label reads "Game file", the instruction manual's term): the
-         * single file control of the front screen (F10 always targets the
-         * active file, so it has no file row). L/R (and A) cycle folders;
-         * (no file) is the unavailable state until one is created. */
+        /* D356: the top profile row (item 0, not in the row table; the label
+         * reads "Profile" -- the end-user term for a per-player game file,
+         * see D357 plan section 4): the single file control of the front
+         * screen (F10 always targets the active file, so it has no file
+         * row). L/R (and A) cycle folders; (none) is the unavailable state
+         * until one is created. */
         {
             int y = rowY(0);
             char sv[32];
@@ -512,10 +513,10 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
                 DL = microcode_constructor_related_to_menus(DL, ROW_X - 2, y - 1,
                         ROW_X + 140, y + 0xE, HILITE);
             }
-            DL = ink(DL, ROW_X, y, "Game file\n", INK);
+            DL = ink(DL, ROW_X, y, "Profile\n", INK);
             int f = watchSettingsActiveFolder();
-            if (f < 0) snprintf(sv, sizeof(sv), "(no file)");
-            else       snprintf(sv, sizeof(sv), "File %d\n", f + 1);
+            if (f < 0) snprintf(sv, sizeof(sv), "(none)");
+            else       snprintf(sv, sizeof(sv), "%d\n", f + 1);
             DL = inkR(DL, VAL_R, y, sv, INK);
         }
 
@@ -534,9 +535,10 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             DL = ink(DL, ROW_X, y, label, INK);
 
             /* D357: per-file rows in the mixed-scope section carry a dim
-             * "(game file)" tag (the section title already says which file). */
+             * "(per profile)" tag -- "stored separately in each profile";
+             * the section title says which one is active. */
             if (optionsRowIsSaveScoped(i)) {
-                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(game file)\n", INK_DIM);
+                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(per profile)\n", INK_DIM);
             }
 
             if (optionsRowIsSlider(i)) {
