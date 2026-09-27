@@ -231,3 +231,4 @@ D350,PARTIAL,Watch-backed PC options:,"PARTIAL (implemented; user reports tests 
 D351,FIXED,Existing D346 value/unit rows had positional initializers shifted into hidePtr:,"FIXED (port-only): designated row initializers restore unit, deadzone divisor and hide-if-auto fields; build clean, headless smoke clean."
 D352,FIXED,D350 review of 1303c0eb:,"FIXED (port-only, port/src/watchsettings.c):"
 D353,FIXED,Turok-style settings regrouping:,"FIXED (port-only, optionsoverlay.c/frontoptions.c):"
+D354,FIXED,Front-end F10 Bond rows silently disabled:,"FIXED (port-only, port/src/watchsettings.c):"

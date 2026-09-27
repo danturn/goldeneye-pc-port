@@ -20,12 +20,24 @@ extern void fileWriteSave(save_data *save);
 extern s32 fileGamePakProbe(void);
 extern void fileGenerateCRC(u8 *start, u8 *end, save_data *result);
 extern void sub_GAME_7F0A91A0(u16 volume);
+extern void fileBuildWriteNewSave(u32 folder);
 extern void set_cur_player_look_vertical_inverted(u32 value);
 extern void cur_player_set_aim_control(u32 value);
 extern void cur_player_set_sight_onscreen_control(u32 value);
 extern void cur_player_set_ammo_onscreen_setting(u32 value);
 
-static int frontScreen(void);   /* defined below; the choose-file guard uses it */
+static int frontFolder(void);   /* defined below; the lazy file default */
+static int stageActive(void);   /* defined below; the choose-file guard uses it */
+
+/* D354: env-gated headless probe for the F10 queue->apply->persist path
+ * (same pattern as optionsoverlay's GE_D314). GE_WSPROBE=<tick> makes the
+ * <tick>-th active stage tick queue an F10-style commit of Music+FX to a
+ * known value, with before/after live+saved logs so a stage run with no
+ * keyboard/mouse can prove the bridge applies and persists. */
+static int wsProbeTick = -1;
+static int wsProbeTickN = 0;
+static int wsProbePhase = 0;   /* 0=armed, 1=queued (log pre), 2=done (log post) */
+
 
 static const char *const keys[WATCH_SETTING_COUNT] = {
     "Bond.Music", "Bond.FX", "Bond.Look", "Bond.AutoAim",
@@ -37,11 +49,10 @@ static const u16 bits[WATCH_SETTING_COUNT] = {
 };
 
 /* Explicit chooser is separate from selected_folder_num (which frontoptions
- * assigns FOLDER1 merely to draw its dossier background). -1 means none.
- * D352: guarded by uiLock. Today these are game-thread-only (front options
- * screen); the lock plus the frontScreen() guard in watchSettingsChooseFile
- * keep a future scheduler-thread caller (e.g. an F10 file indicator) from
- * racing the front screen. */
+ * assigns FOLDER1 merely to draw its dossier background). -1 means none
+ * (unresolved; frontFolder() lazily defaults it). D352: guarded by uiLock;
+ * D354: also read/written by F10 front-end contexts (input thread), which
+ * is why the lock exists. */
 static int chosen = -1;
 static int staged[WATCH_SETTING_COUNT];
 static int stagedField = -1, stagedFolder = -1;
@@ -86,13 +97,14 @@ int watchSettingsFolder(void)
     return f;
 }
 
-/* D352: game-thread only. F10 hides the chooser row, so a call from
- * elsewhere signals a broken UI invariant -- refuse it loudly rather than
- * race the front screen's unlocked readers. */
+/* D352: game-thread only. The chooser is a front-end control (options
+ * screen); in-stage F10 targets the active file, so a stage-context call
+ * signals a broken UI invariant -- refuse it loudly rather than race the
+ * front screen's readers. */
 void watchSettingsChooseFile(int dir)
 {
-    if (!frontScreen()) {
-        sysLogPrintf(LOG_WARNING, "watchsettings: choose-file outside the front options screen; ignored");
+    if (stageActive()) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: choose-file in a stage context; ignored");
         return;
     }
     /* Include 'none' so selection is always intentional; skip empty slots.
@@ -112,7 +124,6 @@ void watchSettingsChooseFile(int dir)
     sysLogPrintf(LOG_INFO, "watchsettings: selected Bond file %d", sel < 0 ? 0 : sel + 1);
 }
 
-static int frontScreen(void) { return current_menu == MENU_PC_OPTIONS; }
 static int stageActive(void)
 {
     /* Direct -level_XX boots never visit the front-end RUN_STAGE state. */
@@ -120,15 +131,41 @@ static int stageActive(void)
            (current_menu == MENU_INVALID && g_StageNum != LEVELID_TITLE);
 }
 
+/* D354: lazy default target for front-end (non-stage) contexts. The chooser
+ * used to start at -1 ("none"), which disabled every Bond row -- and in F10
+ * the chooser row is hidden, so on the front end (file select) the rows could
+ * never be enabled at all: the volume sliders read "Select file" and did
+ * nothing. Resolution order: an explicit "Edit file" choice > the folder the
+ * player is viewing (selected_folder_num, set by file select) > the first
+ * valid folder. The first two are pure reads of stable menu state, safe from
+ * the F10 input thread (D350 gate: no GE writes from it; only chosen is
+ * written, under uiLock). A fresh PC eeprom is booted with a BLANKSAVEDATA
+ * slot per folder (libultra.c D259/D281 patch), so a default almost always
+ * resolves; the game-thread fallback in watchSettingsGameTick builds one if
+ * it does not. */
+static int frontFolder(void)
+{
+    SDL_AtomicLock(&uiLock);
+    int f = chosen;
+    if (f < FOLDER1) {
+        if (validSave(selected_folder_num))
+            f = chosen = selected_folder_num;
+        else
+            for (int i = FOLDER1; i < MAX_FOLDER_COUNT; i++)
+                if (validSave(i)) { f = chosen = i; break; }
+    }
+    SDL_AtomicUnlock(&uiLock);
+    return f;
+}
+
 int watchSettingsAvailable(void)
 {
-    if (frontScreen()) {
-        SDL_AtomicLock(&uiLock);
-        int f = chosen;
-        SDL_AtomicUnlock(&uiLock);
-        return validSave(f) != NULL;
+    if (!stageActive()) {
+        /* Front end: MENU_PC_OPTIONS, or F10 over file select / title.
+         * D354: F10 front contexts were mis-routed through the stage path
+         * (and returned "unavailable"), disabling every Bond row. */
+        return validSave(frontFolder()) != NULL;
     }
-    if (!stageActive()) return 0;
     int valid;
     SDL_AtomicLock(&lock);
     valid = snapFolder >= FOLDER1 && snapFolder < MAX_FOLDER_COUNT;
@@ -146,10 +183,9 @@ static int savedValue(const save_data *save, enum WatchSettingField field)
 int watchSettingsRead(enum WatchSettingField field)
 {
     if ((unsigned)field >= WATCH_SETTING_COUNT) return 0;
-    if (frontScreen()) {
-        int f = -1, stagedVal = -1;
+    if (!stageActive()) {
+        int f = frontFolder(), stagedVal = -1;
         SDL_AtomicLock(&uiLock);
-        f = chosen;
         if (stagedField == (int)field && stagedFolder == f)
             stagedVal = staged[field];
         SDL_AtomicUnlock(&uiLock);
@@ -238,15 +274,15 @@ static void saveFrontField(int folder, enum WatchSettingField field, int value)
 void watchSettingsSet(enum WatchSettingField field, int value, int commit)
 {
     if ((unsigned)field >= WATCH_SETTING_COUNT || !watchSettingsAvailable()) return;
-    if (frontScreen()) {
+    if (!stageActive()) {
+        int f = frontFolder();
         SDL_AtomicLock(&uiLock);
         if (commit) {
-            int f = chosen;
             stagedField = -1;
             SDL_AtomicUnlock(&uiLock);
             saveFrontField(f, field, value);
         } else {
-            stagedField = field; stagedFolder = chosen; staged[field] = value;
+            stagedField = field; stagedFolder = f; staged[field] = value;
             SDL_AtomicUnlock(&uiLock);
         }
         return;
@@ -279,12 +315,12 @@ void watchSettingsSet(enum WatchSettingField field, int value, int commit)
 void watchSettingsCommit(enum WatchSettingField field)
 {
     if ((unsigned)field >= WATCH_SETTING_COUNT) return;
-    if (frontScreen()) {
+    if (!stageActive()) {
         /* D352: a commit is meaningful only if a drag staged an edit; a
          * plain click with no file selected stays a silent no-op. */
-        int pending;
+        int f = frontFolder(), pending;
         SDL_AtomicLock(&uiLock);
-        pending = stagedField == (int)field && stagedFolder == chosen && chosen >= FOLDER1;
+        pending = stagedField == (int)field && stagedFolder == f && f >= FOLDER1;
         SDL_AtomicUnlock(&uiLock);
         if (!pending) return;
     } else if (!watchSettingsAvailable()) {
@@ -338,6 +374,50 @@ void watchSettingsGameTick(void)
      * against selected_folder_num at apply time, so a stale cross-file edit
      * is still dropped, never misapplied. */
     if (!stageActive() || !g_CurrentPlayer) {
+        /* D354: one-shot fallback -- if not a single folder holds a valid
+         * save (wiped/corrupt eeprom), build the game's own blank save for
+         * file 1 (game thread, so the EEPROM write is on the owning thread)
+         * and default to it. A fresh PC eeprom never reaches this: boot
+         * patches in a BLANKSAVEDATA slot per folder (libultra.c D259/D281).
+         * frontFolder() re-checks, so an explicit chooser pick is respected. */
+        if (!stageActive() && frontFolder() < FOLDER1) {
+            static int wsAutoInitTried = 0;
+            if (!wsAutoInitTried) {
+                wsAutoInitTried = 1;
+                sysLogPrintf(LOG_INFO, "watchsettings: no valid Bond save in any folder; building a blank file 1 (fileBuildWriteNewSave)");
+                fileBuildWriteNewSave(FOLDER1);
+                SDL_AtomicLock(&uiLock);
+                if (validSave(FOLDER1))
+                    chosen = FOLDER1;
+                SDL_AtomicUnlock(&uiLock);
+                sysLogPrintf(validSave(FOLDER1) ? LOG_INFO : LOG_WARNING,
+                             "watchsettings: blank file 1 %s", validSave(FOLDER1) ? "created" : "unavailable (no free slot?)");
+            }
+        }
+        /* D354 probe: GE_WSPROBE_FRONT=<tick> exercises the front-end
+         * (chooser-default) write path the same way F10-on-file-select
+         * would, headlessly. */
+        {
+            static int wsFrontProbe = -1, wsFrontTickN = 0, wsFrontPhase = 0;
+            if (wsFrontProbe < 0) {
+                const char *e = getenv("GE_WSPROBE_FRONT");
+                wsFrontProbe = (e && atoi(e) > 0) ? atoi(e) : 2147483647;
+            }
+            if (wsFrontPhase == 0 && wsFrontTickN++ == (size_t)wsFrontProbe) {
+                wsFrontPhase = 1;
+                int f = frontFolder();
+                save_data *save = validSave(f);
+                sysLogPrintf(LOG_INFO, "wsfront: folder=%d save.music=%d; committing front-end Music=4096",
+                             f, save ? (int)save->music_vol : -1);
+                watchSettingsSet(WATCH_SETTING_MUSIC, 4096, 1);
+            } else if (wsFrontPhase == 1 && wsFrontTickN++ == (size_t)wsFrontProbe + 1) {
+                wsFrontPhase = 2;
+                int f = frontFolder();
+                save_data *s2 = validSave(f);
+                sysLogPrintf(LOG_INFO, "wsfront: post save.music=%d (folder %d)",
+                             s2 ? (int)s2->music_vol : -1, f);
+            }
+        }
         SDL_AtomicLock(&lock);
         snapFolder = -1;
         SDL_AtomicUnlock(&lock);
@@ -358,6 +438,27 @@ void watchSettingsGameTick(void)
             !validSave(c->folder)) continue;
         applyValue((enum WatchSettingField)c->field, c->value);
         if (c->commit) watchSettingsPersistField(c->folder, (enum WatchSettingField)c->field);
+    }
+    /* D354 probe: log before/after the queued commit, one tick apart. */
+    if (wsProbeTick < 0) {
+        const char *e = getenv("GE_WSPROBE");
+        wsProbeTick = (e && atoi(e) > 0) ? atoi(e) : 2147483647;
+    }
+    if (wsProbePhase == 0 && wsProbeTickN++ == (size_t)wsProbeTick) {
+        wsProbePhase = 1;
+        save_data *save = validSave(selected_folder_num);
+        sysLogPrintf(LOG_INFO, "wsprobe: pre  music=%d fx=%d save.music=%d save.fx=%d (folder %d, %d queued)",
+                     get_mTrack2Vol(), call_sndGetSfxSlotFirstNaturalVolume(),
+                     save ? (int)save->music_vol : -1, save ? (int)save->sfx_vol : -1,
+                     (int)selected_folder_num, n);
+        watchSettingsSet(WATCH_SETTING_MUSIC, 4096, 1);
+        watchSettingsSet(WATCH_SETTING_FX, 4096, 1);
+    } else if (wsProbePhase == 1 && wsProbeTickN++ == (size_t)wsProbeTick + 1) {
+        wsProbePhase = 2;
+        save_data *save = validSave(selected_folder_num);
+        sysLogPrintf(LOG_INFO, "wsprobe: post music=%d fx=%d save.music=%d save.fx=%d",
+                     get_mTrack2Vol(), call_sndGetSfxSlotFirstNaturalVolume(),
+                     save ? (int)save->music_vol : -1, save ? (int)save->sfx_vol : -1);
     }
     int values[WATCH_SETTING_COUNT];
     for (int f = 0; f < WATCH_SETTING_COUNT; f++)
