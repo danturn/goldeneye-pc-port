@@ -43,14 +43,19 @@ void optionsOverlayScroll(int dir);
  * overlay is closed. Called by fast3d after running the game DL. */
 Gfx *optionsOverlayEmit(void);
 
-/* D343: file-select "Options" label. Called from the one #ifdef PORT hook in
- * constructor_menu05_fileselect (game thread): draws the label, and on a
- * click posts an open request. */
-Gfx *optionsFileSelectLabel(Gfx *gdl);
-
-/* Applies a pending label-open request. Called from the input poll
- * (scheduler thread, controller 0) before the overlay's swallow gate. */
-void optionsOverlayPollRequests(void);
+/* D343 (M2): row API for the file-select options screen (frontoptions.c).
+ * Index i runs over the same row table as the F10 overlay; headers split it
+ * into the screen's sections. */
+int         optionsRowCount(void);
+int         optionsRowIsHeader(int i);
+int         optionsRowIsShown(int i);
+const char *optionsRowLabel(int i);
+int         optionsRowIsSlider(int i);
+int         optionsRowNeedsRestart(int i);
+double      optionsRowFraction(int i);
+void        optionsRowSetFraction(int i, double f);
+void        optionsRowValueText(int i, char *out, int n);
+void        optionsRowAdjust(int i, int dir);
 
 #ifdef __cplusplus
 }

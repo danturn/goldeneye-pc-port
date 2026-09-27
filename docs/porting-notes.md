@@ -1280,6 +1280,12 @@ GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphfram
 
 ## E. Process / method notes
 
+- **Never `exit()` while another thread may be inside the GL driver (D344).**
+  The GL context lives on the render (scheduler) thread; quit events arrive on
+  other threads. Request the quit (`videoRequestQuit`), let the render thread
+  `glFinish` + unbind at a frame boundary and park, then exit from the host.
+  An unclean GL teardown bugchecked the maintainer's PC (0x119, HAGS on).
+  Harness runs should end with `GE_QUITFRAME=<n>`, not a `timeout` kill.
 - **Headless front-end scripts: turn the mouse off (D343).** In menus the
   pointer follows the real OS mouse (WI-2 absolute tracking), so the desktop
   mouse moves the in-game cursor mid-`GE_INPUTSCRIPT`. Put
@@ -1287,8 +1293,7 @@ GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphfram
   about one per rendered frame on the file select screen; calibrate with a
   log, not by assumption.
 - **`textMeasure` height is 0 without a trailing newline (D343).** It only
-  counts completed lines. Measure `"text
-"` when you need a height (front.c's
+  counts completed lines. Measure `"text\n"` when you need a height (front.c's
   folder text does this); the width is unaffected.
 - **Periodic audio glitches: measure the host audio device before touching
   the pipeline (D322).** A clock-regular overflow/garble pattern (~5 min period,

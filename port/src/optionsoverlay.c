@@ -666,7 +666,7 @@ static void rowAdjust(struct Row *r, int dir)
          * without OS window chrome or a keyboard. */
         sysLogPrintf(LOG_INFO, "optionsoverlay: quit to desktop requested");
         configSave();
-        exit(0);
+        videoRequestQuit("Quit to desktop");   /* D344: never exit() off the host thread */
         break;
     default: /* ROW_SLIDER */
         rowSet(r, v + dir * r->step);
@@ -1099,87 +1099,95 @@ Gfx *optionsOverlayEmit(void)
 }
 
 /* ------------------------------------------------------------------------ */
-/* D343: "Options" label on the file-select screen (route B entry point,     */
-/* docs/dev/OPTIONS-MENU-PLAN.md §4). Drawn from the single #ifdef PORT hook */
-/* in constructor_menu05_fileselect, so it is part of GE's own front-end     */
-/* frame (fades with it, D335 pillarbox applies). Clicking it opens the F10  */
-/* overlay.                                                                  */
-/*                                                                           */
-/* Thread map: the hook runs on the game's main thread; the overlay's open   */
-/* flag is read by the scheduler thread (input poll + gfx_run). So the hook  */
-/* only posts a request, which optionsOverlayPollRequests() applies from the */
-/* input poll (same shape as the D314 wheel queue).                          */
+/* D343 (M2): row API for the file-select options screen (frontoptions.c).   */
+/* The screen shares this file's rows, value text and live-apply logic; it   */
+/* keeps its own page/selection state. Both UIs call these from one thread   */
+/* at a time: the screen gets no input while the F10 overlay is open.        */
 /* ------------------------------------------------------------------------ */
 
-extern struct font     *ptrFontZurichBold;
-extern struct fontchar *ptrFontZurichBoldChars;
-extern float cursor_h_pos;
-extern float cursor_v_pos;
-extern s32   folder_selected_for_deletion;
-extern int   menu_update;                     /* MENU enum (signed, -1 = none) */
-extern s32   g_MenuTimer;
-extern u16   joyGetButtonsPressedThisFrame(s8 contpadnum, u16 mask);
-extern ALBank *g_musicSfxBufferPtr;             /* music.h; sndPlaySfx comes via snd.h */
-
-#define FSOPT_MENU_INVALID  (-1)
-#define FSOPT_PRESS_MASK    (0x8000 | 0x2000 | 0x1000)  /* A | Z | START, as front.c */
-#define FSOPT_SFX_DOOR_LOCK 222   /* DOOR_LOCK_SFX: Copy/Erase's own click sound */
-#define FSOPT_TEXT_RIGHT    392   /* right edge of the Erase label's text */
-#define FSOPT_TEXT_Y        24    /* dark strip above the right-hand folder */
-#define FSOPT_HIT_PAD       4
-
-static const char kFsOptLabel[]   = "Options";    /* ASCII only: issue #87 / D295 */
-static const char kFsOptLabelNL[] = "Options\n";
-static SDL_atomic_t s_openRequest;
-
-void optionsOverlayPollRequests(void)
+static struct Row *rowAt(int i)
 {
-    if (SDL_AtomicSet(&s_openRequest, 0) && !optionsOverlayIsOpen()) {
-        optionsOverlayToggle();
-    }
+    overlayInit();
+    return (i >= 0 && i < NUM_ROWS) ? &rows[i] : NULL;
 }
 
-Gfx *optionsFileSelectLabel(Gfx *gdl)
+int optionsRowCount(void)
 {
-    s32 h = 0, w = 0;
-    s32 x, y;
-    int hot;
+    overlayInit();
+    return NUM_ROWS;
+}
 
-    /* The overlay swallows pad 0, so front.c's idle timer never resets and
-     * the file select screen jumped to the legal screen after 30 s. Hold it
-     * at 0 while the overlay is open -- the same write front.c makes when a
-     * button is pressed. This hook only runs on MENU_FILE_SELECT, the one
-     * screen where g_MenuTimer is an idle timer (elsewhere it is the intro /
-     * cast-roll clock, which must keep running). */
-    if (optionsOverlayIsOpen()) {
-        g_MenuTimer = 0;
+int optionsRowIsHeader(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->kind == ROW_HEADER;
+}
+
+/* Registered and not hidden by its "auto" toggle. */
+int optionsRowIsShown(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->found && !(r->hidePtr && *r->hidePtr);
+}
+
+const char *optionsRowLabel(int i)
+{
+    struct Row *r = rowAt(i);
+    return r ? r->label : "";
+}
+
+int optionsRowIsSlider(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->kind == ROW_SLIDER && rowHi(r) > rowLo(r);
+}
+
+int optionsRowNeedsRestart(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->restart;
+}
+
+double optionsRowFraction(int i)
+{
+    struct Row *r = rowAt(i);
+    if (!r || rowHi(r) <= rowLo(r)) {
+        return 0.0;
     }
+    double f = (rowGet(r) - rowLo(r)) / (rowHi(r) - rowLo(r));
+    return f < 0.0 ? 0.0 : (f > 1.0 ? 1.0 : f);
+}
 
-    s32 unusedw = 0;
-
-    /* textMeasure only counts height for completed lines, so measure the
-     * height with a trailing newline (front.c's folder text does the same). */
-    textMeasure(&unusedw, &w, (char *)kFsOptLabel, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
-    textMeasure(&h, &unusedw, (char *)kFsOptLabelNL, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
-    x = FSOPT_TEXT_RIGHT - w;
-    y = FSOPT_TEXT_Y;
-
-    hot = !optionsOverlayIsOpen()
-       && menu_update == FSOPT_MENU_INVALID
-       && folder_selected_for_deletion < 0
-       && cursor_h_pos >= (float)(x - FSOPT_HIT_PAD)
-       && cursor_h_pos <= (float)(x + w + FSOPT_HIT_PAD)
-       && cursor_v_pos >= (float)(y - FSOPT_HIT_PAD)
-       && cursor_v_pos <= (float)(y + h + FSOPT_HIT_PAD);
-
-    if (hot && joyGetButtonsPressedThisFrame(0, FSOPT_PRESS_MASK)) {
-        sndPlaySfx((struct ALBankAlt_s *)g_musicSfxBufferPtr, FSOPT_SFX_DOOR_LOCK, NULL);
-        SDL_AtomicSet(&s_openRequest, 1);
+void optionsRowSetFraction(int i, double f)
+{
+    struct Row *r = rowAt(i);
+    if (!r || !r->found || rowHi(r) <= rowLo(r)) {
+        return;
     }
+    if (f < 0.0) f = 0.0;
+    if (f > 1.0) f = 1.0;
+    double step = (r->step > 0.0) ? r->step : 1.0;
+    double v = rowLo(r) + f * (rowHi(r) - rowLo(r));
+    rowSet(r, lround(v / step) * step);
+}
 
-    /* Same font and white as Copy/Erase; gold (the folder text colour) while
-     * the cursor is over it. */
-    return textRender(gdl, &x, &y, (char *)kFsOptLabel, ptrFontZurichBoldChars,
-                      ptrFontZurichBold, hot ? 0xEBD879FF : 0xFFFFFFFF,
-                      viGetX(), viGetY(), 0, 0);
+void optionsRowValueText(int i, char *out, int n)
+{
+    struct Row *r = rowAt(i);
+    if (!r || n <= 0) {
+        return;
+    }
+    if (r->kind == ROW_ACTION) {
+        out[0] = '\0';   /* the label is the button */
+        return;
+    }
+    valueText(r, out, n);
+}
+
+void optionsRowAdjust(int i, int dir)
+{
+    struct Row *r = rowAt(i);
+    if (r) {
+        rowAdjust(r, dir);
+    }
 }
