@@ -103,6 +103,32 @@ s32 portSkipIntro = 0;
  * original damage flash. */
 s32 portNoHitFlash = 0;
 
+/* v0.4.0 M2 (D373, rule-2 sign-off PENDING): in-game crosshair on/off +
+ * tint (gunfire.c gunDrawSight, #ifdef PORT). 0 = the N64 always-on
+ * white crosshair (default); hide is the opt-in off state. */
+s32 portCrosshairHide = 0;
+static int cfgCrosshairColor = 0;   /* 0 = white (identity) .. 6, see kTints */
+
+/* Port-provided crosshair tint for gunfire.c (M2). Index 0 is the
+ * N64 white (0xFF, 0xFF, 0xFF) so the default render is untouched. */
+void portCrosshairTint(s32 *r, s32 *g, s32 *b)
+{
+    static const unsigned char kTints[7][3] = {
+        { 0xFF, 0xFF, 0xFF }, /* White (N64) */
+        { 0x40, 0xFF, 0x40 }, /* Green */
+        { 0xFF, 0x40, 0x40 }, /* Red */
+        { 0x40, 0x40, 0xFF }, /* Blue */
+        { 0xFF, 0xFF, 0x40 }, /* Yellow */
+        { 0x40, 0xFF, 0xFF }, /* Cyan */
+        { 0xFF, 0x40, 0xFF }, /* Magenta */
+    };
+    if (cfgCrosshairColor < 0 || cfgCrosshairColor > 6)
+        cfgCrosshairColor = 0;
+    *r = (s32)kTints[cfgCrosshairColor][0];
+    *g = (s32)kTints[cfgCrosshairColor][1];
+    *b = (s32)kTints[cfgCrosshairColor][2];
+}
+
 /* D257: Game.AllUnlocked — everything-unlocked goodie, OFF by default
  * (faithful N64 progression: levels unlock as you complete them). Consumed
  * once at startup by main.c, which sets the game's own RAM unlock flags
@@ -346,6 +372,8 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
     configRegisterFloat("Game.ScreenShakeIntensity", &portScreenShakeScale, 0.0f, 10.0f);
     configRegisterInt("Game.SkipIntro", &portSkipIntro, 0, 1);
     configRegisterInt("Game.NoHitFlash", &portNoHitFlash, 0, 1);
+    configRegisterInt("Video.CrosshairHide",  &portCrosshairHide, 0, 1);  /* v0.4.0 M2 (D373) */
+    configRegisterInt("Video.CrosshairColor", &cfgCrosshairColor, 0, 6);  /* v0.4.0 M2 (D373) */
     configRegisterInt("Game.AllUnlocked", &portAllUnlocked, 0, 1);
     configRegisterInt("Video.VSync",         &cfgVSync,      0, 1);
     configRegisterInt("Video.FpsCap",        &cfgFpsCap,     0, 1000);

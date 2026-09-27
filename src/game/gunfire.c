@@ -6501,6 +6501,13 @@ void gunDrawSight(s32 *gdl) {
      * stack as the pointer high word → wild `gdl` write in texSetRenderMode
      * when the player raises the crosshair (right-mouse aim). §A. */
     Gfx *sp54;
+    /* v0.4.0 M2 (D373, rule-2 sign-off PENDING): optional crosshair
+     * hide/tint (video.c). Default is the N64 always-on white:
+     * portCrosshairHide == 0 and portCrosshairTint() is the identity
+     * (0xFF, 0xFF, 0xFF). Non-PORT builds keep the original literals. */
+    extern s32 portCrosshairHide;
+    extern void portCrosshairTint(s32 *r, s32 *g, s32 *b);
+    s32 crosshair_r, crosshair_g, crosshair_b;
 #else
     s32 sp54;
 #endif
@@ -6509,6 +6516,9 @@ void gunDrawSight(s32 *gdl) {
 
     if ((g_CurrentPlayer->gunsightmode == 0) && (g_CurrentPlayer->mpmenuon == FALSE)) {
 #ifdef PORT
+        if (portCrosshairHide)
+            return;
+        portCrosshairTint(&crosshair_r, &crosshair_g, &crosshair_b);
         sp54 = *(Gfx **)gdl;
         texSelect(&sp54, crosshairimage, 4, 0, 0);
 #else
@@ -6536,7 +6546,11 @@ void gunDrawSight(s32 *gdl) {
 #ifdef VERSION_EU
         halfedxy[1] = halfedxy[1] * g_GunSightAspectRatio;
 #endif
+#ifdef PORT
+        display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, crosshair_r, crosshair_g, crosshair_b, 0x6E, (crosshairimage->level > 0), 0);
+#else
         display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, 0xFF, 0xFF, 0xFF, 0x6E, (crosshairimage->level > 0), 0);
+#endif
 #ifdef PORT
         *(Gfx **)gdl = sp54;
 #else

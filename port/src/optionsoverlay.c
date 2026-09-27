@@ -99,9 +99,10 @@ static const char *const kCrosshairColor[] = {
     "White", "Green", "Red", "Blue", "Yellow", "Cyan", "Magenta",
     NULL,
 };
-/* M3: key-layout preset (0 = the FPS default binds, byte-identical to the
- * current defaults; 1 = the GEPD mouse-injector layout) + crouch bind mode */
-static const char *const kKeyLayout[] = { "FPS (default)", "GEPD", NULL };
+/* D374: key-layout preset -- 0 = the GEPD layout (the default: it is the
+ * natural mouse/FPS layout and the N64 never had a keyboard), 1 = the
+ * N64-era keyboard binds (byte-identical to the pre-wave defaults) */
+static const char *const kKeyLayout[] = { "Default", "N64", NULL };
 /* D186: the sim's own tick pacemaker is hardcoded to the console's native VI
  * rate (60Hz NTSC / 50Hz PAL, port/src/libultra.c) -- Video.FpsCap can only
  * throttle down from there, never past it, and throttling it below 30
@@ -203,9 +204,10 @@ static struct Row rows[] = {
     { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1 },
     /* v0.4.0 M3 (modern options wave, D371): the GEPD mouse-injector
      * key-layout preset (docs/dev/notes/GEPORT-REFERENCE-DEEPDIVE.md
-     * section 7.3) + the crouch bind's fire mode. Turok standard: these are
+     * section 7.1) + the crouch bind's fire mode. Turok standard: these are
      * control bindings, so they live in INPUT -- no provenance bucket.
-     * Defaults are the N64-original FPS layout / hold. */
+     * D374: the GEPD layout is the default (a mouse FPS layout is the
+     * natural default; the N64 had no keyboard); crouch defaults to hold. */
     { .key="Input.Layout", .label="Key layout", .kind=ROW_ENUM, .step=1, .names=kKeyLayout },
     { .key="Input.CrouchMode", .label="Crouch mode", .kind=ROW_ENUM, .step=1, .names=kHold },
     { .key="__ResetInput", .label="Reset to defaults", .kind=ROW_ACTION },
@@ -271,6 +273,12 @@ static struct Row rows[] = {
      * Legacy AutoFov ini keys remain supported but no longer hide sliders. */
     { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .uiMin=100, .uiMax=400 },
     { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .uiMin=100, .uiMax=400 },
+    /* v0.4.0 M2 (D373, rule-2 sign-off PENDING): in-game crosshair
+     * on/off + tint (gunfire.c gunDrawSight, #ifdef PORT). 0/white =
+     * the N64 always-on crosshair (default); off and the tints are
+     * opt-in. */
+    { .key="Video.CrosshairHide", .label="Crosshair", .kind=ROW_TOGGLE, .step=1, .names=kOnOffRev },
+    { .key="Video.CrosshairColor", .label="Crosshair colour", .kind=ROW_ENUM, .step=1, .names=kCrosshairColor },
     /* D304: the per-mode aim/turn-sensitivity sliders and the "Link" toggle
      * that papered over their decoupling risk were pulled from the menu
      * (user feedback after the D304 widening); the ONE master
@@ -912,7 +920,7 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Input.PadLookInvertY",    0 },   /* = 0 */
     { "Input.PadDeadzone",       7000 },/* = STICK_DEADZONE (7000) */
     { "Input.PadTriggerPct",     23 },  /* = 23 */
-    { "Input.Layout",            0 },   /* = 0 (FPS defaults) */
+    { "Input.Layout",            0 },   /* = 0 (GEPD default layout, D374) */
     { "Input.CrouchMode",        0 },   /* = 0 (hold) */
     /* GRAPHICS (port/src/video.c initializers) */
     { "Video.MSAA",                 2 },   /* = 2 */
@@ -925,6 +933,8 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Video.SafeAreaCrop",          1 },  /* = 1 */
     { "Video.DrawDistance",        250 },  /* midpoint: 50/100 */
     { "Video.LodDistance",         250 },  /* midpoint: 50/100 */
+    { "Video.CrosshairHide",      0 },   /* = 0 (on, N64) */
+    { "Video.CrosshairColor",   0 },   /* = 0 (white) */
     /* GAMEPLAY ini rows (port/src/video.c initializers) */
     { "Game.SkipIntro",   0 },   /* = 0 */
     { "Game.NoHitFlash",  0 },   /* = 0 */

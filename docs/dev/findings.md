@@ -657,6 +657,8 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D370 | **F10 distance/volume drags hurt frame rate (2026-09-27).** — full `## D370` entry at file tail | PARTIAL (user live test): mostly improved; rapid spam can still lower FPS. Unchanged-detent/audio and Draw/LOD reapply fixed; other image sliders still request full video pass (live log shows frequent FOV passes). No further churn without focused repro. |
 | D371 | **GEPD key-layout preset + reload/crouch bindings, v0.4.0 modern options wave M3 (2026-09-27).** full `## D371` entry at file tail | FIXED (headless-verified; awaiting user live accept): `Input.Layout` (0=FPS, 1=GEPD) + `Input.CrouchMode` (hold/toggle) in F10 INPUT; GEPD preset acts as per-key effective default under `[Input.Bind]` overrides; new IA_RELOAD/IA_CROUCH emit B (unbound by default). MODERN section dropped per D356 Turok-standard rule (rows land in functional INPUT). Boot/ini-round-trip/F10-page verified; in-game feel-check owed. |
 | D372 | **Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).** full `## D372` entry at file tail | FIXED (headless-verified; awaiting user live accept): one-row `Video.LowEndMode` in F10 VIDEO; ON writes FpsCap 30 + MSAA x1 (restart), OFF restores compiled defaults (60/2). Registered key persists through orderly exit. |
+| D373 | **In-game crosshair on/off + colour (v0.4.0 modern options wave M2, 2026-09-27).** full `## D373` entry at file tail | FIXED (user live-tested; rule-2 sign-off recorded 2026-09-27): `Video.CrosshairHide` (0 = on, N64) + `Video.CrosshairColor` (7 tints, 0 = white) in F10 GRAPHICS; #ifdef PORT hook in gunfire.c gunDrawSight (the wave's only rule-2 item). |
+| D374 | **GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27).** full `## D374` entry at file tail | FIXED (headless + user live-tested): GEPD playtest found Ctrl fired the gun (stale persisted [Input.Bind] Fire=Left Ctrl masked the preset) and the FPS default made no sense for a mouse FPS. D374: GEPD is now Input.Layout=0 (the default; N64 layout = 1); only EXPLICIT per-key overrides beat the preset. One-off ini flip: pre-D374 `Layout = 1` (ex-GEPD) is now 0. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -14386,3 +14388,85 @@ boots clean — row resolves, no "not registered" warning. `LowEndMode=1`
 survives an orderly `GE_QUITFRAME` exit. **Owed:** live F10 preset
 toggle (ON→FpsCap/MSAA written, FPS readout drops to 30), restart-for-MSAA
 check, PAL/JP.
+
+## D373 — In-game crosshair on/off + colour (v0.4.0 modern options wave, M2) (2026-09-27)
+
+**Spec:** `docs/dev/notes/MODERN-OPTIONS-PLAN.md` M2 — the wave's ONLY
+rule-2 item (the port intentionally differs from N64 rendering when the
+option is on; sign-off recorded 2026-09-27 via user direction to
+implement + live test).
+
+**Implementation:**
+- `port/src/gunfire.c` `gunDrawSight`: `#ifdef PORT` guard only.
+  `Video.CrosshairHide` → early return (no texSelect, no draw);
+  otherwise `portCrosshairTint()` supplies the RGB args that the N64
+  hardcodes to 0xFF,0xFF,0xFF (alpha 0x6E unchanged). Non-PORT builds
+  keep the original literals byte-identical (local `extern`s inside the
+  function, the bondview2 `portNoHitFlash` pattern; single consumer, no
+  header declaration).
+- `port/src/video.c`: `s32 portCrosshairHide` (non-static, D232
+  pattern) + `portCrosshairTint()` — 7 named tints (index 0 = white =
+  the N64 identity), `Game`-section registration `Video.CrosshairHide`
+  (0/1) + `Video.CrosshairColor` (0..6).
+- `port/src/optionsoverlay.c`: GRAPHICS rows "Crosshair" (kOnOffRev,
+  0 = On) + "Crosshair colour" (kCrosshairColor) + kResetDefaults.
+
+**Verification:** NTSC build clean. `GE_OPTIONSOVERLAY=4` (GRAPHICS
+page) boots clean — both rows resolve. Headless level captures (dam,
+`-level_33`) with hide/red-tint configs: no crash; the crosshair is
+suppressed in cutscene frames (gunDrawSight only draws in live
+gameplay), so the visual A/B was done by the user: **crosshair shows in
+normal gameplay (user-confirmed 2026-09-27, "crosshair showed up")**.
+Defaults (hide=0, colour=0) leave the render byte-identical to the
+pre-wave tree. `betacrosshairimage` confirmed dead (plan §M2) — one
+hook covers in-level rendering.
+
+## D374 — GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27)
+
+**Trigger:** first GEPD playtest (user, 2026-09-27): "Crouch is broken,
+in GEPD mode ctrl shoots the gun" + "why is FPS different than GEPD? GE
+is a first person shooter ... make [GEPD] the default and call it
+default."
+
+**Diagnosis (two distinct bugs, one user-visible symptom):**
+1. The M3 "preset as effective default" only applied to EMPTY
+   `g_bindStr`. But the config migration writes EVERY bind key into the
+   ini on clean exit, so any pre-existing ini carried the full set of
+   persisted N64-layout defaults (`Fire = Left Ctrl`, `Action =
+   Space,Z,E`, ...) — all non-empty — and the preset was silently dead
+   for real users. Switching to GEPD left `Fire = Left Ctrl` in force
+   while the preset added `Crouch = Left Ctrl` → **Ctrl fired and
+   crouched at once**.
+2. Naming/expectation: in the GEPD scheme (DEEPDIVE §7.1) Q = A button
+   (accept/next weapon), E = B button (use/cancel/crouch/reload). The
+   stale ini's `Action = Space,Z,E` kept E on the A button (weapon
+   cycle), not B (use) — the user correctly expected E = USE.
+
+**Fix (user decision 2026-09-27; port-layer only, zero game-logic
+change):**
+- **GEPD is now the DEFAULT layout** (`Input.Layout`: 0 = GEPD — the
+  natural mouse/FPS default; the N64 never had a keyboard, so the old
+  "FPS" default was always a port artifact — 1 = the N64-era keyboard
+  binds, byte-identical to the pre-wave set, one click away). F10 row
+  now reads "Default" / "N64".
+- **True effective-default semantics** (`inputRebuildBinds`, D374
+  precedence): an EXPLICIT per-key `[Input.Bind]` value (non-empty and
+  ≠ the N64 default, or an explicit unbind of a default-bound action)
+  wins; a persisted value that merely equals the N64 default counts as
+  UNSET, so the layout preset fills it. With this, the user's existing
+  ini (full of persisted defaults) gets the clean GEPD preset:
+  Fire="" (LMB/RMB fire/aim), Crouch=Left Ctrl, Reload=R, Action=Q
+  (A), Cancel=E (B=use) — no Ctrl conflict.
+- Boot log line: `input: layout GEPD (default)/N64, crouch mode ...`
+  (verifiable in `ge007.log` without an F10 screenshot).
+- **One-off semantics flip:** an ini with the pre-D374 `Layout = 1`
+  (which meant GEPD) now means N64. No in-code migration marker exists
+  (the value is ambiguous); the dev ini was flipped to 0 by hand —
+  note it in the v0.4.0 release notes for users who had selected GEPD.
+
+**Verification:** user ini (stale binds, `Layout = 0`): boot log
+"layout GEPD (default), crouch mode hold", no "no valid keys" warnings,
+clean exit persists `Layout = 0`. `Layout = 1`: "layout N64". Ctrl no
+longers fires (Fire unset under the preset); crouch/reload/E-use per
+preset. **Owed:** user re-playtest (Ctrl crouch, E use, Q cycle) before
+the wave closes.

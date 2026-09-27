@@ -763,6 +763,9 @@ static unsigned scriptApply(unsigned button)
 
 static void inputRebuildBinds(void);   /* D214; defined below with keyDown() */
 
+static int keyLayout = 0;    /* v0.4.0 D374: 0 = GEPD (the default), 1 = N64 layout */
+static int crouchMode = 0;   /* 0 = hold, 1 = toggle (latched B) */
+
 int inputInit(void)
 {
     if (!SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
@@ -778,6 +781,9 @@ int inputInit(void)
     inputOpenPads();
 
     inputRebuildBinds();   /* D214: parse [Bind] now that configLoad() has run */
+
+    sysLogPrintf(LOG_INFO, "input: layout %s, crouch mode %s (rebuild after configLoad, D214/D374)",
+                 keyLayout ? "N64" : "GEPD (default)", crouchMode ? "toggle" : "hold");
 
     /* Relative mouse mode for mouse-look. Click-to-lock: we start released
      * and wait for a click in the window (video.c -> inputNotifyClick). */
@@ -893,13 +899,18 @@ static const struct { const char *key; const char *def; } kBindDefs[IA_COUNT] = 
     [IA_CROUCH]   = { "Input.Bind.Crouch",      ""              },
 };
 
-/* v0.4.0 M3: GEPD key-layout preset (docs/dev/notes/GEPORT-REFERENCE-
- * DEEPDIVE.md section 7.3). The preset is the EFFECTIVE DEFAULT for any action
- * the user has not overridden per-key in [Bind]; a per-key ini value
- * layers on top, so switching layouts never clobbers explicit binds.
- * Fire loses its Left Ctrl key in this layout (LMB fires, RMB aims;
- * Ctrl becomes crouch); LeanLeft is unbound (lean is GEPD-removed).
- * NULL entries keep the FPS default. */
+/* v0.4.0 M3 (D371) / D374: the GEPD key-layout preset -- now the DEFAULT
+ * layout (docs/dev/notes/GEPORT-REFERENCE-DEEPDIVE.md section 7.1: Q = A
+ * button (accept/next weapon), E = B button (use/cancel/crouch/reload),
+ * R = dedicated reload, Ctrl = crouch). The preset is the effective default
+ * for any action the user has not EXPLICITLY overridden in [Input.Bind];
+ * an ini value equal to the N64-layout default (the migration pass writes
+ * every key on clean exit) counts as "unset", so a pre-wave ini file gets
+ * the preset, not its stale persisted defaults (D374: the stale
+ * Fire=Left Ctrl persisted default is exactly what made Ctrl fire the gun
+ * in the first GEPD playtest). Fire loses its Left Ctrl key (LMB fires,
+ * RMB aims; Ctrl is crouch); LeanLeft is unbound (lean is GEPD-removed).
+ * NULL entries keep the N64 default. */
 static const char *const kGepdPreset[IA_COUNT] = {
     [IA_FIRE]   = "",
     [IA_ACTION] = "Q",
@@ -908,8 +919,6 @@ static const char *const kGepdPreset[IA_COUNT] = {
     [IA_RELOAD] = "R",
     [IA_CROUCH] = "Left Ctrl",
 };
-static int keyLayout = 0;    /* 0 = FPS defaults, 1 = GEPD preset */
-static int crouchMode = 0;   /* 0 = hold, 1 = toggle (latched B) */
 static int s_crouchLatch = 0;
 static int s_crouchHeldPrev = 0;
 
@@ -923,18 +932,39 @@ static void inputRebuildBinds(void)
         for (int k = 0; k < BIND_MAX_KEYS; k++) {
             g_bind[a][k] = SDL_SCANCODE_UNKNOWN;
         }
-        /* v0.4.0 M3: the GEPD preset fills the actions the user has not
-         * individually overridden (empty g_bindStr); FPS layout = the
-         * kBindDefs defaults, byte-identical to the pre-wave binds. */
-        const char *def = kBindDefs[a].def;
-        if (keyLayout == 1) {
+        /* v0.4.0 D374: resolve the effective string for this action.
+         * Precedence: an EXPLICIT per-key [Input.Bind] value (non-empty and
+         * different from the N64-layout default, or an explicit unbind of a
+         * bound-by-default action) wins over everything. Otherwise the
+         * layout preset is the effective default: GEPD (Input.Layout=0, the
+         * shipped default) or the N64-layout kBindDefs defaults (Layout=1,
+         * byte-identical to the pre-wave binds). A persisted ini value that
+         * merely equals the N64 default counts as "unset" -- the config
+         * migration writes every key on clean exit, so without this rule a
+         * pre-wave ini would mask the preset with its stale defaults. */
+        const char *src = NULL;
+        if (g_bindStr[a][0] != 0) {
+            if (strcmp(g_bindStr[a], kBindDefs[a].def) != 0)
+                src = g_bindStr[a];   /* explicit user bind */
+        } else if (kBindDefs[a].def[0] != 0) {
+            src = g_bindStr[a];       /* explicit unbind of a default-bound action */
+        }
+        const char *def;
+        if (src) {
+            def = src;
+        } else if (keyLayout == 1) {
+            def = kBindDefs[a].def;   /* N64 layout */
+        } else {
             const char *preset = kGepdPreset[a];
-            if (preset) def = preset;
+            def = preset ? preset : kBindDefs[a].def;
         }
         char buf[64];
-        strncpy(buf, g_bindStr[a][0] ? g_bindStr[a] : def, sizeof(buf) - 1);
+        strncpy(buf, def, sizeof(buf) - 1);
         buf[sizeof(buf) - 1] = 0;
-        int hadInput = (buf[0] != 0);   /* before strtok clobbers buf */
+        /* Warn only for an explicitly-provided string (g_bindStr) that
+         * yields no valid keys; intentionally-empty preset/default strings
+         * (GEPD Fire, unbound Reload/Crouch in the N64 layout) are silent. */
+        int hadInput = (def == g_bindStr[a] && g_bindStr[a][0] != 0);
 
         int n = 0;
         for (char *tok = strtok(buf, ","); tok && n < BIND_MAX_KEYS; tok = strtok(NULL, ",")) {
@@ -973,7 +1003,7 @@ void inputLayoutApply(void)
     s_crouchHeldPrev = 0;
     inputRebuildBinds();
     sysLogPrintf(LOG_INFO, "input: key layout %s, crouch %s applied",
-                 keyLayout ? "GEPD" : "FPS", crouchMode ? "toggle" : "hold");
+                 keyLayout ? "N64" : "GEPD (default)", crouchMode ? "toggle" : "hold");
 }
 
 static int actHeld(const Uint8 *ks, int act)
