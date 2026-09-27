@@ -2778,7 +2778,13 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         textMeasure(&textsize.p[1], &textsize.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
         textpos.p[0] = 285 - (textsize.p[1] / 2);
+#ifdef PORT
+        /* D343 (user sign-off 2026-09-27): Copy/Erase shift left to make room
+         * for "PC Options" at the right end of the bar (N64: 247/225/357/335). */
+        textpos.p[1] = 222;
+#else
         textpos.p[1] = 247;
+#endif
 
         DL = textRender(DL, &textpos.p[1], &textpos.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, -1, viGetX(), viGetY(), 0, 0);
         folder_option_COPY_bound.right = (f32) (textsize.p[0] + textpos.p[1]);
@@ -2790,7 +2796,11 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
 
         textMeasure(&textsize.p[1], &textsize.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
+#ifdef PORT
+        textpos.p[1] = 304;   /* D343: see Copy above */
+#else
         textpos.p[1] = 357;
+#endif
         textpos.p[0] = 285 - (textsize.p[1] / 2);
 
         DL = textRender(DL, &textpos.p[1], &textpos.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, -1, viGetX(), viGetY(), 0, 0);
@@ -2798,12 +2808,16 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         folder_option_ERASE_bound.right = (f32) (textsize.p[0] + textpos.p[1]);
 
 #ifdef PORT
-        /* D343: PC "Options" label; a click enters MENU_PC_OPTIONS. All
-         * logic lives in port/src/frontoptions.c. */
+        /* D343: "PC Options" at the right end of this bar; a click enters
+         * MENU_PC_OPTIONS. All logic lives in port/src/frontoptions.c. */
         DL = optionsFileSelectLabel(DL);
 #endif
 
+#ifdef PORT
+        copypos.f[0] = 200.0f;   /* D343 */
+#else
         copypos.f[0] = 225.0f;
+#endif
         copypos.f[1] = 285.0f;
 
         copyhalfsize.f[0] = (f32) (mainfolderimages + IMG_COPY)->width * 0.5f;
@@ -2816,7 +2830,11 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         folder_option_COPY_bound.up = copypos.f[1] - copyhalfsize.f[1];
         folder_option_COPY_bound.down = copypos.f[1] + copyhalfsize.f[1];
 
+#ifdef PORT
+        erasepos.f[0] = 282.0f;  /* D343 */
+#else
         erasepos.f[0] = 335.0f;
+#endif
         erasepos.f[1] = 285.0f;
 
         erasehalfsize.f[0] = (mainfolderimages + IMG_DEL)->width * 0.5f;

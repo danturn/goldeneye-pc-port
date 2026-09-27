@@ -57,6 +57,7 @@ extern void load_walletbond(void);
 extern void disable_all_switches(Model *arg0);                                   /* front.c:967 */
 extern void set_item_visibility_in_objinstance(Model *objinstance, s32 item, s32 mode); /* front.c:968 */
 extern s32  folder_selection_screen_option_icon;
+extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 
 /* ---- colours on the paper (RRGGBBAA; 0xFF = opaque black, GE's ink) ---- */
 #define INK        0x000000FFu
@@ -77,16 +78,17 @@ extern s32  folder_selection_screen_option_icon;
 #define ROW_HIT_X0 40.0f
 #define ROW_HIT_X1 385.0f
 
-/* ---- file-select label ---- */
-#define LABEL_RIGHT 392
-#define LABEL_Y     24
+/* ---- file-select label: right end of the Select / Copy / Erase bar ---- */
+#define LABEL_X     352   /* Erase's text now ends ~338 (front.c, D343 shift) */
+#define LABEL_CY    285   /* the bar's centre line, as Copy/Erase */
+#define LABEL_GAP   14    /* space after Erase's text */
 #define HIT_PAD     4
 
 #define MAX_PAGES  8
 #define MAX_PROWS  12            /* the paper fits 12 rows, like the cheat list */
 
-static const char kLabel[]   = "Options";     /* ASCII only: issue #87 / D295 */
-static const char kLabelNL[] = "Options\n";
+static const char kLabel[]   = "PC Options";  /* ASCII only: issue #87 / D295 */
+static const char kLabelNL[] = "PC Options\n";
 
 /* ---- screen state (game thread) ---- */
 static int s_level = 0;          /* 0 = section list, 1 = a section's rows */
@@ -421,8 +423,14 @@ Gfx *optionsFileSelectLabel(Gfx *gdl)
      * height with a trailing newline (front.c's folder text does the same). */
     textMeasure(&unusedw, &w, (char *)kLabel, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
     textMeasure(&h, &unusedw, (char *)kLabelNL, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
-    x = LABEL_RIGHT - w;
-    y = LABEL_Y;
+    /* Follow the Erase label's measured right edge (set by the constructor
+     * just before this hook), so a wider localised "Erase" (JP glyphs) pushes
+     * the label right instead of overlapping it. NTSC/PAL: 352. */
+    x = (s32)folder_option_ERASE_bound.right + LABEL_GAP;
+    if (x < LABEL_X) {
+        x = LABEL_X;
+    }
+    y = LABEL_CY - h / 2;
 
     hot = !optionsOverlayIsOpen()
        && menu_update == MENU_INVALID
