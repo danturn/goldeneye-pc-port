@@ -596,6 +596,68 @@ int videoInit(void)
     return 0;
 }
 
+/* ---- D344: orderly quit ------------------------------------------------
+ * Rendering runs on the scheduler thread with the GL context bound; quit
+ * events arrive on the host thread (or on fast3d's render-thread pump).
+ * exit() used to run straight from whichever pump saw the event, tearing the
+ * process down while the render thread could be inside the NVIDIA driver --
+ * the likely trigger of the 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR bugchecks
+ * (findings D344). Now:
+ *   1. anyone calls videoRequestQuit();
+ *   2. the render thread, at its next frame boundary, glFinish()es, unbinds
+ *      the context and parks for good (videoRenderPark);
+ *   3. the host thread waits until the render thread is parked or outside a
+ *      frame (max QUIT_WAIT_MS), then exit(0) (atexit saves config).
+ * Frame entry sets s_inFrame BEFORE checking s_quitReq, and the host sets
+ * s_quitReq BEFORE reading s_inFrame (SDL atomics are sequentially
+ * consistent), so a frame can never start once the host has decided to exit. */
+#define QUIT_WAIT_MS 2000
+static SDL_atomic_t s_quitReq;
+static SDL_atomic_t s_inFrame;
+static SDL_atomic_t s_parked;
+static int s_quitFrame = -1;   /* GE_QUITFRAME: harness self-quit, -1 = unread */
+
+void videoRequestQuit(const char *why)
+{
+    if (SDL_AtomicCAS(&s_quitReq, 0, 1)) {
+        sysLogPrintf(LOG_INFO, "video: quit requested (%s)", why ? why : "?");
+    }
+}
+
+int videoQuitRequested(void)
+{
+    return SDL_AtomicGet(&s_quitReq) != 0;
+}
+
+/* Render thread only. Never returns. */
+static void videoRenderPark(void)
+{
+    gfx_sdl_park_for_exit();
+    SDL_AtomicSet(&s_inFrame, 0);
+    SDL_AtomicSet(&s_parked, 1);
+    for (;;) {
+        sysSleep(100000);
+    }
+}
+
+/* Host thread: exit once the render thread is out of the GL driver. */
+static void videoHostExitIfRequested(void)
+{
+    if (!SDL_AtomicGet(&s_quitReq)) {
+        return;
+    }
+    Uint32 start = SDL_GetTicks();
+    while (!SDL_AtomicGet(&s_parked) && SDL_AtomicGet(&s_inFrame) &&
+           SDL_GetTicks() - start < QUIT_WAIT_MS) {
+        SDL_Delay(2);
+    }
+    sysLogPrintf(LOG_INFO, "video: exiting (render %s after %u ms)",
+                 SDL_AtomicGet(&s_parked) ? "parked"
+                 : (SDL_AtomicGet(&s_inFrame) ? "STILL IN FRAME (timeout)" : "idle"),
+                 (unsigned)(SDL_GetTicks() - start));
+    exit(0);
+}
+
 void videoDestroy(void)
 {
     if (initDone) {
@@ -609,6 +671,12 @@ void videoStartFrame(void)
     if (!initDone) {
         return;
     }
+    /* D344: enter the frame first, then check for a quit (see above). */
+    SDL_AtomicSet(&s_inFrame, 1);
+    if (SDL_AtomicGet(&s_quitReq)) {
+        videoRenderPark();
+    }
+
     /* Rendering runs on the game's scheduler thread; the GL context was
      * created on the host main thread. */
     gfx_sdl_make_context_current();
@@ -647,13 +715,13 @@ void videoPumpEvents(void)
      * scheduler thread (must run here, on the window's creating thread). */
     videoDrainWindowRequests();
     inputApplyMouseRequests();   /* D287: mouse mode/cursor, same rule */
+    videoHostExitIfRequested();  /* D344: quit posted last pump or by another thread */
 
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         switch (ev.type) {
         case SDL_QUIT:
-            sysLogPrintf(LOG_INFO, "video: quit requested");
-            exit(0);
+            videoRequestQuit("quit event");
             break;
         case SDL_KEYDOWN:
             /* D145: bare ESC used to exit(0). On the front-end / debrief
@@ -663,8 +731,7 @@ void videoPumpEvents(void)
              * (back / cancel) via input.c; quitting is window-close (the X) or
              * Alt+F4 only. */
             if ((ev.key.keysym.sym == SDLK_F4) && (ev.key.keysym.mod & KMOD_ALT)) {
-                sysLogPrintf(LOG_INFO, "video: Alt+F4 -> quit");
-                exit(0);
+                videoRequestQuit("Alt+F4");
             } else if (ev.key.keysym.sym == SDLK_F12 && !ev.key.repeat) {
                 screenshotReq = 1;
             } else if (ev.key.keysym.sym == SDLK_F10 && !ev.key.repeat) {
@@ -701,8 +768,7 @@ void videoPumpEvents(void)
             break;
         case SDL_WINDOWEVENT:
             if (ev.window.event == SDL_WINDOWEVENT_CLOSE) {
-                sysLogPrintf(LOG_INFO, "video: window closed");
-                exit(0);
+                videoRequestQuit("window closed");
             } else if (ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                 gfx_sdl_update_cached_size();
             } else if (ev.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
@@ -791,6 +857,21 @@ void videoEndFrame(void)
         return;
     }
     gfx_end_frame();
+
+    /* D344: the frame (and its swap) is done. Park here on a quit request, so
+     * the host never exits under an in-flight frame. GE_QUITFRAME=<n> is the
+     * harness's clean self-quit (replaces `timeout` kills). */
+    if (s_quitFrame == -1) {
+        const char *q = getenv("GE_QUITFRAME");
+        s_quitFrame = (q && atoi(q) > 0) ? atoi(q) : 0;
+    }
+    if (s_quitFrame > 0 && frames + 1 >= (u32)s_quitFrame) {
+        videoRequestQuit("GE_QUITFRAME");
+    }
+    if (SDL_AtomicGet(&s_quitReq)) {
+        videoRenderPark();
+    }
+    SDL_AtomicSet(&s_inFrame, 0);
 
     ++frames;
     ++fpsNumFrames;

@@ -9,6 +9,8 @@
 #include "gfx_screen_config.h"
 #include "input.h"
 
+extern "C" void videoRequestQuit(const char *why);   // port/src/video.c (D344)
+
 static SDL_Window* wnd;
 static SDL_GLContext ctx;
 static SDL_Renderer* renderer;
@@ -319,7 +321,9 @@ static void gfx_sdl_handle_events(void) {
                 } else if (event.key.keysym.sym == SDLK_F4 && (event.key.keysym.mod & KMOD_ALT)) {
                     // D145: Alt+F4 quits; bare ESC no longer does (it is the
                     // menu "back" key -- see port/src/video.c / input.c).
-                    exit(0);
+                    // D344: request, don't exit(): this is the render thread,
+                    // mid-frame. It parks at the frame's end; the host exits.
+                    videoRequestQuit("Alt+F4 (render pump)");
                 } else if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat) {
                     // WI-1: this render-thread pump and port/src/video.c's
                     // host-thread pump both drain the same SDL queue, so either
@@ -345,7 +349,7 @@ static void gfx_sdl_handle_events(void) {
                            event.window.windowID == SDL_GetWindowID(wnd)) {
                     // We listen specifically for main window close because closing main window
                     // on macOS does not trigger SDL_Quit.
-                    exit(0);
+                    videoRequestQuit("window closed (render pump)");   // D344
                 } else if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
                     inputSetMouseGrab(0);   // free + show cursor on alt-tab (also handled by video.c's pump; whichever dequeues it)
                 } else if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
@@ -353,7 +357,7 @@ static void gfx_sdl_handle_events(void) {
                 }
                 break;
             case SDL_QUIT:
-                exit(0);
+                videoRequestQuit("quit event (render pump)");   // D344
                 break;
         }
     }
@@ -369,6 +373,20 @@ extern "C" void gfx_sdl_make_context_current(void) {
          * failure will surface later as a GL call returning nothing / shader
          * compile failure, which is far louder. */
         SDL_GL_MakeCurrent(wnd, ctx);
+    }
+}
+
+/* D344: called on the render thread when a quit was requested, at a frame
+ * boundary: wait for the GPU to drain everything this process queued, then
+ * unbind the context, so process teardown never lands inside the driver. */
+extern "C" void gfx_sdl_park_for_exit(void) {
+    if (ctx && SDL_GL_GetCurrentContext() == ctx) {
+        typedef void (SDLCALL *FinishFn)(void);   // = APIENTRY on Windows
+        FinishFn finish = (FinishFn)SDL_GL_GetProcAddress("glFinish");
+        if (finish) {
+            finish();
+        }
+        SDL_GL_MakeCurrent(NULL, NULL);
     }
 }
 

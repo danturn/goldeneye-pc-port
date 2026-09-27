@@ -37,6 +37,13 @@ void videoEndFrame(void);
  * loop from main(). Exits the process on QUIT/ESC/close. */
 void videoPumpEvents(void);
 
+/* D344: orderly quit. Any thread may request it; the render thread parks at
+ * the next frame boundary (glFinish + context released) and the host thread
+ * then exits. Never call exit() directly for a normal quit: the render thread
+ * could be inside the GL driver (the 0x119 bugchecks). */
+void videoRequestQuit(const char *why);
+int  videoQuitRequested(void);
+
 /* The game's native video mode (NTSC 640x480, PAL 640x400). fast3d scales
  * N64 screen coordinates into window pixels using this. */
 void videoUpdateNativeResolution(s32 w, s32 h);

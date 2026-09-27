@@ -67,8 +67,12 @@ printf '[Window]\nWidth = 640\nHeight = 480\n' > "$INI"
 
 # --- run ---------------------------------------------------------------------
 rm -rf ppm
-PATH="/c/msys64/mingw64/bin:$PATH" GE_PCDUMP="$DUMP" \
-  timeout 90 ./build-pc/ge007.x86_64.exe "-level_$LEVEL" > "$LOG" 2>&1
+# D344: quit cleanly 30 frames after the last capture (GE_QUITFRAME) instead
+# of being killed by `timeout`; killing the game mid-frame is the likely
+# trigger of the host's 0x119 bugchecks. timeout stays as a backstop only.
+DUMP_HI=${DUMP#*-}; DUMP_HI=${DUMP_HI%%:*}
+PATH="/c/msys64/mingw64/bin:$PATH" GE_PCDUMP="$DUMP" GE_QUITFRAME=$((DUMP_HI + 30)) \
+  timeout 120 ./build-pc/ge007.x86_64.exe "-level_$LEVEL" > "$LOG" 2>&1
 
 if [ "$GOLDEN" = 1 ]; then
   python tools_pc/framediff.py ppm > "$FRAMEDIFF_OUT" 2>&1
