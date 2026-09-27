@@ -633,6 +633,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D345 | **Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select `setCursorPOSforMode(0)`, front.c:2516; every `MENU_PC_OPTIONS` page hop), and the options screen's keyboard navigation was missing/mis-modelled (2026-09-27).** — full `## D345` entry at file tail | Port-only, user-verified (parts a–g): (a) `input.c` re-assert window on menu change; (b) `cursorToItem` skips its snap while the pointer is live; (d) W/S emit stick in menus under NaturalPitch; (e/f) F10-style discrete row stepping + arrow left/right value adjust replace raw drift (first pass shipped broken, fixed); (g) screen-placed cursor parks in the left gutter, off the row text. Game-side one-liner (pad users) parked pending Rule-2 sign-off. |
 | D346 | **PC-settings wording pass: option labels/values aligned to Nightdive/Turok + PD-port conventions (title-case On/Off, "Frame rate cap", "Anti-aliasing"/"None", units in values not labels, self-explanatory auto-FOV toggles); VIEW section merged into VIDEO (2026-09-27).** — full `## D346` entry at file tail | Port-only display change landed (`optionsoverlay.c` rows[]/valueText + one colour match in `frontoptions.c`); both UIs (F10 overlay + options screen) share the table. Config keys/values untouched. Deadzone % display uses raw-step grid (cosmetic follow-up noted). |
 | D347 | **F10 overlay controller: left/right did nothing (only A/Y adjusted values) and no input had hold-to-repeat (2026-09-27).** — full `## D347` entry at file tail | Port-only fix landed (`optionsoverlay.c`): D-pad left/right + stick-X wired into value adjust (A/X/B/Y kept); 18/4-frame hold-to-repeat on adjust and up/down nav, matching the options screen's D345(e)/(f) cadence. Real-device controller retest owed. |
+| D348 | **File-select "PC Options" label: no settings icon exists in the game art (mainfolderimages = copy/del/select-arrow/X/check/dot only) -- a mini slider glyph is drawn instead (2026-09-27).** — full `## D348` entry at file tail | Port-only (`frontoptions.c`): three menu-box tracks + offset knobs in the LABEL_GAP left of the label, INK_DIM/label-ink colours, hot region extended. PCDUMP pixel-verified (135 knob px vs 9 paper); visual feel-check owed. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13732,3 +13733,27 @@ sliders step by their registered step; MSAA/enum wrap as before.
 Controller feel is owed a real-device retest (headless can't drive the pad):
 hold ←/→ on a slider, hold ↑/↓ to traverse, confirm A/X/B/Y still work and
 nothing reaches the game while the overlay is open.
+
+## D348 — File-select "PC Options" label gets a mini slider glyph (2026-09-27)
+
+User request: an icon next to the "PC Options" bottom-bar label, like Copy/Erase
+have theirs. There is no settings-style sprite anywhere in the game art — the
+`mainfolderimages` bank (`assets/oddtextures.h:57-64`) holds exactly six:
+COPY, DEL, SEL (select arrow), X, CHECK, DOT. Per user choice, a glyph is drawn
+instead of borrowing an off-meaning sprite.
+
+Implementation (port-only, `optionsFileSelectLabel()` in frontoptions.c):
+three 2px menu-box tracks with offset 3×4 knobs (a miniature slider control),
+emitted with the same `microcode_constructor_related_to_menus` primitive the
+options screen uses for its slider bars. Tracks are `INK_DIM`; knobs match the
+label ink (white, gold while hot). The glyph is 10px wide (`GLYPH_W`) and sits
+INSIDE the existing 14px `LABEL_GAP` after Erase (2px margins each side), so it
+tracks the dynamic label x — JP's wider Erase pushes glyph + label together —
+and the text position / right-edge clearance are unchanged. The hot region
+extends left to include the glyph. No new strings (issue #87).
+
+**Verification:** `build-pc.sh ntsc-final` clean; headless file-select capture
+(`GE_STARTMENU=5 GE_PCDUMP=200-201`, 1088×816 = 440×330 canvas × 2.473): the
+glyph box (logical x 339–351, y 278–292) contains 135 pure-white pixels — the
+three knobs — vs 9 on an equivalent empty-paper strip. Visual feel-check owed
+to the user (proportions/knob offsets are one-constant tweaks if it looks off).

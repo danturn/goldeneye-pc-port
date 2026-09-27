@@ -86,6 +86,7 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 #define LABEL_X     352   /* Erase's text now ends ~338 (front.c, D343 shift) */
 #define LABEL_CY    285   /* the bar's centre line, as Copy/Erase */
 #define LABEL_GAP   14    /* space after Erase's text */
+#define GLYPH_W     10    /* D348: slider-glyph width, inside LABEL_GAP (2px margins) */
 #define HIT_PAD     4
 
 #define MAX_PAGES  8
@@ -509,12 +510,29 @@ Gfx *optionsFileSelectLabel(Gfx *gdl)
     hot = !optionsOverlayIsOpen()
        && menu_update == MENU_INVALID
        && folder_selected_for_deletion < 0
-       && cursor_h_pos >= (f32)(x - HIT_PAD) && cursor_h_pos <= (f32)(x + w + HIT_PAD)
+       && cursor_h_pos >= (f32)(x - GLYPH_W - HIT_PAD) && cursor_h_pos <= (f32)(x + w + HIT_PAD)
        && cursor_v_pos >= (f32)(y - HIT_PAD) && cursor_v_pos <= (f32)(y + h + HIT_PAD);
 
     if (hot && joyGetButtonsPressedThisFrame(PLAYER_1, A_BUTTON | Z_TRIG | START_BUTTON)) {
         playSfx(DOOR_LOCK_SFX);   /* Copy/Erase's click */
         frontChangeMenu(MENU_PC_OPTIONS, FALSE);
+    }
+
+    /* D348: mini slider glyph left of the label -- three tracks with offset
+     * knobs, drawn with the same menu-box primitive as the options screen's
+     * slider bars. It sits INSIDE the LABEL_GAP after Erase (10px wide, 2px
+     * margins each side), so it tracks the dynamic x (JP's wider Erase pushes
+     * it along) and the text position / right-edge clearance are unchanged.
+     * No new strings (issue #87). */
+    {
+        s32 gx0 = x - GLYPH_W;
+        u32 knob = hot ? 0xEBD879FF : 0xFFFFFFFF;   /* matches the label ink */
+        gdl = microcode_constructor_related_to_menus(gdl, gx0, LABEL_CY - 5, x - 2, LABEL_CY - 3, INK_DIM);
+        gdl = microcode_constructor_related_to_menus(gdl, gx0, LABEL_CY - 1, x - 2, LABEL_CY + 1, INK_DIM);
+        gdl = microcode_constructor_related_to_menus(gdl, gx0, LABEL_CY + 3, x - 2, LABEL_CY + 5, INK_DIM);
+        gdl = microcode_constructor_related_to_menus(gdl, gx0 + 1, LABEL_CY - 6, gx0 + 4, LABEL_CY - 2, knob);
+        gdl = microcode_constructor_related_to_menus(gdl, gx0 + 6, LABEL_CY - 2, gx0 + 9, LABEL_CY + 2, knob);
+        gdl = microcode_constructor_related_to_menus(gdl, gx0 + 3, LABEL_CY + 2, gx0 + 6, LABEL_CY + 6, knob);
     }
 
     /* Same font and white as Copy/Erase; gold (the folder text colour) while

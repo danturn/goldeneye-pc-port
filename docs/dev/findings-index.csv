@@ -225,3 +225,4 @@ D344,FIXED,Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during 
 D345,FIXED,"Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select setCursorPOSforMode(0), front.c:2516; every MENU_PC_OPTIONS p…","Port-only, user-verified (parts a–g):"
 D346,PARTIAL,PC-settings wording pass:,Port-only display change landed (optionsoverlay.c rows[]/valueText + one colour match in frontoptions.c); both UIs (F10 overlay + options screen) share the table.
 D347,PARTIAL,F10 overlay controller:,Port-only fix landed (optionsoverlay.c):
+D348,OPEN,"File-select ""PC Options"" label:",Port-only (frontoptions.c):
