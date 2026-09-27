@@ -629,7 +629,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D341 | **Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).** — full `## D341` entry at file tail | FIXED (M-201, user-verified 2026-09-27): two fast3d defects — the 1-cycle blood texrect sampled a stale tile-1 declaration via the D236 LOD rule, and the in-place-regenerated dyn-pool texture hit a stale address-keyed cache entry. |
 | D342 | **File select: folder bodies and Bond photos vanish after selecting a file and backing out (user, v0.4.0, 2026-09-26).** — full `## D342` entry at file tail | FIXED (M-201, user-verified): scratch placed at the N64 offset +0xA000 of `ptr_logo_and_walletbond_DL` landed inside the larger PC wallet model; moved past its 0x17000 reservation. |
 | D343 | **File select: PC "Options" label opens the settings overlay (v0.4.0 feature, M1 of the route-B options screen, 2026-09-27); also fixes F10 on file select jumping to the legal screen after 30 s.** — full `## D343` entry at file tail | LANDED (M1): one Rule-2 `#ifdef PORT` draw hook (user sign-off 2026-09-27); headless + user-verified (mouse, F10, >30 s, widescreen); physical controller check owed. |
-| D344 | **Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during game test runs; probable cause: quit called exit() while the render thread could be inside the GL driver (2026-09-27).** — full `## D344` entry at file tail | FIX WRITTEN + BUILT (orderly quit + GE_QUITFRAME); runtime verification pending the user's OK (runs paused). |
+| D344 | **Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during game test runs; probable cause: quit called exit() while the render thread could be inside the GL driver (2026-09-27).** — full `## D344` entry at file tail | FIXED (probable cause; orderly quit + GE_QUITFRAME), headless + user-verified; no dump, watch for recurrence. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13568,7 +13568,7 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 - **Input:** while the panel is open on file select, `input.c` passes the stick through (so the mouse or stick moves front.c's crosshair, the panel's pointer, exactly as in GE's menus) and hands the buttons to `frontOptionsFeedPad()`; front.c gets 0. Edges are published with atomics; all UI state lives on the game thread, in the hook. Controls: the crosshair highlights rows and tabs; A/Z/Start (click, Space) acts on the highlighted row (toggle/cycle/step, or set a slider from the crosshair's x and drag); D-pad or C up/down moves the highlight; D-pad or C left/right (keyboard A/D) adjusts with hold-repeat; L/R switch section; B (right-click, Esc) or Back closes and saves the config.
 - Two bugs found and fixed by headless scripts: (1) A acted on the row under an idle crosshair instead of the D-pad's highlighted row; (2) the press that opened the panel leaked in as a first press and toggled Fullscreen. The panel now ignores buttons until they are released once.
 - The hook calls `microcode_constructor()` after the panel, so the Copy/Erase icons and the cursor drawn after it keep their render state.
-- **Verified headless (self-quitting runs, D344):** panel render at 640x480; tab/section switching, D-pad select + A toggle (Mouse invert Y OFF to ON, nothing else changed), B close; label click opens it; open for 2450 frames with no legal-screen drop; clean exit every run. Owed: user playtest (mouse, keyboard, pad) and widescreen captures of the panel.
+- **Verified headless (self-quitting runs, D344):** panel render at 640x480; tab/section switching, D-pad select + A toggle (Mouse invert Y OFF to ON, nothing else changed), B close; label click opens it; open for 2450 frames with no legal-screen drop; clean exit every run. User playtest 2026-09-27: works on PC (mouse/keyboard, window close, Alt+F4). Owed: physical controller; widescreen captures of the panel.
 
 
 ## D344 — Host PC bugchecks (0x119) during game runs: unclean multi-threaded quit (2026-09-27)
@@ -13592,5 +13592,7 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 
 **Verification owed (runs paused at the user's request):** with the user's OK (ideally HAGS off first), run `tools_pc/golden_gate.sh` and a few `GE_QUITFRAME` runs. Check each log ends with `video: exiting (render parked ...)`, check no new ge007 `0x40000015` WER reports appear, and check a window-close / Alt+F4 by hand. A crash dump (fix the host's dump creation) would confirm or rule out the cause.
 
-**Status: FIX WRITTEN + BUILT, unverified at runtime.**
+**Verified (2026-09-27):** golden gate 3/3 with self-quit; five self-quitting runs all logged `render parked after 0-17 ms`; the user closed the game by window close and Alt+F4 with no crash. Not proven as the bugcheck's root cause (no dump): watch for recurrence.
+
+**Status: FIXED (probable cause), user-verified.**
 
