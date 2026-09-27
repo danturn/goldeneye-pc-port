@@ -656,6 +656,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D369 | **Remove F10 row boxes/strips entirely (2026-09-27).** — full `## D369` entry at file tail | FIXED (awaiting live acceptance): no row backgrounds, control rectangles or hover paint; selected setting distinguished by brighter text, slider tracks remain. Input rule from D368 unchanged. |
 | D370 | **F10 distance/volume drags hurt frame rate (2026-09-27).** — full `## D370` entry at file tail | PARTIAL (user live test): mostly improved; rapid spam can still lower FPS. Unchanged-detent/audio and Draw/LOD reapply fixed; other image sliders still request full video pass (live log shows frequent FOV passes). No further churn without focused repro. |
 | D371 | **GEPD key-layout preset + reload/crouch bindings, v0.4.0 modern options wave M3 (2026-09-27).** full `## D371` entry at file tail | FIXED (headless-verified; awaiting user live accept): `Input.Layout` (0=FPS, 1=GEPD) + `Input.CrouchMode` (hold/toggle) in F10 INPUT; GEPD preset acts as per-key effective default under `[Input.Bind]` overrides; new IA_RELOAD/IA_CROUCH emit B (unbound by default). MODERN section dropped per D356 Turok-standard rule (rows land in functional INPUT). Boot/ini-round-trip/F10-page verified; in-game feel-check owed. |
+| D372 | **Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).** full `## D372` entry at file tail | FIXED (headless-verified; awaiting user live accept): one-row `Video.LowEndMode` in F10 VIDEO; ON writes FpsCap 30 + MSAA x1 (restart), OFF restores compiled defaults (60/2). Registered key persists through orderly exit. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -14357,3 +14358,31 @@ always saved there with bare leaf names). F10 INPUT page
 (`GE_OPTIONSOVERLAY=2`) boots clean, both rows resolve. **Owed:** live F10
 layout-switch feel-check (GEPD vs FPS), in-game crouch toggle/reload B
 semantics + menu-latch-reset, PAL/JP.
+
+## D372 — Low-end performance preset row (v0.4.0 modern options wave, M5) (2026-09-27)
+
+**Spec:** `docs/dev/notes/MODERN-OPTIONS-PLAN.md` M5. One row in the
+functional VIDEO section (no MODERN bucket — same D356 Turok-standard
+decision as D371).
+
+**Implementation (port-only; `port/src/video.c`, `port/src/optionsoverlay.c`):**
+- `Video.LowEndMode` (0/1, default 0) registered in `videoConfigInit`. The
+  key only records which preset the user last selected; the effect flows
+  through the two real knobs.
+- F10 row "Low-end mode (restart)" (VIDEO section, after Frame rate cap):
+  ON → `rowSet(Video.FpsCap, 30)` + `rowSet(Video.MSAA, 1)`; OFF → 60 / 2
+  (the compiled defaults). We do NOT remember per-user pre-preset values —
+  the defaults are the N64-original setting, and a single well-known restore
+  point is simpler and predictable (deviation from plan §M5's
+  "pre-toggle values" wording; plan's parenthetical already notes the
+  defaults are the expected pre-toggle state).
+- FpsCap applies live (`videoRequestLiveConfig` via the row's own commit);
+  MSAA is a restart row (applied at next GL context rebuild), hence the
+  "(restart)" label.
+- `kResetDefaults`: `Video.LowEndMode = 0`.
+
+**Verification:** NTSC build clean. F10 VIDEO page (`GE_OPTIONSOVERLAY=6`)
+boots clean — row resolves, no "not registered" warning. `LowEndMode=1`
+survives an orderly `GE_QUITFRAME` exit. **Owed:** live F10 preset
+toggle (ON→FpsCap/MSAA written, FPS readout drops to 30), restart-for-MSAA
+check, PAL/JP.

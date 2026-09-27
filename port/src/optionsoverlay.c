@@ -307,6 +307,9 @@ static struct Row rows[] = {
     { .key="__Resolution", .label="Resolution", .kind=ROW_RES },
     { .key="Video.VSync", .label="VSync", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.FpsCap", .label="Frame rate cap", .kind=ROW_FPSCAP },
+    /* v0.4.0 M5 (D372): one-row low-end preset -- writes FpsCap 30 +
+     * MSAA x1 (restart). OFF restores the compiled defaults (60/2). */
+    { .key="Video.LowEndMode", .label="Low-end mode (restart)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.DisplayFPS", .label="Show FPS", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="__ResetVideo", .label="Reset to defaults", .kind=ROW_ACTION },
     /* D356: the D353 BOND FILE header + "Edit file" chooser row are retired --
@@ -753,6 +756,17 @@ static void rowSetCommit(struct Row *r, double v, int commit)
         inputLayoutApply();
     }
 
+    /* v0.4.0 M5 (D372): low-end perf preset -- one row, two writes:
+     * cap the frame rate at 30 (half the sim tick rate, D186) and drop
+     * MSAA to x1. OFF restores the compiled defaults (60 / 2) rather
+     * than remembering per-user pre-preset values (the defaults ARE
+     * the N64-original setting; simpler and predictable). */
+    if (strcmp(r->key, "Video.LowEndMode") == 0) {
+        int on = (int)lround(v) != 0;
+        rowSet(rowByKey("Video.FpsCap"), on ? 30 : 60);
+        rowSet(rowByKey("Video.MSAA"),   on ? 1  : 2);
+    }
+
     /* Linked aim/turn sensitivity (Input.SensLink, default on): moving either
      * knob scales the other to hold the stock default ratio -- AimModeSens 38
      * : MouseTurnSpeed 50 (the D194/D238 calibrated defaults). */
@@ -902,6 +916,7 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Input.CrouchMode",        0 },   /* = 0 (hold) */
     /* GRAPHICS (port/src/video.c initializers) */
     { "Video.MSAA",                 2 },   /* = 2 */
+    { "Video.LowEndMode",           0 },   /* = 0 (preset off) */
     { "Video.TextureFilter",        1 },   /* = 1 (bilinear) */
     { "Video.Anisotropy",           4 },   /* = 4 */
     { "Video.FovScale",            100 },  /* = 100 */

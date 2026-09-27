@@ -248,3 +248,4 @@ D368,?,Simplify F10 click targets:,"INPUT RULE KEPT; tinted strips user-rejected
 D369,FIXED,Remove F10 row boxes/strips entirely (2026-09-27).,FIXED (awaiting live acceptance):
 D370,PARTIAL,F10 distance/volume drags hurt frame rate (2026-09-27).,PARTIAL (user live test):
 D371,FIXED,"GEPD key-layout preset + reload/crouch bindings, v0.4.0 modern options wave M3 (2026-09-27).",FIXED (headless-verified; awaiting user live accept):
+D372,FIXED,"Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).",FIXED (headless-verified; awaiting user live accept):
