@@ -12426,6 +12426,8 @@ do {
 - **Fix (`src/game/prop.c`, `#ifdef PORT`, A1 class: read the correctly named field):** `CCTV_LOOKPAD` = `arg1->lookpad` on PC, `arg1->pad` on N64, for the 4 look-pad reads in `setupCctv`. `bondtypes.h`'s misleading comment corrected. After the fix the look vectors run from the floor look-at pads (y ≈ 185) to the lenses (~700 units, ~240 up), and the lens forward axis points at the watched spot.
 - **Verified:** user playtest ("that fixed it"); golden gate 3/3. Only `CCTVRecord` had this rename (grep for the duplicate-member note).
 
+**Follow-up (2026-09-27): reaction speed.** User: cameras now point correctly, but may be slow to react. By code this is faithful and tick-based: the alarm fires after `CCTV_ALARM_FRAMES` (NTSC 300) x `F_80030B14` ticks of continuous sighting (Agent 2.0 -> ~10 s, Secret/00 1.0 -> ~5 s), accumulated with `g_ClockTimer`; the sweep integrates `g_GlobalTimerDelta`. No frame-rate dependence. Optional check: time spot-to-alarm on the same camera and difficulty on 1964.
+
 **Status: FIXED (M-201, user-verified 2026-09-26).**
 
 ## D308 — Occasional z-fighting confirmed on some levels' geometry, general/broader than the D306 truck-wheel instance (user QA, 2026-09-18).
