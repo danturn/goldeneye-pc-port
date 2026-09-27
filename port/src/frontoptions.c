@@ -330,8 +330,10 @@ void frontOptionsMenuInterface(void)
              * D352 chooser; folders only, "none" retired, plan §5.5). */
             playSfx(DOOR_LOCK_SFX);
             watchSettingsChooseFile(1);
-        } else if (s_hl >= 0 && s_hl < s_rowN) {
-            int i = s_rowIdx[s_hl];
+        } else if (s_hl >= 1 && s_hl <= s_rowN) {
+            /* s_hl is item-numbered (0 = the save-file row); content row k
+             * is item k+1, so the row index is s_hl - 1. */
+            int i = s_rowIdx[s_hl - 1];
             playSfx(DOOR_LOCK_SFX);
             if (optionsRowIsSlider(i) && cursor_h_pos >= BAR_X0 - 4 &&
                 cursor_h_pos <= BAR_X1 + 4) {
@@ -384,7 +386,7 @@ void frontOptionsMenuInterface(void)
                 if (s_hl == 0) {
                     watchSettingsChooseFile(dir);   /* save-file row */
                 } else {
-                    int i = s_rowIdx[s_hl];
+                    int i = s_rowIdx[s_hl - 1];
                     if (optionsRowIsReset(i))
                         optionsRowActivateReset(i);
                     else
@@ -399,7 +401,7 @@ void frontOptionsMenuInterface(void)
 
     /* D356: reset arm state -- the screen's selected rows[] index (s_hl 0 is
      * the save row, not a rows[] entry); moving on disarms, goBack clears. */
-    optionsResetMaintain(s_level == 1 && s_hl > 0 ? s_rowIdx[s_hl] : -1);
+    optionsResetMaintain(s_level == 1 && s_hl > 0 ? s_rowIdx[s_hl - 1] : -1);
 
     /* The dossier: tabs + a blank CLASSIFIED page, as the cheat screen. */
     disable_all_switches(walletinst[0]);
@@ -518,19 +520,22 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
 
         for (int k = 0; k < s_rowN; k++) {
             int i = s_rowIdx[k];
-            int y = rowY(k);
+            /* Content row k is item k+1 (item 0 is the save-file row), so
+             * it sits one line below the save row -- rowY() already shifts
+             * level-1 items down by one. */
+            int y = rowY(k + 1);
             char label[48];
             snprintf(label, sizeof(label), "%s\n", optionsRowLabel(i));
-            if (k == s_hl) {
+            if (k + 1 == s_hl) {
                 DL = microcode_constructor_related_to_menus(DL, ROW_X - 2, y - 1,
                         ROW_X + measureW(label) + 5, y + 0xE, HILITE);
             }
             DL = ink(DL, ROW_X, y, label, INK);
 
-            /* D356: per-file rows in the mixed-scope section carry a dim
-             * "(save)" tag (the section title already says which file). */
+            /* D357: per-file rows in the mixed-scope section carry a dim
+             * "(profile)" tag (the section title already says which file). */
             if (optionsRowIsSaveScoped(i)) {
-                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(save)\n", INK_DIM);
+                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(profile)\n", INK_DIM);
             }
 
             if (optionsRowIsSlider(i)) {

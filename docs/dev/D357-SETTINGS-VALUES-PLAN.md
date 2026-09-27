@@ -1,0 +1,139 @@
+# D357 — Settings thresholds & values: align display units/defaults with the PD port + Turok PC
+
+Status: **PROPOSAL — awaiting sign-off** (2026-09-27). Baselines: the PD port
+checkout (`C:\Users\james\Source\Repos\pd_port`, `port/src/optionsmenu.c` +
+`input.c`/`video.c` config registrations), the Turok PC (Nightdive) list from
+the maintainer's notes (`docs/dev/notes/OPTIONS-MENU-PLAN.md` §6 — *taken from
+user notes, not checked independently*), and the N64 watch (ground truth for
+the `Bond.*` rows only). Triggered by maintainer report: the current values
+are "a bit confusing".
+
+Companion change landed with this doc's review: the dim per-file row tag is
+now **"(profile)"** (was "(save)"; user request, both UIs).
+
+## 1. Problem
+
+The D356 regroup fixed the *layout*; the *values* still mix three unit
+families with no consistent rule:
+
+- **raw internal units shown as-is**: `Input.MouseSensitivity` (1–500, 100 =
+  1× — the "100" is a % of a 1.0 multiplier, not a count),
+  `Input.PadDeadzone` (raw 0–30000, `dispDiv=300` → "23%" but the step of 500
+  raw is 1.67 display-%, so the slider lands on 23, 25, 26…),
+  `Bond.Music`/`Bond.FX` (0–32767, `dispDiv=328`, step 128 = 0.39 display-%);
+- **N64-era vocabulary on PC rows**: texture filter "Nearest / Bilinear /
+  **3-Point**" (the N64 watch term for trilinear), "FOV scale %" instead of
+  degrees;
+- **defaults that don't read as defaults**: MSAA shows "4x" fine, but
+  `FpsCap` 0–1000 with step 1 invites 117 FPS; `Video.LodDistance` default
+  150% vs `DrawDistance` 150% with a 25-step grid (100/125/150/175…).
+
+The PD port is the house style to copy: per-stick sensitivity as a **±10
+multiplier (default 1.0, negatives invert)** (`input.c:1537`), mouse speed
+**-30..30 (default 2.5)**, deadzone **raw 0–32767 per stick+axis**, rumble
+**0–1**, MSAA as a **2x/4x/8x/16x dropdown**, frame cap as **"N FPS"**,
+volumes as 0–100 %. Turok's (user's list) conventions: single mouse
+sensitivity knob, per-section resets (landed, D356), master/sound/music
+volume trio (master still M3-backlog).
+
+## 2. Principles
+
+1. **Display, don't rescale the world.** Every change is port-only (row
+   table, `dispDiv`/step/`unit` fields, value-text, `kResetDefaults`): no
+   `src/game` change, and config *storage units* are kept wherever a change
+   would migrate existing ini files (principle 3).
+2. **Human units in the value column**: `%` on a 0–100 grid, `×` multipliers
+   with 1.0 as the default, `N FPS`, `Off/2x/4x/8x`, `Unlimited`. A slider
+   step must map to a **whole display unit** (the deadzone 1.67%-step bug is
+   the canonical example to fix).
+3. **Ini stability**: renaming a config key's storage unit is a migration.
+   Where the plan needs it, register a *new* key (e.g.
+   `Input.PadDeadzonePct`) and keep the old key as a read-once legacy alias —
+   the D333 `Input.AimMode`→`Input.AimStyle` alias pattern (`input.c:1962`).
+   Each migration gets a findings note.
+4. **`kResetDefaults` stays in lockstep** with the config C initializers
+   (D356 Gate E): every default change in this plan updates the table in
+   `optionsoverlay.c` in the same commit; the `GE_WSPROBE_RESET` probe
+   re-verifies.
+5. **Defaults = the config C initializers**, never a new menu-only default.
+
+## 3. Row-by-row audit & proposal
+
+Current state from `optionsoverlay.c` `rows[]` + the `configRegister*`
+ranges (2026-09-27). "Display" = what the value column shows today.
+
+### INPUT
+
+| Row | Now (default · range · step · display) | PD port | Turok (notes) | Proposal |
+|---|---|---|---|---|
+| Mouse sensitivity | 100 · 1–500 · 5 · raw `100` | `MouseSpeedX/Y` float −30..30, def 2.5 (sign = invert) | single knob | **Display as a × multiplier**: keep storage (100 = 1.0×), value text `%.1f×` (v/100); range 10–300 (0.1–3.0×), step 10 (0.1×). Label stays "Mouse sensitivity". |
+| Invert look (mouse) | Off/On | folded into the −/× sign of MouseSpeed | — | **Keep On/Off** (PD's negative-multiplier style is an alternative; a separate invert is simpler next to the × slider). Decision: confirm. |
+| Aim style / Aim range | N64/Centred (PC) · PC/N64 | — (GE-only, D337/D338) | — | Keep as-is (GE-specific; hiddenIfOn already sane). |
+| Invert look (controller) | Off/On | sign of stick scale | — | Keep. |
+| Stick deadzone | 7000 raw · 0–30000 · 500 · ÷300 → `23%` (1.67%-steps) | raw 0–32767 per stick+axis, `DEFAULT_DEADZONE` | MISSING | **New key `Input.PadDeadzonePct` 0–100, step 1, default 23** (7000/30000×100); `input.c` scales back to raw at apply; old key becomes a legacy alias (principle 3). Display `N%` on a whole-% grid. |
+| Trigger threshold | 23 · 1–99 · 1 · `%` | — (GE extra) | — | Keep. |
+
+### GAMEPLAY
+
+| Row | Now | Baseline | Proposal |
+|---|---|---|---|
+| Auto-aim / Sight / Look ahead / Ammo (profile) | Off/On (N64 watch 0/1) | N64 watch = ground truth | Keep; tag now reads **(profile)** (this doc's companion change). |
+| Skip intro / No hit flash / All unlocked | Off/On | Turok: screen-shake/hit-flash family | Keep. |
+| HUD scale | 100 · 75–150 · 5 · `%` | — | Keep (whole-% grid already; range cap D226). |
+
+### GRAPHICS
+
+| Row | Now | Baseline | Proposal |
+|---|---|---|---|
+| Anti-aliasing | 1/2/4/8, def 4, shows `None/2x/4x/8x`, restart | PD dropdown 2x/4x/8x/**16x**, def 4x | **Add 16x to the sequence** (`kMsaaSeq`, range clamp 1–16) — SDL/GL supports it; PD has it. Decision: perf cost on mid GPUs (restart already flagged). |
+| Texture filter | Nearest / Bilinear / **3-Point** | PC convention: Nearest/Linear/Bilinear | **Rename the enum names to `Nearest / Linear / Bilinear`** (3-point *is* trilinear; the N64 term is the last one left on a PC row). Storage 0/1/2 unchanged. |
+| Anisotropic filtering | 4 · 1–16 · 1 · `x` | Turok 1–16 | Keep; **dim/disable when filter = Nearest** (anisotropy only applies to filtered sampling) — `hiddenIfOff`-style guard, UI-only. |
+| FOV scale | 100 · 50–150 · 5 · `%` | Turok 3: 60–120° slider | **Display in degrees**: the 100% baseline is the N64 vertical FOV scaled to the port's widescreen math — value text `N°` (v/100 × baseline, 1 decimal); storage unchanged. Decision: degrees vs % (Turok uses degrees; % is the existing mental model — pick one, recommend degrees). |
+| Native widescreen / Widescreen auto FOV / Crop overscan | Off/On | — | Keep. |
+| Draw distance | 150 · 100–400 · 25 · `%` (hidden under auto-FOV) | Turok: draw-distance row | Keep the % grid (25% steps read fine); **step 25 → display already whole-%**. No change. |
+| LOD distance | 150 · 25–400 · 25 · `%` | — | Keep; note default 150 vs DrawDistance 150 is intentional parity. |
+
+### AUDIO
+
+| Row | Now | Baseline | Proposal |
+|---|---|---|---|
+| Music volume (profile) | 32767 · 0–32767 · 128 · ÷328 → 0.39%-steps | Turok: 0–100% | **step 128 → 328** (exactly 1 display-%; 32767/328 = 99.9 ≈ "100%"). Storage unchanged (N64 `VOLUME_MAX` semantics). |
+| FX volume (profile) | same | same | same. |
+| *(master volume)* | — | Turok trio | M3-backlog, out of scope (shape the section for it, D356 note). |
+
+### VIDEO
+
+| Row | Now | Baseline | Proposal |
+|---|---|---|---|
+| Fullscreen | Off/On | Turok: window mode (borderless missing) | Keep; borderless = separate backlog item. |
+| Resolution | action row (presets) | both | Keep. |
+| VSync | On/Off | both | Keep. |
+| Frame rate cap | 60 · 0–1000 · 1 · `Uncapped/N FPS` | Turok: "up to 120 FPS" / uncapped | **Preset grid**: 0/30/60/120/144 (step = next preset, wraps to Uncapped); value text already `N FPS`/`Uncapped`. Decision: preset grid vs free 1-step (recommend presets; 117 FPS has no purpose). |
+| Show FPS | Off/On | both | Keep. |
+
+## 4. Terminology
+
+- Per-file row tag: **"(save)" → "(profile)"** (landed with this doc's
+  review; `frontoptions.c` + `optionsoverlay.c`, both draw paths + comments).
+- Open question for the maintainer: the front screen's top row still reads
+  **"Save file: File N"** — rename to "Profile: File N" for consistency?
+  (Not done; the save *file* is literally what's being chosen.)
+
+## 5. Gates
+
+1. Port-only per principle 1; the deadzone key migration (principle 3) is
+   the only config-surface change and follows the D333 alias pattern.
+2. `kResetDefaults` updated in the same commit as every default/range
+   change; `GE_WSPROBE_RESET` (front + `-level_33`) re-run, all sections
+   `failures=0`.
+3. Build via `build-pc-cmd.bat` (the pi-shell MSYS env gap, D356 note).
+4. Visual check owed (maintainer): front options screen + F10 in all five
+   sections; the overlap fix from the same session (the level-1 save-file
+   row no longer paints under the first content row).
+
+## 6. Out of scope
+
+- Key rebinding (Phase 4), master volume (M3), output-device selection,
+  borderless window, per-axis controller sensitivity (PD-style four-knob —
+  GE's one-knob design is D238/D304).
+- Any `src/game` change; the N64 watch keeps its own values and wording.

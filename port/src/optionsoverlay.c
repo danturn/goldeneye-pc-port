@@ -146,7 +146,7 @@ struct Row {
     int                dispDiv;
 
     /* D356: 1 = this row's value lives in the selected save file (per-file
-     * watch rows). Carries the dim "(save)" tag on the only section that
+     * watch rows). Carries the dim "(profile)" tag on the only section that
      * mixes scopes (GAMEPLAY); on headers the flag is recomputed at init to
      * mean "this section contains per-file rows" (drives the "(File N)"
      * title annotation in both UIs). */
@@ -158,7 +158,7 @@ static struct Row rows[] = {
      * GAMEPLAY, GRAPHICS, AUDIO, VIDEO; docs/dev/D356-SETTINGS-REGROUP-PLAN.md).
      * The D353 "BOND FILE" section -- the one named after WHERE a value is
      * saved -- is gone: its surviving rows split into GAMEPLAY (the per-file
-     * watch toggles, dim "(save)" tagged since the section mixes scopes) and
+     * watch toggles, dim "(profile)" tagged since the section mixes scopes) and
      * AUDIO (the per-file volume sliders, homogeneous so title annotation
      * only), and the "Edit file" chooser row is retired in favour of the
      * single top save-file row on the front options screen (frontoptions.c).
@@ -198,7 +198,7 @@ static struct Row rows[] = {
      *   Bond.AimControl  collides with Input.AimMode (two rows fighting over
      *                    the same N64-vs-PC aim model).
      * The four surviving per-file toggles move here from the D353 BOND FILE
-     * section and carry .saveScoped (dim "(save)" tag, the only mixed-scope
+     * section and carry .saveScoped (dim "(profile)" tag, the only mixed-scope
      * section). */
     /* { .key="Bond.Look", .label="Look up/down (watch; stacks)", .kind=ROW_TOGGLE,
        .names=kReverse, .found=1, .uiMax=1, .cfgMax=1 }, */
@@ -1436,11 +1436,11 @@ Gfx *optionsOverlayEmit(void)
         }
         gdl = drawText(gdl, OV_LABEL_X, rowY, (char *)r->label,
                        r->found ? col : 0x808080ff);
-        /* D356: per-file rows in the mixed-scope section carry a dim
-         * "(save)" tag (the section title already says which file). */
+        /* D357: per-file rows in the mixed-scope section carry a dim
+         * "(profile)" tag (the section title already says which file). */
         if (r->saveScoped && r->kind != ROW_HEADER) {
             gdl = drawText(gdl, OV_LABEL_X + measureText(r->label) + 5, rowY,
-                           "(save)", 0x909090ff);
+                           "(profile)", 0x909090ff);
         }
         if (!r->found) {
             gdl = drawTextR(gdl, right, rowY, "(n/a)", 0x808080ff);
@@ -1520,7 +1520,7 @@ int optionsRowIsBondChooser(int i)
 
 /* D356: content rows carry the literal per-file flag from the table; header
  * rows were recomputed at init to "this section contains per-file rows".
- * Both drive UI decoration (the "(save)" tag, the "(File N)" annotation).
+ * Both drive UI decoration (the "(profile)" tag, the "(File N)" annotation).
  * The F10 overlay and the front options screen are the only consumers. */
 int optionsRowIsSaveScoped(int i)
 {
