@@ -13965,4 +13965,7 @@ and are untouched. Verified by build + headless boot smoke; visual check
 of the screen owed (D357 plan gate 4).
 
 **Companion change (same commit):** the per-file row tag now reads
-"(profile)" (was "(save)", maintainer request), both UIs.
+"(profile)" (was "(save)", maintainer request), both UIs. (Later the same
+day the tag and the rest of the file terminology were anchored on the
+instruction manual's "game file" term: "(game file)" tag, "Game file" top
+row, "Select game file" -- D357 plan §4.)

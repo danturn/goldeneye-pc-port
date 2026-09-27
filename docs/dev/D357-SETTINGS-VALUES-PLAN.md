@@ -9,7 +9,9 @@ the `Bond.*` rows only). Triggered by maintainer report: the current values
 are "a bit confusing".
 
 Companion change landed with this doc's review: the dim per-file row tag is
-now **"(profile)"** (was "(save)"; user request, both UIs).
+now **"(game file)"** (was "(save)"); the front top row reads **"Game
+file"** and the F10 unavailable value reads **"Select game file"** — the
+instruction manual's term (§4).
 
 ## 1. Problem
 
@@ -111,13 +113,23 @@ ranges (2026-09-27). "Display" = what the value column shows today.
 | Frame rate cap | 60 · 0–1000 · 1 · `Uncapped/N FPS` | Turok: "up to 120 FPS" / uncapped | **Preset grid**: 0/30/60/120/144 (step = next preset, wraps to Uncapped); value text already `N FPS`/`Uncapped`. Decision: preset grid vs free 1-step (recommend presets; 117 FPS has no purpose). |
 | Show FPS | Off/On | both | Keep. |
 
-## 4. Terminology
+## 4. Terminology (instruction manual = "game file")
 
-- Per-file row tag: **"(save)" → "(profile)"** (landed with this doc's
-  review; `frontoptions.c` + `optionsoverlay.c`, both draw paths + comments).
-- Open question for the maintainer: the front screen's top row still reads
-  **"Save file: File N"** — rename to "Profile: File N" for consistency?
-  (Not done; the save *file* is literally what's being chosen.)
+The instruction manual calls the per-player save a **"game file"**; the
+settings UI anchors on that term (2026-09-27, maintainer request). Final
+string set:
+
+| String | Where | State |
+|---|---|---|
+| **"Game file"** | front options top-row label (was "Save file") | changed |
+| **"(game file)"** | per-file row tag, both UIs (was "(save)", briefly "(profile)") | changed |
+| **"Select game file"** | F10 unavailable value (was "Select file") | changed |
+| `File N` | row values + the `(File N)` section annotation | kept (value-column short form, PD "Player N" pattern) |
+| `(no file)` | unavailable state, dim annotation | kept |
+
+"Bond file" remains in code identifiers/config keys (`Bond.*` rows,
+`watchSettingsChooseFile`, ini keys) only -- never user-visible; the manual
+and UI say "game file".
 
 ## 5. Gates
 

@@ -500,9 +500,10 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
         }
 
-        /* D356: the top save-file row (item 0, not in the row table): the
+        /* D356: the top game-file row (item 0, not in the row table; the
+         * label reads "Game file", the instruction manual's term): the
          * single file control of the front screen (F10 always targets the
-         * active file, so it has no file row). L/R (and A) cycle folders; ""
+         * active file, so it has no file row). L/R (and A) cycle folders;
          * (no file) is the unavailable state until one is created. */
         {
             int y = rowY(0);
@@ -511,7 +512,7 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
                 DL = microcode_constructor_related_to_menus(DL, ROW_X - 2, y - 1,
                         ROW_X + 140, y + 0xE, HILITE);
             }
-            DL = ink(DL, ROW_X, y, "Save file\n", INK);
+            DL = ink(DL, ROW_X, y, "Game file\n", INK);
             int f = watchSettingsActiveFolder();
             if (f < 0) snprintf(sv, sizeof(sv), "(no file)");
             else       snprintf(sv, sizeof(sv), "File %d\n", f + 1);
@@ -533,9 +534,9 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             DL = ink(DL, ROW_X, y, label, INK);
 
             /* D357: per-file rows in the mixed-scope section carry a dim
-             * "(profile)" tag (the section title already says which file). */
+             * "(game file)" tag (the section title already says which file). */
             if (optionsRowIsSaveScoped(i)) {
-                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(profile)\n", INK_DIM);
+                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(game file)\n", INK_DIM);
             }
 
             if (optionsRowIsSlider(i)) {
