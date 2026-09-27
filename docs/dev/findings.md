@@ -632,6 +632,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D344 | **Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during game test runs; probable cause: quit called exit() while the render thread could be inside the GL driver (2026-09-27).** — full `## D344` entry at file tail | FIXED (probable cause; orderly quit + GE_QUITFRAME), headless + user-verified; no dump, watch for recurrence. |
 | D345 | **Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select `setCursorPOSforMode(0)`, front.c:2516; every `MENU_PC_OPTIONS` page hop), and the options screen's keyboard navigation was missing/mis-modelled (2026-09-27).** — full `## D345` entry at file tail | Port-only, user-verified (parts a–g): (a) `input.c` re-assert window on menu change; (b) `cursorToItem` skips its snap while the pointer is live; (d) W/S emit stick in menus under NaturalPitch; (e/f) F10-style discrete row stepping + arrow left/right value adjust replace raw drift (first pass shipped broken, fixed); (g) screen-placed cursor parks in the left gutter, off the row text. Game-side one-liner (pad users) parked pending Rule-2 sign-off. |
 | D346 | **PC-settings wording pass: option labels/values aligned to Nightdive/Turok + PD-port conventions (title-case On/Off, "Frame rate cap", "Anti-aliasing"/"None", units in values not labels, self-explanatory auto-FOV toggles); VIEW section merged into VIDEO (2026-09-27).** — full `## D346` entry at file tail | Port-only display change landed (`optionsoverlay.c` rows[]/valueText + one colour match in `frontoptions.c`); both UIs (F10 overlay + options screen) share the table. Config keys/values untouched. Deadzone % display uses raw-step grid (cosmetic follow-up noted). |
+| D347 | **F10 overlay controller: left/right did nothing (only A/Y adjusted values) and no input had hold-to-repeat (2026-09-27).** — full `## D347` entry at file tail | Port-only fix landed (`optionsoverlay.c`): D-pad left/right + stick-X wired into value adjust (A/X/B/Y kept); 18/4-frame hold-to-repeat on adjust and up/down nav, matching the options screen's D345(e)/(f) cadence. Real-device controller retest owed. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13702,3 +13703,32 @@ now 4 entries: Video / Mouse / Aim / Controller / Game.
 boot into the options screen (`GE_STARTMENU=26 GE_QUITFRAME=300`) orderly
 self-quit, zero crash lines. All strings plain ASCII (JP-region safe, #87).
 Port-only: no `src/game` edits, N64 build untouched.
+
+## D347 — F10 overlay controller value-adjust + hold-to-repeat (2026-09-27)
+
+User report (controller, Steam Deck class): in the F10 options overlay,
+left/right did nothing — only A (increment) / Y (decrement) adjusted values,
+"feels bad". Root cause: `optionsOverlayHandleInput()` wired only DPAD_UP/DOWN
++ stick-Y to navigation and A/X/B/Y to adjust; **DPAD_LEFT/RIGHT and stick-X
+were never read**, and every action was edge-triggered — no hold-to-repeat
+anywhere (holding a key or the stick stepped exactly once).
+
+Fix (port-only, `optionsoverlay.c`):
+- D-pad left/right + left-stick X (±12000, matching the existing Y-axis style)
+  OR-ed into the lf/rt adjust inputs. A/X/B/Y keep working as before.
+- Hold-to-repeat on value adjust: first press fires immediately, then an
+  18-frame delay and a 4-frame repeat — the same cadence as the options
+  screen's D345(e)/(f) blocks, so both settings UIs now feel identical.
+- Same repeat added to up/down navigation (previously one row per press even
+  on keyboard — traversing the list held-down was impossible). `overlayStepSel`
+  clamps at the ends, so holding at an end is a harmless no-op.
+- Repeat state (`navDir/navTimer/adjDir/adjTimer`) resets when the overlay
+  closes, alongside the existing prev*/dragRow reset.
+
+Toggles flip on either adjust direction (existing `rowAdjust` behaviour);
+sliders step by their registered step; MSAA/enum wrap as before.
+
+**Verification:** `build-pc.sh ntsc-final` clean; headless boot smoke clean.
+Controller feel is owed a real-device retest (headless can't drive the pad):
+hold ←/→ on a slider, hold ↑/↓ to traverse, confirm A/X/B/Y still work and
+nothing reaches the game while the overlay is open.

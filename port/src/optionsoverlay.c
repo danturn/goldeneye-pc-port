@@ -763,10 +763,14 @@ void optionsOverlayHandleInput(void)
 {
     static int prevUp, prevDn, prevLf, prevRt, prevLmb, prevRmb;
     static int dragRow = -1;
+    /* D347: hold-to-repeat state (18/4-frame cadence, same as the options
+     * screen's D345(e)/(f) blocks). */
+    static int navDir = 0, navTimer = 0, adjDir = 0, adjTimer = 0;
 
     if (!s_open) {
         prevUp = prevDn = prevLf = prevRt = prevLmb = prevRmb = 0;
         dragRow = -1;
+        navDir = adjDir = 0;
         SDL_AtomicSet(&s_wheelPending, 0);
         return;
     }
@@ -799,18 +803,26 @@ void optionsOverlayHandleInput(void)
      * logic as the keyboard, so repeat/clamp/scroll behaviour is identical.
      * input.c swallows the pad while we are open, so none of this reaches
      * the game. (Select also closes -- handled in input.c's toggle, which
-     * runs before this one.) */
+     * runs before this one.)
+     * D347: D-pad left/right and stick-X join A/X/B/Y as value adjust --
+     * the standard controller convention; A/X/B/Y keep working. */
     int gUp = inputPadButton(0, SDL_CONTROLLER_BUTTON_DPAD_UP)
            || inputPadAxis(0, SDL_CONTROLLER_AXIS_LEFTY) < -12000;
     int gDn = inputPadButton(0, SDL_CONTROLLER_BUTTON_DPAD_DOWN)
            || inputPadAxis(0, SDL_CONTROLLER_AXIS_LEFTY) > 12000;
+    int gLf = inputPadButton(0, SDL_CONTROLLER_BUTTON_DPAD_LEFT)
+            || inputPadAxis(0, SDL_CONTROLLER_AXIS_LEFTX) < -12000;
+    int gRt = inputPadButton(0, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+            || inputPadAxis(0, SDL_CONTROLLER_AXIS_LEFTX) > 12000;
     int up = ks[SDL_SCANCODE_UP]    || ks[SDL_SCANCODE_KP_8] || gUp;
     int dn = ks[SDL_SCANCODE_DOWN]  || ks[SDL_SCANCODE_KP_2] || gDn;
     int lf = ks[SDL_SCANCODE_LEFT]  || ks[SDL_SCANCODE_KP_4]
+          || gLf
           || inputPadButton(0, SDL_CONTROLLER_BUTTON_B)
           || inputPadButton(0, SDL_CONTROLLER_BUTTON_Y);
     int rt = ks[SDL_SCANCODE_RIGHT] || ks[SDL_SCANCODE_KP_6]
           || ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER]
+          || gRt
           || inputPadButton(0, SDL_CONTROLLER_BUTTON_A)
           || inputPadButton(0, SDL_CONTROLLER_BUTTON_X);
 
@@ -820,12 +832,41 @@ void optionsOverlayHandleInput(void)
     if (startNow && !prevStart) optionsOverlayToggle();   /* Start closes */
     prevStart = startNow;
 
-    /* ---- keyboard / D-pad nav (clamped at the ends; scroll follows) ---- */
-    if (up && !prevUp) s_sel = overlayStepSel(s_sel, -1);   /* skips headers */
-    if (dn && !prevDn) s_sel = overlayStepSel(s_sel, +1);
+    /* ---- keyboard / D-pad nav (clamped at the ends; scroll follows).
+     * D347: hold-to-repeat so a controller (and held keys) can traverse the
+     * list without one-press-per-row. */
+    {
+        int vdir = (dn && !prevDn) ? +1 : (up && !prevUp) ? -1 : 0;
+        if (vdir != 0) {
+            navDir = vdir;
+            navTimer = 18;
+            s_sel = overlayStepSel(s_sel, vdir);   /* skips headers */
+        } else if ((up || dn) && navDir != 0) {
+            if (--navTimer <= 0) {
+                navTimer = 4;
+                s_sel = overlayStepSel(s_sel, navDir);
+            }
+        } else {
+            navDir = 0;
+        }
+    }
     overlayUpdateScroll();
-    if (lf && !prevLf) rowAdjust(&rows[s_visIdx[s_sel]], -1);
-    if (rt && !prevRt) rowAdjust(&rows[s_visIdx[s_sel]], +1);
+    /* ---- value adjust (D347: D-pad/stick left-right wired in; hold repeats) ---- */
+    {
+        int dir = (rt && !prevRt) ? +1 : (lf && !prevLf) ? -1 : 0;
+        if (dir != 0) {
+            adjDir = dir;
+            adjTimer = 18;
+            rowAdjust(&rows[s_visIdx[s_sel]], dir);
+        } else if ((rt || lf) && adjDir != 0) {
+            if (--adjTimer <= 0) {
+                adjTimer = 4;
+                rowAdjust(&rows[s_visIdx[s_sel]], adjDir);
+            }
+        } else {
+            adjDir = 0;
+        }
+    }
 
     /* ---- mouse ----
      * D316: mx/my are raw window pixels, but the overlay's own 2D content
