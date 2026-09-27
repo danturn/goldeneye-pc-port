@@ -628,7 +628,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D339 | **#92 (low-end ~30 fps, Celeron N3060 / HD 400) — measured CPU budget: game thread ~0.2–0.35 ms/frame, render-thread display-list pass 0.4–1.8 ms/frame on this box; CPU very likely not the bottleneck. New `GE_PERFSTAT=1` probe (render phases, tris/batches, game-thread busy, GPU timer query).** — full `## D339` entry at file tail | OPEN (2026-09-26, user: review toward the end of v0.4.0; needs a test machine with similar HD 400-class hardware). Earlier: INVESTIGATING — probe landed; target-hardware numbers needed before any fix. |
 | D341 | **Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).** — full `## D341` entry at file tail | FIXED (M-201, user-verified 2026-09-27): two fast3d defects — the 1-cycle blood texrect sampled a stale tile-1 declaration via the D236 LOD rule, and the in-place-regenerated dyn-pool texture hit a stale address-keyed cache entry. |
 | D342 | **File select: folder bodies and Bond photos vanish after selecting a file and backing out (user, v0.4.0, 2026-09-26).** — full `## D342` entry at file tail | FIXED (M-201, user-verified): scratch placed at the N64 offset +0xA000 of `ptr_logo_and_walletbond_DL` landed inside the larger PC wallet model; moved past its 0x17000 reservation. |
-| D343 | **File select: PC "Options" label opens the settings overlay (v0.4.0 feature, M1 of the route-B options screen, 2026-09-27); also fixes F10 on file select jumping to the legal screen after 30 s.** — full `## D343` entry at file tail | LANDED (M1): one Rule-2 `#ifdef PORT` draw hook (user sign-off 2026-09-27); click + idle timer A/B verified headless; golden 3/3. User playtest owed. |
+| D343 | **File select: PC "Options" label opens the settings overlay (v0.4.0 feature, M1 of the route-B options screen, 2026-09-27); also fixes F10 on file select jumping to the legal screen after 30 s.** — full `## D343` entry at file tail | LANDED (M1): one Rule-2 `#ifdef PORT` draw hook (user sign-off 2026-09-27); headless + user-verified (mouse, F10, >30 s, widescreen); physical controller check owed. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13558,5 +13558,7 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 
 **Owed:** a user playtest: mouse hover/click and pad on the label, F10 and label opening the same overlay, leaving it open for more than 30 s, and 16:9 / 21:9. Then M2 (a GE-styled screen) per the local plan.
 
-**Status: LANDED (M1), user playtest owed.**
+**User playtest (2026-09-27):** mouse hover and click, F10 and label opening the same overlay, open for more than 30 s, and widescreen all confirmed. Controller not yet confirmed. (Headless scripted stick + A drives the same game-side path; only the SDL pad read, which is existing code, is uncovered.)
+
+**Status: LANDED (M1), user-verified except a physical controller.**
 
