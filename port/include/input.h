@@ -68,6 +68,11 @@ short inputPadAxis(int idx, SDL_GameControllerAxis a);
  * ignored -- GE only cycles forward on a bare A edge. */
 void inputPostWheel(int notches);
 
+/* v0.4.0 M3: re-derive the keyboard binds after an F10 change to
+ * Input.Layout / Input.CrouchMode (optionsoverlay rowSetCommit hook).
+ * Also drops the latched-crouch state. Scheduler thread only. */
+void inputLayoutApply(void);
+
 /* D345(b): 1 while the 1:1 menu pointer owns cursor_h/v_pos (in a menu,
  * abs pointer available, mouse used within the re-assert window). Port
  * screens that teleport the crosshair should skip their snap when set. */

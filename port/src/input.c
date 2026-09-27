@@ -868,7 +868,12 @@ static int keyDown(const Uint8 *ks, SDL_Scancode sc)
  * ---------------------------------------------------------------------- */
 enum {
     IA_FORWARD, IA_BACK, IA_STRAFE_L, IA_STRAFE_R, IA_TURN_L, IA_TURN_R,
-    IA_FIRE, IA_AIM, IA_ACTION, IA_CANCEL, IA_LEAN_L, IA_START, IA_COUNT
+    IA_FIRE, IA_AIM, IA_ACTION, IA_CANCEL, IA_LEAN_L, IA_START,
+    /* v0.4.0 M3 (modern options wave): GEPD-layout actions. Both map to
+     * the N64 B button -- the game's own B-context logic
+     * (bond_interact_object) picks reload (tap, gun in hand, no
+     * interact target) vs crouch (held) exactly as on the N64. */
+    IA_RELOAD, IA_CROUCH, IA_COUNT
 };
 
 static const struct { const char *key; const char *def; } kBindDefs[IA_COUNT] = {
@@ -884,7 +889,29 @@ static const struct { const char *key; const char *def; } kBindDefs[IA_COUNT] = 
     [IA_CANCEL]   = { "Input.Bind.Cancel",      "X,R,F,Escape"  },
     [IA_LEAN_L]   = { "Input.Bind.LeanLeft",    "Q"             },
     [IA_START]    = { "Input.Bind.Start",       "Return,Tab"    },
+    [IA_RELOAD]   = { "Input.Bind.Reload",      ""              },
+    [IA_CROUCH]   = { "Input.Bind.Crouch",      ""              },
 };
+
+/* v0.4.0 M3: GEPD key-layout preset (docs/dev/notes/GEPORT-REFERENCE-
+ * DEEPDIVE.md section 7.3). The preset is the EFFECTIVE DEFAULT for any action
+ * the user has not overridden per-key in [Bind]; a per-key ini value
+ * layers on top, so switching layouts never clobbers explicit binds.
+ * Fire loses its Left Ctrl key in this layout (LMB fires, RMB aims;
+ * Ctrl becomes crouch); LeanLeft is unbound (lean is GEPD-removed).
+ * NULL entries keep the FPS default. */
+static const char *const kGepdPreset[IA_COUNT] = {
+    [IA_FIRE]   = "",
+    [IA_ACTION] = "Q",
+    [IA_CANCEL] = "E",
+    [IA_LEAN_L] = "",
+    [IA_RELOAD] = "R",
+    [IA_CROUCH] = "Left Ctrl",
+};
+static int keyLayout = 0;    /* 0 = FPS defaults, 1 = GEPD preset */
+static int crouchMode = 0;   /* 0 = hold, 1 = toggle (latched B) */
+static int s_crouchLatch = 0;
+static int s_crouchHeldPrev = 0;
 
 #define BIND_MAX_KEYS 4
 static char         g_bindStr[IA_COUNT][64];
@@ -896,9 +923,18 @@ static void inputRebuildBinds(void)
         for (int k = 0; k < BIND_MAX_KEYS; k++) {
             g_bind[a][k] = SDL_SCANCODE_UNKNOWN;
         }
+        /* v0.4.0 M3: the GEPD preset fills the actions the user has not
+         * individually overridden (empty g_bindStr); FPS layout = the
+         * kBindDefs defaults, byte-identical to the pre-wave binds. */
+        const char *def = kBindDefs[a].def;
+        if (keyLayout == 1) {
+            const char *preset = kGepdPreset[a];
+            if (preset) def = preset;
+        }
         char buf[64];
-        strncpy(buf, g_bindStr[a][0] ? g_bindStr[a] : kBindDefs[a].def, sizeof(buf) - 1);
+        strncpy(buf, g_bindStr[a][0] ? g_bindStr[a] : def, sizeof(buf) - 1);
         buf[sizeof(buf) - 1] = 0;
+        int hadInput = (buf[0] != 0);   /* before strtok clobbers buf */
 
         int n = 0;
         for (char *tok = strtok(buf, ","); tok && n < BIND_MAX_KEYS; tok = strtok(NULL, ",")) {
@@ -914,11 +950,30 @@ static void inputRebuildBinds(void)
             }
             g_bind[a][n++] = sc;
         }
-        if (n == 0) {
+        /* v0.4.0 M3: an intentionally-empty string (a preset or default
+         * that leaves an action unbound, e.g. GEPD Fire) is silent --
+         * only a non-empty string that produced no valid keys warns. */
+        if (n == 0 && hadInput) {
             sysLogPrintf(LOG_WARNING, "input: %s has no valid keys; action unbound",
                          kBindDefs[a].key);
         }
     }
+}
+
+/* v0.4.0 M3: re-derive the binds after an F10 change to Input.Layout /
+ * Input.CrouchMode (optionsoverlay rowSetCommit hook, scheduler thread).
+ * g_bind is read per-frame by the game thread's actHeld(): a mid-poll
+ * rebuild can at worst drop or add one scancode for one frame (the
+ * D214 startup-rebuild is the same thread-pairing, just at boot).
+ * Also drops the crouch latch so a latched crouch never carries B into
+ * a menu (where B = back/cancel). */
+void inputLayoutApply(void)
+{
+    s_crouchLatch = 0;
+    s_crouchHeldPrev = 0;
+    inputRebuildBinds();
+    sysLogPrintf(LOG_INFO, "input: key layout %s, crouch %s applied",
+                 keyLayout ? "GEPD" : "FPS", crouchMode ? "toggle" : "hold");
 }
 
 static int actHeld(const Uint8 *ks, int act)
@@ -1126,6 +1181,21 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         }
         if (actHeld(ks, IA_CANCEL))     /* D145: Escape is in the default Cancel bind */
             button |= GE_CONT_B;
+        /* v0.4.0 M3: reload (B tap, same as any B press) and crouch
+         * (hold, or a latched toggle). Both are unbound by default (the
+         * N64-original layout), so this is a no-op out of the box; the
+         * game's B-context logic decides reload-vs-crouch as on N64. */
+        if (actHeld(ks, IA_RELOAD))
+            button |= GE_CONT_B;
+        int crouchNow = actHeld(ks, IA_CROUCH);
+        if (crouchMode == 1) {
+            if (crouchNow && !s_crouchHeldPrev) s_crouchLatch ^= 1;
+            if (menuMode) s_crouchLatch = 0;  /* never carry B into a menu */
+            if (s_crouchLatch) button |= GE_CONT_B;
+            s_crouchHeldPrev = crouchNow;
+        } else if (crouchNow) {
+            button |= GE_CONT_B;
+        }
         if (actHeld(ks, IA_LEAN_L))
             button |= GE_CONT_L;
         if (actHeld(ks, IA_START))
@@ -1998,6 +2068,10 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.PadDeadzone", &padDeadzone, 0, 30000);
     configRegisterInt("Input.PadTriggerPct", &padTriggerPct, 1, 99);
     configRegisterInt("Input.PadLookInvertY", &padLookInvertY, 0, 1);
+    /* v0.4.0 M3 (modern options wave): key-layout preset + crouch bind
+     * mode; both default to the N64-original FPS layout / hold. */
+    configRegisterInt("Input.Layout",     &keyLayout,  0, 1);
+    configRegisterInt("Input.CrouchMode", &crouchMode, 0, 1);
 
     /* D214: keyboard rebinding. Seed each buffer with its default so the knob
      * is visible/editable in a fresh ge007.ini; configLoad() overwrites any the
