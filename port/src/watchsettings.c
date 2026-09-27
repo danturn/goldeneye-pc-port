@@ -12,6 +12,7 @@
 #include "player.h"
 #include "system.h"
 #include "watchsettings.h"
+#include "optionsoverlay.h"   /* D356 GE_WSPROBE_RESET probe hooks */
 
 extern s32 g_StageNum; /* boss.c: direct -level_XX starts with MENU_INVALID */
 extern save_data *fileGetSaveForFoldernum(u32 folder);
@@ -108,28 +109,86 @@ int watchSettingsFolder(void)
 /* D352: game-thread only. The chooser is a front-end control (options
  * screen); in-stage F10 targets the active file, so a stage-context call
  * signals a broken UI invariant -- refuse it loudly rather than race the
- * front screen's readers. */
+ * front screen's readers.
+ * D356: "none" retired from the cycle (plan §5.5) -- the front target is
+ * always a folder: frontFolder() resolves a -1 chosen lazily to a valid
+ * folder (D354) and the auto-init fallback builds file 1 if none exists,
+ * so the UI shows an unavailable state ("(no file)" annotation, via
+ * watchSettingsActiveFolder) instead of a number the write path cannot
+ * use. */
 void watchSettingsChooseFile(int dir)
 {
     if (stageActive()) {
         sysLogPrintf(LOG_WARNING, "watchsettings: choose-file in a stage context; ignored");
         return;
     }
-    /* Include 'none' so selection is always intentional; skip empty slots.
-     * Do not load the file here: GE's loader would change front-end audio. */
+    /* Skip empty slots. Do not load the file here: GE's loader would change
+     * front-end audio. */
     SDL_AtomicLock(&uiLock);
-    int next = chosen;
-    for (int n = 0; n <= MAX_FOLDER_COUNT; n++) {
-        next += dir < 0 ? -1 : 1;
-        if (next < -1) next = MAX_FOLDER_COUNT - 1;
-        if (next >= MAX_FOLDER_COUNT) next = -1;
-        if (next == -1 || validSave(next)) break;
+    int next = (chosen < FOLDER1) ? FOLDER1 : chosen;
+    for (int n = 0; n < MAX_FOLDER_COUNT; n++) {
+        next += dir;
+        if (next < FOLDER1) next = MAX_FOLDER_COUNT - 1;
+        if (next >= MAX_FOLDER_COUNT) next = FOLDER1;
+        if (validSave(next)) break;
     }
     chosen = next;
     stagedField = -1;
     int sel = chosen;
     SDL_AtomicUnlock(&uiLock);
-    sysLogPrintf(LOG_INFO, "watchsettings: selected Bond file %d", sel < 0 ? 0 : sel + 1);
+    sysLogPrintf(LOG_INFO, "watchsettings: selected save file %d", sel + 1);
+}
+
+/* D356: context-aware, read-only (never mutates the stored front target):
+ * in stage -> the stage's active file; front contexts -> the resolved front
+ * target (frontFolder()'s lazy default). -1 when nothing usable (the
+ * auto-init file not yet applied) -- the UIs render that as an unavailable
+ * state ("(no file)"), never a file number the write path cannot use.
+ * NOTE: frontFolder() acquires uiLock itself -- never call it (or this)
+ * while uiLock is held: it is a plain spinlock, not re-entrant. */
+int watchSettingsActiveFolder(void)
+{
+    int f;
+    if (stageActive()) {
+        SDL_AtomicLock(&uiLock);
+        f = selected_folder_num;
+        SDL_AtomicUnlock(&uiLock);
+    } else {
+        f = frontFolder();   /* self-locks; may default + store 'chosen' */
+    }
+    return validSave(f) ? f : -1;
+}
+
+/* D356: queued field commands awaiting the game thread (0 in front
+ * contexts -- nothing is queued there). Drives the in-stage reset probe's
+ * dispatch check (plan §5.8). */
+int watchSettingsQueueCount(void)
+{
+    SDL_AtomicLock(&lock);
+    int n = count;
+    SDL_AtomicUnlock(&lock);
+    return n;
+}
+
+/* D356: the per-file "default" for the reset rows -- BLANKSAVEDATA's watch
+ * fields (file2.c's blank save is a macro, not a global; only the music,
+ * sfx and options fields matter here: full 0xFF volumes, DEFAULT_OPTIONS).
+ * completion_bitflags is left 0 (BLANKSAVEDATA sets BOND_BROSNAN; the reset
+ * rows never touch it). */
+static const save_data kBlankSave = {
+    0, 0,
+    0, 0,             /* completion_bitflags, flag_007 */
+    0xFF, 0xFF,       /* music_vol, sfx_vol (expanded -> VOLUME_MAX) */
+    DEFAULT_OPTIONS,  /* options */
+    0, 0, 0,
+};
+
+int watchSettingsBlankValue(enum WatchSettingField field)
+{
+    if ((unsigned)field >= WATCH_SETTING_COUNT) return 0;
+    if (field == WATCH_SETTING_MUSIC) return ((int)kBlankSave.music_vol << 7) | (kBlankSave.music_vol >> 1);
+    if (field == WATCH_SETTING_FX)    return ((int)kBlankSave.sfx_vol << 7) | (kBlankSave.sfx_vol >> 1);
+    return (kBlankSave.options & bits[field]) ? 1 : 0;
 }
 
 static int stageActive(void)
@@ -387,6 +446,40 @@ static void applyValue(enum WatchSettingField field, int value)
 
 void watchSettingsGameTick(void)
 {
+    /* D356: the GE_WSPROBE_RESET env gate drives the real reset UI dispatch
+     * (arm -> confirm -> handler, no bypass) through optionsoverlay.c's
+     * probe hooks. Each phase waits for its context to be stable (~120
+     * ticks, a couple of seconds, after the front title has been rendering /
+     * after stage start) so the probe's save-file I/O never stalls the boot
+     * black frame. Phase 0 = the pre-stage front probe (dispatch + verify
+     * directly); once a stage is active, phase 1 = dispatch (arms+confirms
+     * all sections, queueing the file rows) and phase 2 = verify (after the
+     * game thread has drained + persisted them). */
+    {
+        static int wsResetProbePhase = 0;
+        static int wsProbeFrontTicks = 0, wsProbeStageTicks = 0;
+        if (getenv("GE_WSPROBE_RESET")) {
+            if (!stageActive()) {
+                if (wsResetProbePhase == 0 && ++wsProbeFrontTicks == 120) {
+                    optionsResetProbePrepare();
+                    wsResetProbePhase = 1;
+                }
+            } else {
+                /* A direct -level_XX boot enters the stage long before the
+                 * front counter would reach 120, so a stage run starts its
+                 * own timer from phase 0 (the front prepare is front-only;
+                 * the stage dispatch builds its section list lazily). */
+                if (wsResetProbePhase == 0) wsResetProbePhase = 1;
+                if (wsResetProbePhase == 1 && ++wsProbeStageTicks == 120) {
+                    optionsResetProbeDispatchStage();
+                    wsResetProbePhase = 2;
+                } else if (wsResetProbePhase == 2 && ++wsProbeStageTicks == 121) {
+                    optionsResetProbeVerifyStage();
+                    wsResetProbePhase = 3;
+                }
+            }
+        }
+    }
     /* This hook runs on the game thread after a gfxFrameMsgQ receive, even
      * during load. D352: HOLD pending commands (do not drain) until a stage
      * is active -- a slider-release commit must not be silently discarded

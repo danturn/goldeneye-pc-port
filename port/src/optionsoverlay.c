@@ -47,9 +47,14 @@ extern MENU current_menu;
 #include "config.h"
 #include "video.h"
 #include "input.h"
+#include "front.h"   /* selected_folder_num (D356 stage probe) */
+#include "file.h"   /* save_data (D356 reset probe: second-file isolation) */
 #include "optionsoverlay.h"
 #include "watchsettings.h"
 #include "../fast3d/gfx_api.h"
+
+/* file2.c; same extern as watchsettings.c (not in a header). */
+extern save_data *fileGetSaveForFoldernum(u32 folder);
 
 /* D324 class: -Iinclude resolves <math.h> to GE's N64 stub, which does not
  * declare lround; without this the call is an implicit `int lround()`
@@ -139,86 +144,29 @@ struct Row {
      * (e.g. deadzone raw 0..30000 -> % of full stick). NULL/0 = plain int. */
     const char        *unit;
     int                dispDiv;
+
+    /* D356: 1 = this row's value lives in the selected save file (per-file
+     * watch rows). Carries the dim "(save)" tag on the only section that
+     * mixes scopes (GAMEPLAY); on headers the flag is recomputed at init to
+     * mean "this section contains per-file rows" (drives the "(File N)"
+     * title annotation in both UIs). */
+    int                saveScoped;
 };
 
 static struct Row rows[] = {
-    /* D353: Turok-style regrouping. The D346b single 15-row VIDEO section
-     * sat exactly at the front page's MAX_PROWS cap (a new row would have
-     * been silently truncated). Split into DISPLAY (presentation) and
-     * GRAPHICS (quality + distance); sections now top out at 11 rows
-     * (GRAPHICS with both auto-FOV toggles off). All rows use designated
-     * initializers (D351 class: positional shifts into hidePtr/unit). */
-    { .key="__HdrDisplay", .label="DISPLAY", .kind=ROW_HEADER },
-    { .key="Video.Fullscreen", .label="Fullscreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="__Resolution", .label="Resolution", .kind=ROW_RES },
-    { .key="Video.VSync", .label="VSync", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.FpsCap", .label="Frame rate cap", .kind=ROW_FPSCAP },
-    { .key="__HdrGraphics", .label="GRAPHICS", .kind=ROW_HEADER },
-    { .key="Video.MSAA", .label="Anti-aliasing", .kind=ROW_MSAA, .restart=1 },
-    { .key="Video.TextureFilter", .label="Texture filter", .kind=ROW_ENUM, .step=1, .names=kTexFilter },
-    { .key="Video.Anisotropy", .label="Anisotropic filtering", .kind=ROW_SLIDER, .step=1, .unit="x" },
-    { .key="Video.FovScale", .label="FOV scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
-    /* D334: native widescreen (world projected at the window aspect, Hor+).
-     * While on, "Widescreen auto FOV" has no effect (it was the stretch-era
-     * vertical-FOV compensation). */
-    { .key="Video.NativeWidescreen", .label="Native widescreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.WidescreenAuto", .label="Widescreen auto FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.SafeAreaCrop", .label="Crop overscan", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.DrawDistanceAutoFov", .unit="%" },
-    { .key="Video.DrawDistanceAutoFov", .label="Draw dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.LodDistanceAutoFov", .unit="%" },
-    { .key="Video.LodDistanceAutoFov", .label="LOD dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    /* Aim row edits Input.AimModeSens -- the knob the default GEPD aim path
-     * actually uses (Input.MouseAimSpeed only feeds the legacy velocity-stick
-     * fallback, so it was inert here). D304: both this row and the turn-speed
-     * row below now use the (0,0) "inherit the registered clamp" sentinel
-     * instead of hardcoded uiMin/uiMax -- they were previously (1,80) and
-     * (0,100), two arbitrary, DIFFERENT, and (for turn speed) outright wrong
-     * ceilings that didn't even match either row's own backing config clamp
-     * (both are actually registered 1..500 in input.c) -- fixed as an earlier
-     * part of this same D304 pass. **Follow-up, same day, user feedback after
-     * trying the widened sliders live:** exposing BOTH per-mode knobs still
-     * let a player decouple them into a bad, hard-to-diagnose state (e.g. aim
-     * mode very slow, hipfire very fast, or vice versa) with no indication
-     * anything was wrong -- worse than a narrow range. Per the user's request,
-     * these two rows and the "Link aim/turn sens" toggle that tried to paper
-     * over the same risk are pulled from the menu entirely; only the single
-     * master `Input.MouseSensitivity` row below remains player-facing, exactly
-     * mirroring the reference GEPD/PD injector model this input was ported
-     * from (GEPD-Edition Mouse Injector's goldeneye.c -- source no longer
-     * vendored in the public repo, see reference/mouse-injector/README.md) --
-     * ONE user-facing
-     * sensitivity value, with the two per-mode constants staying fixed at
-     * their calibrated (38/50) defaults, never independently player-tunable.
-     * Config vars + SensLink logic stay in `input.c`/`rowSet()` untouched
-     * (ini power users can still hand-edit them; existing ini files with
-     * either key keep working) -- only the menu surface changes, same
-     * established pattern as the D181/D216 pulled rows below. */
-    /* { "Input.AimModeSens",        "Mouse aim speed",  ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
-    /* { "Input.MouseTurnSpeed",     "Mouse turn speed", ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
-    /* { "Input.SensLink",           "Link aim/turn sens",ROW_TOGGLE,1, kOnOff, 0, 0, 0, 0,0,0,0,0 }, */
-    { .key="__HdrBond", .label="BOND FILE", .kind=ROW_HEADER, .found=1 },
-    { .key="__BondFile", .label="Edit file", .kind=ROW_BOND_FILE, .found=1 },
-    { .key="Bond.Look", .label="Look up/down (watch; stacks)", .kind=ROW_TOGGLE,
-      .names=kReverse, .found=1, .uiMax=1, .cfgMax=1 },
-    { .key="Bond.AutoAim", .label="Auto-aim", .kind=ROW_TOGGLE,
-      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
-    { .key="Bond.AimControl", .label="Aim control", .kind=ROW_TOGGLE,
-      .names=kHold, .found=1, .uiMax=1, .cfgMax=1 },
-    { .key="Bond.Sight", .label="Sight on screen", .kind=ROW_TOGGLE,
-      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
-    { .key="Bond.LookAhead", .label="Look ahead", .kind=ROW_TOGGLE,
-      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
-    { .key="Bond.Ammo", .label="Ammo on screen", .kind=ROW_TOGGLE,
-      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
-    /* D353: the separate "AUDIO (BOND FILE)" header is retired -- the two
-     * sliders belong to the same per-file section as the watch toggles. A
-     * port-level master volume (M3) will start a real AUDIO section. */
-    { .key="Bond.Music", .label="Music volume", .kind=ROW_SLIDER, .step=128,
-      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
-    { .key="Bond.FX", .label="FX volume", .kind=ROW_SLIDER, .step=128,
-      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
-    { .key="__HdrMouse", .label="MOUSE / AIM", .kind=ROW_HEADER },
+    /* D356: Turok-style functional sections in Turok's order (INPUT,
+     * GAMEPLAY, GRAPHICS, AUDIO, VIDEO; docs/dev/D356-SETTINGS-REGROUP-PLAN.md).
+     * The D353 "BOND FILE" section -- the one named after WHERE a value is
+     * saved -- is gone: its surviving rows split into GAMEPLAY (the per-file
+     * watch toggles, dim "(save)" tagged since the section mixes scopes) and
+     * AUDIO (the per-file volume sliders, homogeneous so title annotation
+     * only), and the "Edit file" chooser row is retired in favour of the
+     * single top save-file row on the front options screen (frontoptions.c).
+     * Per-section "Reset to defaults" rows (D356, plan Gate E) share
+     * rowResetSection(); "(File N)" title annotations come from
+     * watchSettingsActiveFolder(). All rows use designated initializers
+     * (D351 class). */
+    { .key="__HdrInput", .label="INPUT", .kind=ROW_HEADER },
     { .key="Input.MouseSensitivity", .label="Mouse sensitivity", .kind=ROW_SLIDER, .step=5 },
     { .key="Input.MouseInvertY", .label="Invert look (mouse)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* Input.PdMouseAim (findings D332): the Perfect Dark port's mouse-aim
@@ -237,10 +185,81 @@ static struct Row rows[] = {
      * (65% of the half-width, camera turn from ~49%). Hidden while the aim
      * style is CENTRED (PC), where the crosshair doesn't travel. */
     { .key="Input.AimRange", .label="Aim range", .kind=ROW_ENUM, .step=1, .names=kAimRange, .hiddenIfOn="Input.AimMode" },
-    { .key="__HdrPad", .label="CONTROLLER", .kind=ROW_HEADER },
     { .key="Input.PadLookInvertY", .label="Invert look (controller)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500, .unit="%", .dispDiv=300 },
     { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1, .unit="%" },
+    { .key="__ResetInput", .label="Reset to defaults", .kind=ROW_ACTION },
+
+    { .key="__HdrGameplay", .label="GAMEPLAY", .kind=ROW_HEADER },
+    /* D356 exposure filter (menu surface only, the D181/D216/D304 pattern --
+     * config keys, the N64 watch paths and ini hand-edits all stay live):
+     *   Bond.Look        duplicates Input.MouseInvertY + Input.PadLookInvertY
+     *                    (stacking both is a double-negation trap);
+     *   Bond.AimControl  collides with Input.AimMode (two rows fighting over
+     *                    the same N64-vs-PC aim model).
+     * The four surviving per-file toggles move here from the D353 BOND FILE
+     * section and carry .saveScoped (dim "(save)" tag, the only mixed-scope
+     * section). */
+    /* { .key="Bond.Look", .label="Look up/down (watch; stacks)", .kind=ROW_TOGGLE,
+       .names=kReverse, .found=1, .uiMax=1, .cfgMax=1 }, */
+    { .key="Bond.AutoAim", .label="Auto-aim", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
+    /* { .key="Bond.AimControl", .label="Aim control", .kind=ROW_TOGGLE,
+       .names=kHold, .found=1, .uiMax=1, .cfgMax=1 }, */
+    { .key="Bond.Sight", .label="Sight on screen", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
+    { .key="Bond.LookAhead", .label="Look ahead", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
+    { .key="Bond.Ammo", .label="Ammo on screen", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
+    /* D216/Game.SkipIntro: user report (v0.2.1 testing) that it breaks audio
+     * -- pulled from the menu until root-caused. Not exposed to players; the
+     * config var + lv.c hook stay in place (dead unless an existing ini has
+     * it set, which no menu path can do any more). Do not re-add without
+     * fixing the underlying issue first. */
+    { .key="Game.SkipIntro", .label="Skip intro", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    /* D232: the community "no damage flash" toggle (suppresses the red/green
+     * hit-flash overlay in bondview2). */
+    { .key="Game.NoHitFlash", .label="No hit flash", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    /* D257: everything-unlocked goodie. The C initializers (port/src/video.c)
+     * start it OFF (0) -- the old "default ON" note was stale and is
+     * corrected by D356. Consumed at startup by main.c -- applies from the
+     * next launch. */
+    { .key="Game.AllUnlocked", .label="All unlocked", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    /* D226: scales the ammo counter, pickup / status messages and dialogue
+     * about their screen anchors. 100% = original, nothing emitted. */
+    { .key="Game.HudScale", .label="HUD scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
+    { .key="__ResetGameplay", .label="Reset to defaults", .kind=ROW_ACTION },
+    /* D293: only quit path used to be the OS window-close / Alt+F4 -- no
+     * discoverable in-game way to exit, a real gap on Deck/controller-only
+     * setups. Not config-backed (like __Resolution); activating it exits
+     * the same way video.c's SDL_QUIT/Alt+F4 handlers already do. */
+    { .key="__QuitToDesktop", .label="Quit to desktop", .kind=ROW_ACTION },
+
+    { .key="__HdrGraphics", .label="GRAPHICS", .kind=ROW_HEADER },
+    { .key="Video.MSAA", .label="Anti-aliasing", .kind=ROW_MSAA, .restart=1 },
+    { .key="Video.TextureFilter", .label="Texture filter", .kind=ROW_ENUM, .step=1, .names=kTexFilter },
+    { .key="Video.Anisotropy", .label="Anisotropic filtering", .kind=ROW_SLIDER, .step=1, .unit="x" },
+    { .key="Video.FovScale", .label="FOV scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
+    /* D334: native widescreen (world projected at the window aspect, Hor+).
+     * While on, "Widescreen auto FOV" has no effect (it was the stretch-era
+     * vertical-FOV compensation). */
+    { .key="Video.NativeWidescreen", .label="Native widescreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.WidescreenAuto", .label="Widescreen auto FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.SafeAreaCrop", .label="Crop overscan", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.DrawDistanceAutoFov", .unit="%" },
+    { .key="Video.DrawDistanceAutoFov", .label="Draw dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.LodDistanceAutoFov", .unit="%" },
+    { .key="Video.LodDistanceAutoFov", .label="LOD dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    /* D304: the per-mode aim/turn-sensitivity sliders and the "Link" toggle
+     * that papered over their decoupling risk were pulled from the menu
+     * (user feedback after the D304 widening); the ONE master
+     * Input.MouseSensitivity row above is the player-facing knob, mirroring
+     * the GEPD/PD injector model. Config vars + SensLink logic stay live in
+     * input.c/rowSetCommit() for ini hand-edits. */
+    /* { "Input.AimModeSens",        "Mouse aim speed",  ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
+    /* { "Input.MouseTurnSpeed",     "Mouse turn speed", ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
+    /* { "Input.SensLink",           "Link aim/turn sens",ROW_TOGGLE,1, kOnOff, 0, 0, 0, 0,0,0,0,0 }, */
     /* D181/Game.ScreenShakeIntensity: user testing (v0.2.1) found the slider
      * "basically useless" -- viShake() is only called from explosion.c, so it
      * scales explosion shake alone; it never touches the always-on walking
@@ -248,28 +267,33 @@ static struct Row rows[] = {
      * reads as to a player. Pulled from the menu until it covers all
      * screen-shake/view-bob sources, not just explosions. Config var + fr.c
      * hook stay in place. */
-    /* D232: the community "no damage flash" toggle (suppresses the red/green
-     * hit-flash overlay in bondview2). */
-    { .key="__HdrGame", .label="GAME", .kind=ROW_HEADER },
-    /* D226: scales the ammo counter, pickup / status messages and dialogue
-     * about their screen anchors. 100% = original, nothing emitted. */
-    { .key="Game.HudScale", .label="HUD scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
-    { .key="Game.SkipIntro", .label="Skip intro", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="__ResetGraphics", .label="Reset to defaults", .kind=ROW_ACTION },
+
+    { .key="__HdrAudio", .label="AUDIO", .kind=ROW_HEADER },
+    /* D356: the per-file volume sliders get a real AUDIO section (the D353
+     * "AUDIO (BOND FILE)" header was retired with the BOND FILE section).
+     * A port-level master volume (M3) will join here as Turok's
+     * Master/Sound/Music trio. */
+    { .key="Bond.Music", .label="Music volume", .kind=ROW_SLIDER, .step=128,
+      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
+    { .key="Bond.FX", .label="FX volume", .kind=ROW_SLIDER, .step=128,
+      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
+    { .key="__ResetAudio", .label="Reset to defaults", .kind=ROW_ACTION },
+
+    /* D353's DISPLAY section renamed VIDEO (the presentation knobs), with
+     * Video.DisplayFPS moved here from the old GAME section. */
+    { .key="__HdrVideo", .label="VIDEO", .kind=ROW_HEADER },
+    { .key="Video.Fullscreen", .label="Fullscreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="__Resolution", .label="Resolution", .kind=ROW_RES },
+    { .key="Video.VSync", .label="VSync", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.FpsCap", .label="Frame rate cap", .kind=ROW_FPSCAP },
     { .key="Video.DisplayFPS", .label="Show FPS", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Game.NoHitFlash", .label="No hit flash", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    /* D216/Game.SkipIntro: user report (v0.2.1 testing) that it breaks audio
-     * -- pulled from the menu until root-caused. Not exposed to players; the
-     * config var + lv.c hook stay in place (dead unless an existing ini has
-     * it set, which no menu path can do any more). Do not re-add without
-     * fixing the underlying issue first. */
-    /* D257: everything-unlocked goodie (default ON). Consumed at startup by
-     * main.c -- applies from the next launch. */
-    { .key="Game.AllUnlocked", .label="All unlocked", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    /* D293: only quit path used to be the OS window-close / Alt+F4 -- no
-     * discoverable in-game way to exit, a real gap on Deck/controller-only
-     * setups. Not config-backed (like __Resolution); activating it exits
-     * the same way video.c's SDL_QUIT/Alt+F4 handlers already do. */
-    { .key="__QuitToDesktop", .label="Quit to desktop", .kind=ROW_ACTION },
+    { .key="__ResetVideo", .label="Reset to defaults", .kind=ROW_ACTION },
+    /* D356: the D353 BOND FILE header + "Edit file" chooser row are retired --
+     * the front options screen's top save-file row (frontoptions.c, D356) is
+     * the single file control; F10 always targets the active file. */
+    /* { .key="__HdrBond", .label="BOND FILE", .kind=ROW_HEADER, .found=1 }, */
+    /* { .key="__BondFile", .label="Edit file", .kind=ROW_BOND_FILE, .found=1 }, */
 };
 #define NUM_ROWS ((int)(sizeof(rows) / sizeof(rows[0])))
 
@@ -545,6 +569,18 @@ static void overlayInit(void)
             }
         }
     }
+    /* D356: on a header row, saveScoped means "this section contains
+     * per-file rows" (drives the "(File N)" title annotation in both UIs);
+     * on a content row it is the literal per-file flag from the table. */
+    for (int i = 0; i < NUM_ROWS; i++) {
+        if (rows[i].kind != ROW_HEADER) {
+            continue;
+        }
+        int has = 0;
+        for (int j = i + 1; j < NUM_ROWS && rows[j].kind != ROW_HEADER; j++)
+            has |= rows[j].saveScoped;
+        rows[i].saveScoped = has;
+    }
     overlayUpdateVisible();
 
     /* Build the windowed-resolution preset list: presets that fit the desktop,
@@ -670,6 +706,11 @@ static void rowSetCommit(struct Row *r, double v, int commit)
 
 static void rowSet(struct Row *r, double v) { rowSetCommit(r, v, 1); }
 
+/* D356 reset rows (defined below, in the reset block). */
+static struct Row *rowAt(int i);
+static int isResetRow(const struct Row *r);
+static void rowActivateReset(struct Row *r);
+
 static void rowAdjust(struct Row *r, int dir)
 {
     if (!r->found || r->kind == ROW_HEADER) {   /* D237: headers have no value */
@@ -725,6 +766,11 @@ static void rowAdjust(struct Row *r, int dir)
         break;
     }
     case ROW_ACTION:
+        /* D356: reset rows arm/confirm through the shared activation
+         * contract (edge-triggered by their callers: fresh key press / fresh
+         * click / A-press -- the held-repeat paths below never re-fire them).
+         * The quit row is the only non-reset ROW_ACTION left. */
+        if (isResetRow(r)) { rowActivateReset(r); break; }
         /* D293: same exit path as SDL_QUIT / Alt+F4 (video.c), just reachable
          * without OS window chrome or a keyboard. */
         sysLogPrintf(LOG_INFO, "optionsoverlay: quit to desktop requested");
@@ -735,6 +781,163 @@ static void rowAdjust(struct Row *r, int dir)
         rowSet(r, v + dir * r->step);
         break;
     }
+}
+
+/* ------------------------------------------------------------------------ */
+/* D356: per-section "Reset to defaults" (plan Gate E, made concrete).       */
+/* The activation contract (plan §5.4): edge-triggered, two-step            */
+/* arm -> confirm within 3 s, one commit per confirmed activation,          */
+/* disarm on timeout or navigating away. The arm state is shared by the     */
+/* F10 overlay and the front options screen (they are never open at the     */
+/* same time; both clear it on open/close).                                 */
+/* ------------------------------------------------------------------------ */
+
+#define RESET_ARM_US 3000000   /* arm expires after 3 s */
+
+static int  s_resetArmedRow = -1;   /* rows[] index of the armed reset row */
+static uint64_t s_resetArmedUs = 0;
+
+static int isResetRow(const struct Row *r)
+{
+    return r->kind == ROW_ACTION && strncmp(r->key, "__Reset", 7) == 0;
+}
+
+int optionsRowIsReset(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && isResetRow(r);
+}
+
+/* ini rows reset to the port's C initializers (verified at implementation
+ * time, D356 -- each entry cites its source variable): the reset table
+ * mirrors them; config.c itself has no central default table (first-write
+ * "defaults" are just the current values). __Resolution is NOT here: it is
+ * action-backed (s_resSel + videoRequestWindowSize), not a registered config
+ * row, so a numeric default cannot express it -- a documented exclusion (the
+ * findings D356 entry states it); the player's resolution choice survives a
+ * VIDEO reset. */
+static const struct { const char *key; double def; } kResetDefaults[] = {
+    /* INPUT (port/src/input.c initializers) */
+    { "Input.MouseSensitivity", 100 },  /* static int mouseSensitivity = 100 */
+    { "Input.MouseInvertY",      0 },   /* = 0 */
+    { "Input.AimMode",           0 },   /* = AIMMODE_N64 (0) */
+    { "Input.AimRange",          0 },   /* = 0 (PC) */
+    { "Input.PadLookInvertY",    0 },   /* = 0 */
+    { "Input.PadDeadzone",       7000 },/* = STICK_DEADZONE (7000) */
+    { "Input.PadTriggerPct",     23 },  /* = 23 */
+    /* GRAPHICS (port/src/video.c initializers) */
+    { "Video.MSAA",                 4 },   /* = 4 */
+    { "Video.TextureFilter",        1 },   /* = 1 (bilinear) */
+    { "Video.Anisotropy",           4 },   /* = 4 */
+    { "Video.FovScale",            100 },  /* = 100 */
+    { "Video.NativeWidescreen",      1 },  /* = 1 */
+    { "Video.WidescreenAuto",        1 },  /* = 1 */
+    { "Video.SafeAreaCrop",          1 },  /* = 1 */
+    { "Video.DrawDistance",        150 },  /* = 150 (D218) */
+    { "Video.DrawDistanceAutoFov",   1 },  /* = 1 (D218) */
+    { "Video.LodDistance",         150 },  /* = 150 (D249) */
+    { "Video.LodDistanceAutoFov",    0 },  /* = 0 (standalone perf lever) */
+    /* GAMEPLAY ini rows (port/src/video.c initializers) */
+    { "Game.SkipIntro",   0 },   /* = 0 */
+    { "Game.NoHitFlash",  0 },   /* = 0 */
+    { "Game.AllUnlocked", 0 },   /* = 0 -- D257's "default ON" note was stale */
+    { "Game.HudScale",   100 },  /* = 100 (D226) */
+    /* VIDEO (port/src/video.c initializers; DisplayFPS in overlayConfigInit) */
+    { "Video.Fullscreen", 0 },   /* = 0 (windowed) */
+    { "Video.VSync",        1 }, /* = 1 (on) */
+    { "Video.FpsCap",      60 }, /* = 60 */
+    { "Video.DisplayFPS",   0 }, /* registered 0 */
+};
+
+static double kResetDefault(const char *key)
+{
+    for (size_t i = 0; i < sizeof(kResetDefaults) / sizeof(kResetDefaults[0]); i++)
+        if (strcmp(kResetDefaults[i].key, key) == 0) return kResetDefaults[i].def;
+    return -1.0;
+}
+
+/* The section's DECLARED row range (its header through the next header) --
+ * NOT the visible list, so conditionally hidden rows (the manual draw/LOD %
+ * sliders while their auto-FOV toggles are on) are reset too; their live
+ * values are written through the same ptr/rowSet path, visibility
+ * irrelevant. Per row, its OWN scope is reset: watch rows -> the selected
+ * file's BLANKSAVEDATA values through the normal commit path (front: direct
+ * write; stage: D352 queue, applied+persisted by the game thread); ini rows
+ * -> the table above (applied live now, persisted like any ini edit when the
+ * screen/overlay closes). No cross-scope surprise: a section reset touches
+ * only that section's rows, and a file reset never touches other files. */
+static void rowResetSection(int iReset)
+{
+    int hdr = iReset - 1;
+    while (hdr >= 0 && rows[hdr].kind != ROW_HEADER) hdr--;
+    if (hdr < 0) {
+        sysLogPrintf(LOG_WARNING, "optionsoverlay: reset row %d has no section header", iReset);
+        return;
+    }
+    int end = hdr + 1;
+    while (end < NUM_ROWS && rows[end].kind != ROW_HEADER) end++;
+    int nWatch = 0, nIni = 0;
+    for (int j = hdr + 1; j < end; j++) {
+        struct Row *r = &rows[j];
+        if (r->kind == ROW_ACTION) continue;             /* reset rows, Quit */
+        if (strcmp(r->key, "__Resolution") == 0) continue;  /* documented exclusion */
+        int field = watchSettingsFieldForKey(r->key);
+        if (field >= 0) {
+            watchSettingsSet((enum WatchSettingField)field,
+                             watchSettingsBlankValue((enum WatchSettingField)field), 1);
+            nWatch++;
+        } else if (r->found && r->ptr) {
+            double def = kResetDefault(r->key);
+            if (def < 0.0) continue;
+            rowSetCommit(r, def, 1);
+            nIni++;
+        }
+    }
+    sysLogPrintf(LOG_INFO, "optionsoverlay: section reset '%s': %d file row(s), %d ini row(s)",
+                 rows[hdr].label, nWatch, nIni);
+}
+
+/* Arm (first edge) or confirm (second edge within RESET_ARM_US). Callers
+ * guarantee edges: the front screen routes only fresh presses (its held-key
+ * repeat is suppressed for reset rows) and F10's fresh-press / fresh-click
+ * paths; the held-repeat branches skip reset rows entirely. */
+static void rowActivateReset(struct Row *r)
+{
+    if (!isResetRow(r)) return;
+    uint64_t now = sysGetMicroseconds();
+    int i = (int)(r - rows);
+    if (s_resetArmedRow == i && now - s_resetArmedUs <= RESET_ARM_US) {
+        s_resetArmedRow = -1;
+        rowResetSection(i);   /* exactly one commit per confirmed activation */
+        return;
+    }
+    s_resetArmedRow = i;
+    s_resetArmedUs = now;
+    int h = i - 1;
+    while (h >= 0 && rows[h].kind != ROW_HEADER) h--;
+    sysLogPrintf(LOG_INFO, "optionsoverlay: section reset '%s' armed (confirm within 3 s)",
+                 h >= 0 ? rows[h].label : "?");
+}
+
+void optionsRowActivateReset(int i)
+{
+    struct Row *r = rowAt(i);
+    if (r) rowActivateReset(r);
+}
+
+/* Timeout / navigate-away disarm. selRow = the rows[] index the UI has
+ * selected (any other value, e.g. -1, disarms). */
+void optionsResetMaintain(int selRow)
+{
+    if (s_resetArmedRow < 0) return;
+    uint64_t now = sysGetMicroseconds();
+    if (s_resetArmedRow != selRow || now - s_resetArmedUs > RESET_ARM_US)
+        s_resetArmedRow = -1;
+}
+
+void optionsResetClear(void)
+{
+    s_resetArmedRow = -1;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -749,6 +952,7 @@ void optionsOverlayToggle(void)
     s_open = !s_open;
     sysLogPrintf(LOG_INFO, "optionsoverlay: %s", s_open ? "opened" : "closed");
     if (!s_open) {
+        optionsResetClear();   /* D356: closing the overlay disarms a pending reset */
         configSave();
     }
 }
@@ -845,6 +1049,10 @@ void optionsOverlayHandleInput(void)
      * visible (a stage poll would otherwise leave it locked/hidden). */
     inputSuspendForOverlay();
 
+    /* D356: a pending reset arm expires after 3 s or when the selection
+     * leaves the armed row; the overlay's selection is s_visIdx[s_sel]. */
+    optionsResetMaintain(s_visIdx[s_sel]);
+
     overlayUpdateVisible();   /* % rows may have appeared/vanished (auto toggles) */
     overlayApplyWheel();      /* D314: wheel notches queued by the host thread */
     overlayUpdateScroll();
@@ -919,7 +1127,11 @@ void optionsOverlayHandleInput(void)
         } else if ((rt || lf) && adjDir != 0) {
             if (--adjTimer <= 0) {
                 adjTimer = 4;
-                rowAdjust(&rows[s_visIdx[s_sel]], adjDir);
+                /* D356: reset actions are edge-triggered -- the held-repeat
+                 * re-fires adjust rows but must never re-fire a reset (a held
+                 * key could arm AND confirm, or commit repeatedly). */
+                if (!isResetRow(&rows[s_visIdx[s_sel]]))
+                    rowAdjust(&rows[s_visIdx[s_sel]], adjDir);
             }
         } else {
             adjDir = 0;
@@ -1013,8 +1225,9 @@ static Gfx *fillRect(Gfx *gdl, s32 x0, s32 y0, s32 x1, s32 y1,
     return gdl;
 }
 
-static void valueText(const struct Row *r, char *out, int n)
+static void valueText(int i, char *out, int n)
 {
+    const struct Row *r = &rows[i];
     double v = rowGet(r);
     if (r->kind == ROW_BOND_FILE) {
         int f = watchSettingsFolder();
@@ -1032,9 +1245,24 @@ static void valueText(const struct Row *r, char *out, int n)
         } else if (s_resFitN <= 0) {
             snprintf(out, n, "n/a");
         } else {
-            int i = s_resFit[s_resSel];
-            snprintf(out, n, "%d x %d", kResList[i][0], kResList[i][1]);
+            int i2 = s_resFit[s_resSel];
+            snprintf(out, n, "%d x %d", kResList[i2][0], kResList[i2][1]);
         }
+        return;
+    }
+    if (r->kind == ROW_ACTION) {
+        if (isResetRow(r)) {
+            /* D356: the label is the button; the value column shows the
+             * armed state so the confirm step is discoverable. */
+            snprintf(out, n, s_resetArmedRow == i ? "Confirm" : "");
+        } else {
+            snprintf(out, n, "[ENTER]");
+        }
+        return;
+    }
+    if (r->kind == ROW_MSAA) {
+        if ((int)lround(v) <= 1) snprintf(out, n, "None");
+        else                     snprintf(out, n, "%dx", (int)lround(v));
         return;
     }
     if ((r->kind == ROW_TOGGLE || r->kind == ROW_ENUM) && r->names) {
@@ -1045,15 +1273,6 @@ static void valueText(const struct Row *r, char *out, int n)
             snprintf(out, n, "%s", r->names[idx]);
             return;
         }
-    }
-    if (r->kind == ROW_MSAA) {
-        if ((int)lround(v) <= 1) snprintf(out, n, "None");
-        else                     snprintf(out, n, "%dx", (int)lround(v));
-        return;
-    }
-    if (r->kind == ROW_ACTION) {
-        snprintf(out, n, "[ENTER]");
-        return;
     }
     if (r->kind == ROW_SLIDER && r->type == CONFIG_OPT_FLOAT) {
         snprintf(out, n, "%.2f", v);
@@ -1203,16 +1422,32 @@ Gfx *optionsOverlayEmit(void)
 
         if (r->kind == ROW_HEADER) {   /* D237 category label, no value */
             gdl = drawText(gdl, OV_X0, rowY, (char *)r->label, 0xffe040ff);
+            /* D356: sections that contain per-file rows carry the active
+             * file in the header ("GAMEPLAY (File 1)"), PD-style -- in-stage
+             * the active file, front end the resolved front target. */
+            if (r->saveScoped) {
+                int f = watchSettingsActiveFolder();
+                char note[16];
+                if (f < 0) snprintf(note, sizeof(note), "(no file)");
+                else       snprintf(note, sizeof(note), "(File %d)", f + 1);
+                gdl = drawText(gdl, OV_X0 + measureText(r->label) + 6, rowY, note, 0x909090ff);
+            }
             continue;
         }
         gdl = drawText(gdl, OV_LABEL_X, rowY, (char *)r->label,
                        r->found ? col : 0x808080ff);
+        /* D356: per-file rows in the mixed-scope section carry a dim
+         * "(save)" tag (the section title already says which file). */
+        if (r->saveScoped && r->kind != ROW_HEADER) {
+            gdl = drawText(gdl, OV_LABEL_X + measureText(r->label) + 5, rowY,
+                           "(save)", 0x909090ff);
+        }
         if (!r->found) {
             gdl = drawTextR(gdl, right, rowY, "(n/a)", 0x808080ff);
             continue;
         }
 
-        valueText(r, val, sizeof(val));
+        valueText(s_visIdx[p], val, sizeof(val));
         if (r->restart) {
             /* value left of the bar span, "(restart)" pinned to the edge */
             gdl = drawText(gdl, bx0, rowY, val, col);
@@ -1283,6 +1518,16 @@ int optionsRowIsBondChooser(int i)
     return r && r->kind == ROW_BOND_FILE;
 }
 
+/* D356: content rows carry the literal per-file flag from the table; header
+ * rows were recomputed at init to "this section contains per-file rows".
+ * Both drive UI decoration (the "(save)" tag, the "(File N)" annotation).
+ * The F10 overlay and the front options screen are the only consumers. */
+int optionsRowIsSaveScoped(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->saveScoped;
+}
+
 int optionsRowNeedsRestart(int i)
 {
     struct Row *r = rowAt(i);
@@ -1297,6 +1542,14 @@ double optionsRowFraction(int i)
     }
     double f = (rowGet(r) - rowLo(r)) / (rowHi(r) - rowLo(r));
     return f < 0.0 ? 0.0 : (f > 1.0 ? 1.0 : f);
+}
+
+/* D356: raw value (the fraction accessors are bar geometry only); the
+ * reset probe verifies against raw defaults. */
+double optionsRowGetValue(int i)
+{
+    struct Row *r = rowAt(i);
+    return r ? rowGet(r) : 0.0;
 }
 
 void optionsRowSetFraction(int i, double f)
@@ -1327,11 +1580,7 @@ void optionsRowValueText(int i, char *out, int n)
     if (!r || n <= 0) {
         return;
     }
-    if (r->kind == ROW_ACTION) {
-        out[0] = '\0';   /* the label is the button */
-        return;
-    }
-    valueText(r, out, n);
+    valueText(i, out, n);
 }
 
 void optionsRowAdjust(int i, int dir)
@@ -1339,5 +1588,212 @@ void optionsRowAdjust(int i, int dir)
     struct Row *r = rowAt(i);
     if (r) {
         rowAdjust(r, dir);
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+/* D356 GE_WSPROBE_RESET dev hook (env-gated; driven from the game-thread   */
+/* hook in watchSettingsGameTick, so the dispatch runs on the right        */
+/* thread in both contexts). Drives the REAL arm -> confirm -> dispatch    */
+/* UI path for EVERY section's reset row and verifies each section's       */
+/* values after ITS dispatch (plan §5.8): watch rows vs BLANKSAVEDATA,     */
+/* ini rows vs the defaults table, __Resolution untouched, and (front) a   */
+/* second file's bytes unchanged (scope isolation).                        */
+/* ------------------------------------------------------------------------ */
+
+#define PROBE_MAX_SECTIONS 8
+static int probeSectionIdxs[PROBE_MAX_SECTIONS];
+static int probeSectionN = 0;
+static int probeResSelBefore = -2;
+static int probeOtherFolder = -1;
+static save_data probeOtherBytes;
+
+/* The header + end of the section a reset row belongs to. Written in
+ * plain local-variable form on purpose: the pointer-increment style
+ * (`while (*hdr >= 0 && ...) *hdr--;`) miscompiled under -O2 (the loop
+ * pointer walked the stack and the faulted on garbage rows[] indices). */
+static void probeSectionRange(int iReset, int *hdr, int *end)
+{
+    int h, e;
+    if (iReset <= 0 || iReset >= NUM_ROWS) {
+        sysLogPrintf(LOG_ERROR, "wsresetprobe: bad reset row index %d (NUM_ROWS %d)", iReset, NUM_ROWS);
+        *hdr = -1; *end = -1;
+        return;
+    }
+    h = iReset - 1;
+    while (h >= 0 && rows[h].kind != ROW_HEADER) h--;
+    e = h + 1;
+    while (e < NUM_ROWS && rows[e].kind != ROW_HEADER) e++;
+    *hdr = h;
+    *end = e;
+}
+
+/* Verify every row of section iReset is at its default. Returns the
+ * failure count. Watch rows compare against BLANKSAVEDATA via
+ * watchSettingsRead (front: the saved file, stage: the post-drain
+ * snapshot); ini rows against the defaults table. */
+static int probeVerifySection(int iReset)
+{
+    int hdr, end;
+    probeSectionRange(iReset, &hdr, &end);
+    if (hdr < 0) {
+        sysLogPrintf(LOG_WARNING, "wsresetprobe: section %d: no header", iReset);
+        return 1;
+    }
+    int bad = 0;
+    for (int j = hdr + 1; j < end; j++) {
+        struct Row *r = &rows[j];
+        if (r->kind == ROW_ACTION) continue;
+        if (strcmp(r->key, "__Resolution") == 0) continue;   /* documented exclusion */
+        int field = watchSettingsFieldForKey(r->key);
+        if (field >= 0) {
+            int want = watchSettingsBlankValue((enum WatchSettingField)field);
+            int got = watchSettingsRead((enum WatchSettingField)field);
+            if (got != want) {
+                sysLogPrintf(LOG_WARNING, "wsresetprobe: section '%s': %s = %d, want %d (BLANKSAVEDATA)",
+                             rows[hdr].label, r->key, got, want);
+                bad++;
+            }
+        } else if (r->found && r->ptr) {
+            double want = kResetDefault(r->key);
+            if (want < 0.0) continue;   /* no default (the handler skips it too) */
+            double got = optionsRowGetValue(j);
+            if (got < want - 0.001 || got > want + 0.001) {
+                sysLogPrintf(LOG_WARNING, "wsresetprobe: section '%s': %s = %g, want %g (default table)",
+                             rows[hdr].label, r->key, got, want);
+                bad++;
+            }
+        }
+    }
+    return bad;
+}
+
+/* Front context (tick 1): dirty one value per section, then arm + confirm
+ * every section's reset row in order, verifying each section right after
+ * its own dispatch (the front commit is direct). Finally: resolution
+ * untouched + a second file's bytes unchanged (scope isolation). */
+void optionsResetProbePrepare(void)
+{
+    overlayInit();   /* idempotent: resolves the ini rows (found + ptr) so
+                     * the front probe dispatches every declared row, not
+                     * just the watch rows */
+    probeSectionN = 0;
+    for (int i = 0; i < NUM_ROWS; i++)
+        if (isResetRow(&rows[i]) && probeSectionN < PROBE_MAX_SECTIONS)
+            probeSectionIdxs[probeSectionN++] = i;
+    probeResSelBefore = s_resSel;
+    int active = watchSettingsActiveFolder();
+    sysLogPrintf(LOG_INFO, "wsresetprobe: front prepare start (active folder %d, %d sections)", active, probeSectionN);
+    probeOtherFolder = -1;
+    for (int f = FOLDER1; f < MAX_FOLDER_COUNT; f++) {
+        if (f == active) continue;
+        save_data *s = fileGetSaveForFoldernum((u32)f);
+        if (s) {
+            probeOtherFolder = f;
+            probeOtherBytes = *s;
+            break;
+        }
+    }
+    sysLogPrintf(LOG_INFO, "wsresetprobe: other-folder snapshot done (folder %d)", probeOtherFolder);
+    /* 1. dirty a distinct value in each section (its first adjustable row). */
+    for (int s = 0; s < probeSectionN; s++) {
+        int iR = probeSectionIdxs[s];
+        int hdr, end;
+        probeSectionRange(iR, &hdr, &end);
+        if (hdr < 0) continue;
+        int did = 0;
+        for (int j = hdr + 1; j < end && !did; j++) {
+            struct Row *r = &rows[j];
+            if (r->kind == ROW_ACTION || strcmp(r->key, "__Resolution") == 0) continue;
+            int field = watchSettingsFieldForKey(r->key);
+            if (field >= 0) {
+                int blank = watchSettingsBlankValue((enum WatchSettingField)field);
+                int want = (blank > 1) ? 0 : 1;   /* distinct from the blank */
+                if (watchSettingsRead((enum WatchSettingField)field) == want) continue;
+                watchSettingsSet((enum WatchSettingField)field, want, 1);
+                did = 1;
+            } else if (r->found && r->ptr && (r->kind == ROW_TOGGLE || r->kind == ROW_ENUM ||
+                       r->kind == ROW_SLIDER || r->kind == ROW_MSAA)) {
+                optionsRowAdjust(j, 1);   /* one step off the default */
+                did = 1;
+            }
+        }
+        sysLogPrintf(LOG_INFO, "wsresetprobe: section '%s' dirty=%d", rows[hdr].label, did);
+    }
+    /* 2. arm + confirm every section, verifying each after its dispatch. */
+    for (int s = 0; s < probeSectionN; s++) {
+        int iReset = probeSectionIdxs[s];
+        int hdr, end;
+        probeSectionRange(iReset, &hdr, &end);
+        if (hdr < 0) continue;
+        optionsRowActivateReset(iReset);   /* arm */
+        sysLogPrintf(LOG_INFO, "wsresetprobe: section %d armed", s);
+        optionsRowActivateReset(iReset);   /* confirm -> commit */
+        int bad = probeVerifySection(iReset);
+        sysLogPrintf(LOG_INFO, "wsresetprobe: section %d confirmed + verified", s);
+        if (s_resSel != probeResSelBefore) {
+            sysLogPrintf(LOG_WARNING, "wsresetprobe: __Resolution changed (%d -> %d)", probeResSelBefore, s_resSel);
+            bad++;
+        }
+        sysLogPrintf(LOG_INFO, "wsresetprobe: section '%s' verified, failures=%d", rows[hdr].label, bad);
+    }
+    if (probeOtherFolder >= 0) {
+        save_data *s = fileGetSaveForFoldernum((u32)probeOtherFolder);
+        if (!s || memcmp(&probeOtherBytes, s, sizeof(save_data)) != 0) {
+            sysLogPrintf(LOG_WARNING, "wsresetprobe: file %d bytes CHANGED (scope isolation broken)", probeOtherFolder + 1);
+        } else {
+            sysLogPrintf(LOG_INFO, "wsresetprobe: file %d unchanged (scope isolation)", probeOtherFolder + 1);
+        }
+    } else {
+        sysLogPrintf(LOG_INFO, "wsresetprobe: no second folder to compare");
+    }
+}
+
+/* In stage (tick 2): arm + confirm every section. The file rows enter the
+ * D352 command queue (applied + persisted by the game thread at the next
+ * drain); log the queue depth so the dispatch is visible. */
+void optionsResetProbeDispatchStage(void)
+{
+    if (probeSectionN == 0) {
+        for (int i = 0; i < NUM_ROWS; i++)
+            if (isResetRow(&rows[i]) && probeSectionN < PROBE_MAX_SECTIONS)
+                probeSectionIdxs[probeSectionN++] = i;
+    }
+    probeResSelBefore = s_resSel;
+    for (int s = 0; s < probeSectionN; s++) {
+        optionsRowActivateReset(probeSectionIdxs[s]);   /* arm */
+        optionsRowActivateReset(probeSectionIdxs[s]);   /* confirm */
+    }
+    int q = watchSettingsQueueCount();
+    if (q < 6) {
+        sysLogPrintf(LOG_WARNING, "wsresetprobe: stage dispatch: queue depth %d, want >= 6 (4 GAMEPLAY + 2 AUDIO watch rows)", q);
+    } else {
+        sysLogPrintf(LOG_INFO, "wsresetprobe: stage dispatch: %d command(s) queued (game thread drains next tick)", q);
+    }
+}
+
+/* In stage (tick 3, after the drain + persist): verify every section. */
+void optionsResetProbeVerifyStage(void)
+{
+    for (int s = 0; s < probeSectionN; s++) {
+        int iReset = probeSectionIdxs[s];
+        int hdr, end;
+        probeSectionRange(iReset, &hdr, &end);
+        int bad = probeVerifySection(iReset);
+        if (s_resSel != probeResSelBefore) {
+            sysLogPrintf(LOG_WARNING, "wsresetprobe: __Resolution changed (%d -> %d)", probeResSelBefore, s_resSel);
+            bad++;
+        }
+        sysLogPrintf(LOG_INFO, "wsresetprobe: stage: section '%s' verified, failures=%d", rows[hdr].label, bad);
+    }
+    /* The persisted bytes must hold the BLANKSAVEDATA raw values too. */
+    save_data *save = fileGetSaveForFoldernum(selected_folder_num);
+    if (!save) {
+        sysLogPrintf(LOG_WARNING, "wsresetprobe: stage: no save for folder %d", (int)selected_folder_num);
+    } else if (save->music_vol != 0xFF || save->sfx_vol != 0xFF) {
+        sysLogPrintf(LOG_WARNING, "wsresetprobe: stage: saved music=%d fx=%d, want 0xFF/0xFF",
+                     (int)save->music_vol, (int)save->sfx_vol);
+    } else {
+        sysLogPrintf(LOG_INFO, "wsresetprobe: stage: saved bytes OK (music/sfx = 0xFF)");
     }
 }

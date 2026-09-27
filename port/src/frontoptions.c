@@ -41,6 +41,7 @@
 #include "config.h"
 #include "envflag.h"
 #include "optionsoverlay.h"
+#include "watchsettings.h"
 #include "frontoptions.h"
 #include "input.h"
 
@@ -153,6 +154,9 @@ static void titleCase(const char *in, char *out, int n)
 
 static int rowY(int k)
 {
+    /* D356: level 1's item 0 is the save-file row; the page's content rows
+     * sit one line lower. */
+    if (s_level == 1) k++;
     return ROW_Y0 + k * ROW_DY;
 }
 
@@ -171,9 +175,12 @@ static void buildPages(void)
     s_rowN = 0;
     if (s_pageN > 0) {
         int overflow = 0;
+        /* D356: the level-1 page also carries the top save-file row, so the
+         * content rows get one less line. */
+        int cap = MAX_PROWS - 1;
         for (int i = s_pageHdr[s_page] + 1; i < n && !optionsRowIsHeader(i); i++) {
             if (!optionsRowIsShown(i)) continue;
-            if (s_rowN < MAX_PROWS) {
+            if (s_rowN < cap) {
                 s_rowIdx[s_rowN++] = i;
             } else {
                 overflow++;
@@ -183,15 +190,17 @@ static void buildPages(void)
          * outgrew the page (the D346b VIDEO section did, at exactly 15) lost
          * rows with no trace. */
         if (overflow)
-            sysLogPrintf(LOG_WARNING, "frontoptions: section '%s' has %d row(s) past MAX_PROWS=%d; last visible: '%s'",
-                         optionsRowLabel(s_pageHdr[s_page]), overflow, MAX_PROWS,
-                         optionsRowLabel(s_rowIdx[MAX_PROWS - 1]));
+            sysLogPrintf(LOG_WARNING, "frontoptions: section '%s' has %d row(s) past the page cap (%d); last visible: '%s'",
+                         optionsRowLabel(s_pageHdr[s_page]), overflow, cap,
+                         optionsRowLabel(s_rowIdx[cap - 1]));
     }
 }
 
 static int itemCount(void)
 {
-    return s_level == 0 ? s_pageN : s_rowN;
+    /* D356: level 1 carries the top save-file row (item 0, not in rows[]) on
+     * top of the page's content rows. */
+    return s_level == 0 ? s_pageN : s_rowN + 1;
 }
 
 /* Put the crosshair on item k, unconditionally. */
@@ -262,6 +271,7 @@ static void goBack(void)
     playSfx(DOOR_METAL_CLOSE2_SFX);
     if (s_dragRow >= 0) optionsRowCommit(s_dragRow);
     s_dragRow = -1;
+    optionsResetClear();   /* D356: navigating away (or closing) disarms a pending reset */
     if (s_level == 1) {
         s_level = 0;
         cursorToItem(s_page);
@@ -315,6 +325,11 @@ void frontOptionsMenuInterface(void)
             buildPages();
             cursorToItem(0);
             s_hl = -1;
+        } else if (s_hl == 0 && s_level == 1) {
+            /* D356: the top save-file row -- A steps to the next file (the
+             * D352 chooser; folders only, "none" retired, plan §5.5). */
+            playSfx(DOOR_LOCK_SFX);
+            watchSettingsChooseFile(1);
         } else if (s_hl >= 0 && s_hl < s_rowN) {
             int i = s_rowIdx[s_hl];
             playSfx(DOOR_LOCK_SFX);
@@ -322,6 +337,11 @@ void frontOptionsMenuInterface(void)
                 cursor_h_pos <= BAR_X1 + 4) {
                 optionsRowSetFraction(i, ((double)cursor_h_pos - BAR_X0) / (BAR_X1 - BAR_X0));
                 s_dragRow = i;
+            } else if (optionsRowIsReset(i)) {
+                /* D356: reset rows are two-step arm -> confirm (edge
+                 * activation: joyGetButtonsPressedThisFrame fires once per
+                 * press). The value column shows "Confirm" while armed. */
+                optionsRowActivateReset(i);
             } else {
                 optionsRowAdjust(i, +1);   /* toggle / cycle / step (wraps) */
             }
@@ -341,8 +361,10 @@ void frontOptionsMenuInterface(void)
     }
 
     /* Left/right (D-pad, C buttons; keyboard A/D) adjust the highlighted row,
-     * with hold-to-repeat. */
-    if (s_level == 1 && s_hl >= 0 && s_hl < s_rowN) {
+     * with hold-to-repeat. D356: on the save-file row it cycles the file;
+     * on a reset row a fresh press activates (arm/confirm) and the held
+     * repeat is suppressed (the activation contract, plan §5.4). */
+    if (s_level == 1 && s_hl >= 0) {
         int dir = 0;
         /* D345(f): stick X joins the D-pad/C-buttons, so Left/Right arrows
          * (and the pad's left stick) adjust values like F10's left/right. */
@@ -359,13 +381,25 @@ void frontOptionsMenuInterface(void)
                 s_repeatTimer = 4;
             }
             if (fire) {
-                optionsRowAdjust(s_rowIdx[s_hl], dir);
+                if (s_hl == 0) {
+                    watchSettingsChooseFile(dir);   /* save-file row */
+                } else {
+                    int i = s_rowIdx[s_hl];
+                    if (optionsRowIsReset(i))
+                        optionsRowActivateReset(i);
+                    else
+                        optionsRowAdjust(i, dir);
+                }
             }
         }
         s_repeatDir = dir;
     } else {
         s_repeatDir = 0;
     }
+
+    /* D356: reset arm state -- the screen's selected rows[] index (s_hl 0 is
+     * the save row, not a rows[] entry); moving on disarms, goBack clears. */
+    optionsResetMaintain(s_level == 1 && s_hl > 0 ? s_rowIdx[s_hl] : -1);
 
     /* The dossier: tabs + a blank CLASSIFIED page, as the cheat screen. */
     disable_all_switches(walletinst[0]);
@@ -450,24 +484,36 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
         strcat(title, "\n");
         DL = ink(DL, ROW_X, TITLE_Y, title, INK);
 
-        /* D353: scope annotation -- the Bond-file section's title carries
-         * the chooser's value ("(File 2)" / "(no file)"), so the player sees
-         * which save the per-file toggles and sliders touch without scrolling
-         * to the "Edit file" row. */
+        /* D356: scope annotation -- a section that carries per-file rows has
+         * its title carry the active file ("GAMEPLAY (File 2)"), PD-style.
+         * watchSettingsActiveFolder() is the context-aware accessor (front:
+         * the resolved front target; -1 while no file is usable, which the
+         * annotation renders as an unavailable state, never a number the
+         * write path cannot use). */
+        if (optionsRowIsSaveScoped(s_pageHdr[s_page])) {
+            int f = watchSettingsActiveFolder();
+            char note[16];
+            if (f < 0) snprintf(note, sizeof(note), "(no file)");
+            else       snprintf(note, sizeof(note), "(File %d)", f + 1);
+            DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
+        }
+
+        /* D356: the top save-file row (item 0, not in the row table): the
+         * single file control of the front screen (F10 always targets the
+         * active file, so it has no file row). L/R (and A) cycle folders; ""
+         * (no file) is the unavailable state until one is created. */
         {
-            int bondRow = -1;
-            for (int k = 0; k < s_rowN; k++) {
-                if (optionsRowIsBondChooser(s_rowIdx[k])) { bondRow = k; break; }
+            int y = rowY(0);
+            char sv[32];
+            if (s_hl == 0) {
+                DL = microcode_constructor_related_to_menus(DL, ROW_X - 2, y - 1,
+                        ROW_X + 140, y + 0xE, HILITE);
             }
-            if (bondRow >= 0) {
-                char vt[32] = "", note[40];
-                optionsRowValueText(s_rowIdx[bondRow], vt, sizeof(vt));
-                if (vt[0] && strcmp(vt, "Select file") != 0)
-                    snprintf(note, sizeof(note), "(%s)", vt);
-                else
-                    snprintf(note, sizeof(note), "(no file)");
-                DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
-            }
+            DL = ink(DL, ROW_X, y, "Save file\n", INK);
+            int f = watchSettingsActiveFolder();
+            if (f < 0) snprintf(sv, sizeof(sv), "(no file)");
+            else       snprintf(sv, sizeof(sv), "File %d\n", f + 1);
+            DL = inkR(DL, VAL_R, y, sv, INK);
         }
 
         for (int k = 0; k < s_rowN; k++) {
@@ -480,6 +526,12 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
                         ROW_X + measureW(label) + 5, y + 0xE, HILITE);
             }
             DL = ink(DL, ROW_X, y, label, INK);
+
+            /* D356: per-file rows in the mixed-scope section carry a dim
+             * "(save)" tag (the section title already says which file). */
+            if (optionsRowIsSaveScoped(i)) {
+                DL = ink(DL, ROW_X + measureW(label) + 4, y, "(save)\n", INK_DIM);
+            }
 
             if (optionsRowIsSlider(i)) {
                 s32 fx = BAR_X0 + (s32)((BAR_X1 - BAR_X0) * optionsRowFraction(i) + 0.5);

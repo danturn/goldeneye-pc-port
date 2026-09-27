@@ -1,6 +1,8 @@
 # D356 — Settings regroup: functional sections, save-file scoping, per-section reset
 
-Status: **PROPOSAL — awaiting sign-off** (2026-09-27). Supersedes the "BOND FILE"
+Status: **LANDED (D356, 2026-09-27, port-only)** — signed off and implemented
+this session; verification in `docs/dev/findings.md` D356 (GE_WSPROBE_RESET
+front + in-stage probes, regressions, build). Supersedes the "BOND FILE"
 section introduced in D353. Baselines: Turok PC port options (Nightdive, list
 provided by the maintainer), the PD port's `port/src/optionsmenu.c`
 (`C:\Users\james\Source\Repos\pd_port`), and plan §6 of
@@ -138,6 +140,12 @@ expected not to, see below).
   the row never touches the game's active file (plan Gate B invariant).
   **Display value reads through the context-aware accessor (§5.5), never
   the raw chooser value.**
+- **Unavailable state (maintainer consistency fix):** the D354 auto-init
+  fallback creates the blank file on a *later game tick*, so at an
+  empty/corrupt-save startup the accessor can return -1 for a few ticks.
+  The row then shows the unavailable state ("(no file)"), never a file
+  number the write path cannot use. Once creation succeeds the same tick
+  the row shows "File 1".
 - F10 context: row suppressed (extend the D353 accessor to cover it).
 
 ### 5.3 Reset to defaults (Gate E)
@@ -253,26 +261,35 @@ the §5.4 confirmation contract.
 
 New env-gated probe **`GE_WSPROBE_RESET=<tick>`** (GE_D314/GE_WSPROBE
 pattern): at tick N of a *front-end* boot it drives the **UI action path**
-— dispatches the GAMEPLAY and VIDEO section-reset handlers through the same
-handler the confirm step calls (arm → confirm → dispatch, no bypass), then
-logs/asserts on the following tick:
+through the same handler the confirm step calls (arm → confirm → dispatch,
+no bypass). **Every section being verified is itself dispatched:** the
+probe dispatches all five section resets (INPUT, GAMEPLAY, GRAPHICS, AUDIO,
+VIDEO) via arm → confirm, and after *each* dispatch verifies that
+section's rows:
 
-1. **Selected-file scope:** the chosen file's `save_data` fields ==
-   BLANKSAVEDATA (auto-aim/sight/look-ahead/ammo enabled, Music/FX 0xFF —
-   per WATCH-SETTINGS-PLAN §6).
-2. **Scope isolation:** a *second* folder's `save_data` is byte-identical
-   to its pre-reset state (a GAMEPLAY reset never touches other files).
-3. **Hidden rows:** GRAPHICS draw/LOD slider values (hidden while the
-   auto-FOV toggles are on) == their table defaults after a GRAPHICS reset,
-   even while hidden.
-4. **Mixed scopes:** after a GAMEPLAY reset, the ini rows
-   (SkipIntro/NoHitFlash/AllUnlocked/HudScale) == the ini default table
-   while the save rows == BLANKSAVEDATA — the two scopes land
-   independently.
+- **INPUT / GRAPHICS / VIDEO (ini rows):** values == the default table.
+  GRAPHICS specifically covers the **hidden** draw/LOD sliders (hidden
+  while their auto-FOV toggles are on) — a section reset must land them
+  even while they are not visible; VIDEO's `__Resolution` is the documented
+  exclusion (unchanged, logged).
+- **GAMEPLAY (mixed scope):** the four save rows == BLANKSAVEDATA
+  (auto-aim/sight/look-ahead/ammo) *and* the ini rows (SkipIntro/
+  NoHitFlash/AllUnlocked/HudScale) == the ini default table — the two
+  scopes land independently in one action.
+- **AUDIO (save rows):** Music/FX == BLANKSAVEDATA (0xFF raw = 32767,
+  the `VOLUME_MAX` endpoint), not the probe's pre-dirtied 4096.
+- **Scope isolation (after all dispatches):** a *second* folder's
+  `save_data` is byte-identical to its pre-reset snapshot (a reset of the
+  selected file never touches other files).
 
-In-stage dispatch is covered by a `GE_WSPROBE`-style queue check on a
-`-level_XX` run (reset commits ride the D352 queue; the probe asserts the
-enqueued field count and the post-apply save state).
+Front-end prep (tick N) first dirties live values (Music/FX → 4096,
+VSync/HudScale → non-defaults) and snapshots the second folder, so the
+verifications at tick N+1 prove the resets actually moved values back.
+
+In-stage dispatch is covered by the same env var on a `-level_XX` run:
+arm → confirm at tick N (file rows enqueue through the D352 queue — the
+probe logs the enqueued command count), drain at N+1, then the same
+per-section value verification against the post-apply state.
 
 ### 5.9 No changes
 
@@ -311,11 +328,12 @@ enqueued field count and the post-apply save state).
 3. `GE_WSPROBE` / `GE_WSPROBE_FRONT` regression: identical pass as D355
    (queue/commit paths untouched).
 4. **`GE_WSPROBE_RESET` (§5.8) exercises the UI action, not just direct
-   commits:** confirmed-reset dispatch → (a) selected file == BLANKSAVEDATA,
-   (b) second file byte-identical (scope isolation), (c) hidden GRAPHICS
-   draw/LOD values == table defaults, (d) mixed-scope GAMEPLAY lands both
-   scopes independently. In-stage dispatch: `GE_WSPROBE`-style queue check
-   on a `-level_XX` run.
+   commits:** per-section arm → confirm → dispatch of all five sections,
+   with each section's rows verified right after its own dispatch
+   (ini == table, save == BLANKSAVEDATA, hidden GRAPHICS rows included,
+   VIDEO resolution untouched), then the second-folder byte-identity
+   check. In-stage dispatch: `GE_WSPROBE`-style queue check on a
+   `-level_XX` run (enqueued command count + post-apply state).
 5. **Confirmation contract check (§5.4):** a held key/click arms but never
    confirms (edge-triggered); second activation within 3 s commits exactly
    once; timeout/navigate disarms. Headlessly assertable via the probe

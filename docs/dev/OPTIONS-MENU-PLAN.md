@@ -1,6 +1,11 @@
 # In-game PC options menu — design + resume point
 
 Status: **config-system foundation landed (M-35); menu surface not built.**
+(Updated 2026-09-27: the menu surface *has* since been built and iterated
+as D346 -> D356; the current layout and per-section reset live in
+`docs/dev/D356-SETTINGS-REGROUP-PLAN.md` + `docs/dev/WATCH-SETTINGS-PLAN.md`
+and `docs/dev/findings.md` D346–D356. This doc remains the historical
+M3-scope record.)
 Pattern follows `docs/dev/AUDIO-PLAN.md` — a plan doc that a later session
 executes.
 

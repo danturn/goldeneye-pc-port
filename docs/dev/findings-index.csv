@@ -233,3 +233,4 @@ D352,FIXED,D350 review of 1303c0eb:,"FIXED (port-only, port/src/watchsettings.c)
 D353,FIXED,Turok-style settings regrouping:,"FIXED (port-only, optionsoverlay.c/frontoptions.c):"
 D354,FIXED,Front-end F10 Bond rows silently disabled:,"FIXED (port-only, port/src/watchsettings.c):"
 D355,FIXED,F10/options Music slider inaudible in-stage:,"FIXED (port-only, port/src/watchsettings.c):"
+D356,FIXED,"Settings regroup: Turok-style pages renamed to functional sections (INPUT/GAMEPLAY/GRAPHICS/AUDIO/VIDEO) with PD-style ""(File N)"" scoping annotations, the redu…","FIXED (port-only, port/src/optionsoverlay.{h,c} + port/src/watchsettings.{h,c} + port/src/frontoptions.c; plan docs/dev/D356-SETTINGS-REGROUP-PLAN.md):"
