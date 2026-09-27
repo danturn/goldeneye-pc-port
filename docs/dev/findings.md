@@ -13584,6 +13584,8 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 - **Not verifiable here:** PAL/JP captures, because only the NTSC ROM is present. PAL shares the canvas, strings and constants; JP relies on the dynamic label x.
 - **Owed:** user playtest (mouse, keyboard, pad; music/ambience on entering and leaving; "PC Options" sits close to the right edge, ending about x 428 of 440); a physical controller.
 
+**Closed 2026-09-27.** User visual pass done: label placement accepted, mini slider glyph added beside it (D348), screen navigation fixed and verified (D345), wording aligned to Turok/Nightdive (D346/D346b); music on enter/leave unremarked. NTSC reference frames captured + pixel-verified headless (PCDUMP, incl. the D348 glyph: 135 knob px vs 9 paper). PAL/JP visual verification not capturable — only an NTSC ROM is present locally; layout is font-width-driven and region-independent except label width, so risk is low. Physical-controller pass on the bottom-row label + row-stepping still owed to the user (tracked in HANDOFF).
+
 
 
 ## D344 — Host PC bugchecks (0x119) during game runs: unclean multi-threaded quit (2026-09-27)
