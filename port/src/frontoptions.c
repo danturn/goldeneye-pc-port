@@ -69,10 +69,11 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 #define TITLE_Y    0x2B
 #define ROW_X      0x37          /* the cheat list's x */
 #define ROW_Y0     0x41          /* cheat list starts 0x35; +12 for the title line */
-/* D346b: 20 -> 18 px so the merged Video section (14 rows default, 15 with
- * "Draw dist. follows FOV" off) fits the paper on one page. Hit bands stay
- * contiguous at any pitch >= 6; the 22px highlight box still clears the next
- * row (y+14 < y+17). */
+/* D346b: 20 -> 18 px so a full section fits the paper on one page. Hit bands
+ * stay contiguous at any pitch >= 6; the 22px highlight box still clears the
+ * next row (y+14 < y+17). D353: the largest section is now GRAPHICS at 11
+ * rows (both auto-FOV toggles off); MAX_PROWS=15 keeps headroom, and
+ * buildPages() logs any future overflow instead of silently truncating. */
 #define ROW_DY     18
 #define NUM_X      0x37          /* "1." on the section list */
 #define SEC_X      0x4B
@@ -169,11 +170,22 @@ static void buildPages(void)
     }
     s_rowN = 0;
     if (s_pageN > 0) {
+        int overflow = 0;
         for (int i = s_pageHdr[s_page] + 1; i < n && !optionsRowIsHeader(i); i++) {
-            if (optionsRowIsShown(i) && s_rowN < MAX_PROWS) {
+            if (!optionsRowIsShown(i)) continue;
+            if (s_rowN < MAX_PROWS) {
                 s_rowIdx[s_rowN++] = i;
+            } else {
+                overflow++;
             }
         }
+        /* D353: the old code stopped at MAX_PROWS silently; a section that
+         * outgrew the page (the D346b VIDEO section did, at exactly 15) lost
+         * rows with no trace. */
+        if (overflow)
+            sysLogPrintf(LOG_WARNING, "frontoptions: section '%s' has %d row(s) past MAX_PROWS=%d; last visible: '%s'",
+                         optionsRowLabel(s_pageHdr[s_page]), overflow, MAX_PROWS,
+                         optionsRowLabel(s_rowIdx[MAX_PROWS - 1]));
     }
 }
 
@@ -434,8 +446,29 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
     } else {
         char title[32];
         titleCase(optionsRowLabel(s_pageHdr[s_page]), title, sizeof(title));
+        int titleW = measureW(title);
         strcat(title, "\n");
         DL = ink(DL, ROW_X, TITLE_Y, title, INK);
+
+        /* D353: scope annotation -- the Bond-file section's title carries
+         * the chooser's value ("(File 2)" / "(no file)"), so the player sees
+         * which save the per-file toggles and sliders touch without scrolling
+         * to the "Edit file" row. */
+        {
+            int bondRow = -1;
+            for (int k = 0; k < s_rowN; k++) {
+                if (optionsRowIsBondChooser(s_rowIdx[k])) { bondRow = k; break; }
+            }
+            if (bondRow >= 0) {
+                char vt[32] = "", note[40];
+                optionsRowValueText(s_rowIdx[bondRow], vt, sizeof(vt));
+                if (vt[0] && strcmp(vt, "Select file") != 0)
+                    snprintf(note, sizeof(note), "(%s)", vt);
+                else
+                    snprintf(note, sizeof(note), "(no file)");
+                DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
+            }
+        }
 
         for (int k = 0; k < s_rowN; k++) {
             int i = s_rowIdx[k];

@@ -142,27 +142,32 @@ struct Row {
 };
 
 static struct Row rows[] = {
-    { "__HdrDisplay",            "VIDEO",            ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Video.Fullscreen",         "Fullscreen",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "__Resolution",             "Resolution",       ROW_RES,    0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Video.VSync",              "VSync",            ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.FpsCap",             "Frame rate cap",   ROW_FPSCAP, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Video.MSAA",               "Anti-aliasing",    ROW_MSAA,   0,    NULL,       1, 0, 0,   0,0,0,0,0 },
-    { "Video.TextureFilter",      "Texture filter",   ROW_ENUM,   1,    kTexFilter, 0, 0, 0,   0,0,0,0,0 },
+    /* D353: Turok-style regrouping. The D346b single 15-row VIDEO section
+     * sat exactly at the front page's MAX_PROWS cap (a new row would have
+     * been silently truncated). Split into DISPLAY (presentation) and
+     * GRAPHICS (quality + distance); sections now top out at 11 rows
+     * (GRAPHICS with both auto-FOV toggles off). All rows use designated
+     * initializers (D351 class: positional shifts into hidePtr/unit). */
+    { .key="__HdrDisplay", .label="DISPLAY", .kind=ROW_HEADER },
+    { .key="Video.Fullscreen", .label="Fullscreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="__Resolution", .label="Resolution", .kind=ROW_RES },
+    { .key="Video.VSync", .label="VSync", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.FpsCap", .label="Frame rate cap", .kind=ROW_FPSCAP },
+    { .key="__HdrGraphics", .label="GRAPHICS", .kind=ROW_HEADER },
+    { .key="Video.MSAA", .label="Anti-aliasing", .kind=ROW_MSAA, .restart=1 },
+    { .key="Video.TextureFilter", .label="Texture filter", .kind=ROW_ENUM, .step=1, .names=kTexFilter },
     { .key="Video.Anisotropy", .label="Anisotropic filtering", .kind=ROW_SLIDER, .step=1, .unit="x" },
-    /* D346b: the old VIEW section (FOV / widescreen / draw distance) is merged
-     * into VIDEO -- one Nightdive-style "video" section; rows keep order. */
     { .key="Video.FovScale", .label="FOV scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
     /* D334: native widescreen (world projected at the window aspect, Hor+).
      * While on, "Widescreen auto FOV" has no effect (it was the stretch-era
      * vertical-FOV compensation). */
-    { "Video.NativeWidescreen",   "Native widescreen",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.WidescreenAuto",     "Widescreen auto FOV",ROW_TOGGLE,1,   kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.SafeAreaCrop",       "Crop overscan",    ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { .key="Video.NativeWidescreen", .label="Native widescreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.WidescreenAuto", .label="Widescreen auto FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.SafeAreaCrop", .label="Crop overscan", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.DrawDistanceAutoFov", .unit="%" },
-    { "Video.DrawDistanceAutoFov","Draw dist. follows FOV",ROW_TOGGLE,1,kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { .key="Video.DrawDistanceAutoFov", .label="Draw dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.LodDistanceAutoFov", .unit="%" },
-    { "Video.LodDistanceAutoFov", "LOD dist. follows FOV",ROW_TOGGLE,1,kOnOff,      0, 0, 0,   0,0,0,0,0 },
+    { .key="Video.LodDistanceAutoFov", .label="LOD dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* Aim row edits Input.AimModeSens -- the knob the default GEPD aim path
      * actually uses (Input.MouseAimSpeed only feeds the legacy velocity-stick
      * fallback, so it was inert here). D304: both this row and the turn-speed
@@ -206,14 +211,16 @@ static struct Row rows[] = {
       .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
     { .key="Bond.Ammo", .label="Ammo on screen", .kind=ROW_TOGGLE,
       .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
-    { .key="__HdrBondAudio", .label="AUDIO (BOND FILE)", .kind=ROW_HEADER, .found=1 },
+    /* D353: the separate "AUDIO (BOND FILE)" header is retired -- the two
+     * sliders belong to the same per-file section as the watch toggles. A
+     * port-level master volume (M3) will start a real AUDIO section. */
     { .key="Bond.Music", .label="Music volume", .kind=ROW_SLIDER, .step=128,
       .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
     { .key="Bond.FX", .label="FX volume", .kind=ROW_SLIDER, .step=128,
       .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
-    { "__HdrMouse",              "MOUSE / AIM",      ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Input.MouseSensitivity",   "Mouse sensitivity",ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Input.MouseInvertY",       "Invert look (mouse)",ROW_TOGGLE, 1,  kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { .key="__HdrMouse", .label="MOUSE / AIM", .kind=ROW_HEADER },
+    { .key="Input.MouseSensitivity", .label="Mouse sensitivity", .kind=ROW_SLIDER, .step=5 },
+    { .key="Input.MouseInvertY", .label="Invert look (mouse)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* Input.PdMouseAim (findings D332): the Perfect Dark port's mouse-aim
      * model. The port only accumulates the mouse; the game's own crosshair
      * integrator is driven by the port-supplied turn with PD's near-zero damp
@@ -224,14 +231,14 @@ static struct Row rows[] = {
      * with the mouse fed through the game's integrator at PD's mouse damp --
      * the default. CENTRED (PC) = opt-in FPS-style aim (#104), not N64. Applies
      * to every aim input (RMB, Shift, Q/L, pad trigger, Toggle mode). */
-    { "Input.AimMode",            "Aim style",        ROW_ENUM,   1,    kAimMode,   0, 0, 0,   0,0,0,0,0 },
+    { .key="Input.AimMode", .label="Aim style", .kind=ROW_ENUM, .step=1, .names=kAimMode },
     /* D338: how far the N64-style crosshair travels. PC = to the screen edge
      * (GEPD / mouse-injector feel, default); N64 = the original stick limits
      * (65% of the half-width, camera turn from ~49%). Hidden while the aim
      * style is CENTRED (PC), where the crosshair doesn't travel. */
-    { "Input.AimRange",           "Aim range",        ROW_ENUM,   1,    kAimRange,  0, 0, 0,   0,0,0,0,0, "Input.AimMode" },
-    { "__HdrPad",                "CONTROLLER",       ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
-    { "Input.PadLookInvertY",     "Invert look (controller)",ROW_TOGGLE,1,kOnOff,   0, 0, 0,   0,0,0,0,0 },
+    { .key="Input.AimRange", .label="Aim range", .kind=ROW_ENUM, .step=1, .names=kAimRange, .hiddenIfOn="Input.AimMode" },
+    { .key="__HdrPad", .label="CONTROLLER", .kind=ROW_HEADER },
+    { .key="Input.PadLookInvertY", .label="Invert look (controller)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500, .unit="%", .dispDiv=300 },
     { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1, .unit="%" },
     /* D181/Game.ScreenShakeIntensity: user testing (v0.2.1) found the slider
@@ -243,13 +250,13 @@ static struct Row rows[] = {
      * hook stay in place. */
     /* D232: the community "no damage flash" toggle (suppresses the red/green
      * hit-flash overlay in bondview2). */
-    { "__HdrGame",               "GAME",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { .key="__HdrGame", .label="GAME", .kind=ROW_HEADER },
     /* D226: scales the ammo counter, pickup / status messages and dialogue
      * about their screen anchors. 100% = original, nothing emitted. */
     { .key="Game.HudScale", .label="HUD scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
-    { "Game.SkipIntro",           "Skip intro",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.DisplayFPS",         "Show FPS",         ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Game.NoHitFlash",          "No hit flash",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { .key="Game.SkipIntro", .label="Skip intro", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Video.DisplayFPS", .label="Show FPS", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Game.NoHitFlash", .label="No hit flash", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* D216/Game.SkipIntro: user report (v0.2.1 testing) that it breaks audio
      * -- pulled from the menu until root-caused. Not exposed to players; the
      * config var + lv.c hook stay in place (dead unless an existing ini has
@@ -257,12 +264,12 @@ static struct Row rows[] = {
      * fixing the underlying issue first. */
     /* D257: everything-unlocked goodie (default ON). Consumed at startup by
      * main.c -- applies from the next launch. */
-    { "Game.AllUnlocked",         "All unlocked",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
+    { .key="Game.AllUnlocked", .label="All unlocked", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* D293: only quit path used to be the OS window-close / Alt+F4 -- no
      * discoverable in-game way to exit, a real gap on Deck/controller-only
      * setups. Not config-backed (like __Resolution); activating it exits
      * the same way video.c's SDL_QUIT/Alt+F4 handlers already do. */
-    { "__QuitToDesktop",          "Quit to desktop",  ROW_ACTION, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
+    { .key="__QuitToDesktop", .label="Quit to desktop", .kind=ROW_ACTION },
 };
 #define NUM_ROWS ((int)(sizeof(rows) / sizeof(rows[0])))
 
@@ -1267,6 +1274,13 @@ int optionsRowIsSlider(int i)
 {
     struct Row *r = rowAt(i);
     return r && r->kind == ROW_SLIDER && rowHi(r) > rowLo(r);
+}
+
+/* D353: the explicit Bond-file chooser row (front options screen only). */
+int optionsRowIsBondChooser(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->kind == ROW_BOND_FILE;
 }
 
 int optionsRowNeedsRestart(int i)

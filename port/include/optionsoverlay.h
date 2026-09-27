@@ -51,6 +51,7 @@ int         optionsRowIsHeader(int i);
 int         optionsRowIsShown(int i);
 const char *optionsRowLabel(int i);
 int         optionsRowIsSlider(int i);
+int         optionsRowIsBondChooser(int i); /* D353: the Bond-file chooser row */
 int         optionsRowNeedsRestart(int i);
 double      optionsRowFraction(int i);
 void        optionsRowSetFraction(int i, double f);
