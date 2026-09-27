@@ -229,3 +229,4 @@ D348,OPEN,"File-select ""PC Options"" label:",Port-only (frontoptions.c):
 D349,PARTIAL,GE watch settings are not normally saved to the Bond file:,ANALYZED (static decomp audit):
 D350,PARTIAL,Watch-backed PC options:,"PARTIAL (implemented; user reports tests good, review pending):"
 D351,FIXED,Existing D346 value/unit rows had positional initializers shifted into hidePtr:,"FIXED (port-only): designated row initializers restore unit, deadzone divisor and hide-if-auto fields; build clean, headless smoke clean."
+D352,FIXED,D350 review of 1303c0eb:,"FIXED (port-only, port/src/watchsettings.c):"

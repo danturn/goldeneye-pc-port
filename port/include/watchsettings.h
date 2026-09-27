@@ -23,6 +23,5 @@ int watchSettingsRead(enum WatchSettingField field); /* front: saved file, F10: 
 void watchSettingsSet(enum WatchSettingField field, int value, int commit);
 void watchSettingsCommit(enum WatchSettingField field); /* slider release */
 void watchSettingsGameTick(void);             /* game thread; after gfxFrameMsgQ receive */
-int watchSettingsPersistField(int folder, enum WatchSettingField field);
 
 #endif

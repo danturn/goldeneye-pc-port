@@ -25,6 +25,8 @@ extern void cur_player_set_aim_control(u32 value);
 extern void cur_player_set_sight_onscreen_control(u32 value);
 extern void cur_player_set_ammo_onscreen_setting(u32 value);
 
+static int frontScreen(void);   /* defined below; the choose-file guard uses it */
+
 static const char *const keys[WATCH_SETTING_COUNT] = {
     "Bond.Music", "Bond.FX", "Bond.Look", "Bond.AutoAim",
     "Bond.AimControl", "Bond.Sight", "Bond.LookAhead", "Bond.Ammo"
@@ -35,10 +37,15 @@ static const u16 bits[WATCH_SETTING_COUNT] = {
 };
 
 /* Explicit chooser is separate from selected_folder_num (which frontoptions
- * assigns FOLDER1 merely to draw its dossier background). -1 means none. */
+ * assigns FOLDER1 merely to draw its dossier background). -1 means none.
+ * D352: guarded by uiLock. Today these are game-thread-only (front options
+ * screen); the lock plus the frontScreen() guard in watchSettingsChooseFile
+ * keep a future scheduler-thread caller (e.g. an F10 file indicator) from
+ * racing the front screen. */
 static int chosen = -1;
 static int staged[WATCH_SETTING_COUNT];
 static int stagedField = -1, stagedFolder = -1;
+static SDL_SpinLock uiLock;
 
 /* Bounded producer (F10 scheduler) -> consumer (game thread) queue. Snapshot
  * is also guarded; no game/watch reads from F10 render or input paths. */
@@ -71,14 +78,26 @@ static save_data *validSave(int folder)
         ? save : NULL;
 }
 
-static save_data *chosenSave(void) { return validSave(chosen); }
+int watchSettingsFolder(void)
+{
+    SDL_AtomicLock(&uiLock);
+    int f = chosen;
+    SDL_AtomicUnlock(&uiLock);
+    return f;
+}
 
-int watchSettingsFolder(void) { return chosen; }
-
+/* D352: game-thread only. F10 hides the chooser row, so a call from
+ * elsewhere signals a broken UI invariant -- refuse it loudly rather than
+ * race the front screen's unlocked readers. */
 void watchSettingsChooseFile(int dir)
 {
+    if (!frontScreen()) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: choose-file outside the front options screen; ignored");
+        return;
+    }
     /* Include 'none' so selection is always intentional; skip empty slots.
      * Do not load the file here: GE's loader would change front-end audio. */
+    SDL_AtomicLock(&uiLock);
     int next = chosen;
     for (int n = 0; n <= MAX_FOLDER_COUNT; n++) {
         next += dir < 0 ? -1 : 1;
@@ -88,7 +107,9 @@ void watchSettingsChooseFile(int dir)
     }
     chosen = next;
     stagedField = -1;
-    sysLogPrintf(LOG_INFO, "watchsettings: selected Bond file %d", chosen < 0 ? 0 : chosen + 1);
+    int sel = chosen;
+    SDL_AtomicUnlock(&uiLock);
+    sysLogPrintf(LOG_INFO, "watchsettings: selected Bond file %d", sel < 0 ? 0 : sel + 1);
 }
 
 static int frontScreen(void) { return current_menu == MENU_PC_OPTIONS; }
@@ -101,7 +122,12 @@ static int stageActive(void)
 
 int watchSettingsAvailable(void)
 {
-    if (frontScreen()) return chosenSave() != NULL;
+    if (frontScreen()) {
+        SDL_AtomicLock(&uiLock);
+        int f = chosen;
+        SDL_AtomicUnlock(&uiLock);
+        return validSave(f) != NULL;
+    }
     if (!stageActive()) return 0;
     int valid;
     SDL_AtomicLock(&lock);
@@ -121,10 +147,15 @@ int watchSettingsRead(enum WatchSettingField field)
 {
     if ((unsigned)field >= WATCH_SETTING_COUNT) return 0;
     if (frontScreen()) {
-        save_data *save = chosenSave();
-        if (!save) return 0;
-        if (stagedField == (int)field && stagedFolder == chosen) return staged[field];
-        return savedValue(save, field);
+        int f = -1, stagedVal = -1;
+        SDL_AtomicLock(&uiLock);
+        f = chosen;
+        if (stagedField == (int)field && stagedFolder == f)
+            stagedVal = staged[field];
+        SDL_AtomicUnlock(&uiLock);
+        if (stagedVal >= 0) return stagedVal;
+        save_data *save = validSave(f);
+        return save ? savedValue(save, field) : 0;
     }
     int value = 0;
     SDL_AtomicLock(&lock);
@@ -134,15 +165,26 @@ int watchSettingsRead(enum WatchSettingField field)
     return value;
 }
 
-/* F10 game thread calls this after applying the requested GE setter.
- * temp serialization must NOT overwrite unrelated, watch-only edits or the
- * port-forced controller type in the Bond file. */
-int watchSettingsPersistField(int folder, enum WatchSettingField field)
+/* D352: game-thread only (watchSettingsGameTick, after the setter was
+ * applied). temp serialization must NOT overwrite unrelated, watch-only
+ * edits or the port-forced controller type in the Bond file. */
+static int watchSettingsPersistField(int folder, enum WatchSettingField field)
 {
     if (folder < FOLDER1 || folder >= MAX_FOLDER_COUNT ||
-        (unsigned)field >= WATCH_SETTING_COUNT || !g_CurrentPlayer) return 0;
+        (unsigned)field >= WATCH_SETTING_COUNT) return 0;
+    if (!g_CurrentPlayer) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: persist field %d skipped: no current player", field);
+        return 0;
+    }
     save_data *save = validSave(folder);
-    if (!save || !fileGamePakProbe()) return 0;
+    if (!save) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: persist field %d in Bond file %d: no valid save (CRC?)", field, folder + 1);
+        return 0;
+    }
+    if (!fileGamePakProbe()) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: persist field %d in Bond file %d: EEPROM absent, edit not saved", field, folder + 1);
+        return 0;
+    }
     save_data serialized = *save;
     fileSaveSettingsForFolder(&serialized);
     if (field == WATCH_SETTING_MUSIC) {
@@ -165,10 +207,17 @@ int watchSettingsPersistField(int folder, enum WatchSettingField field)
 /* Front end has no active GE watch/player settings. Edit the explicitly
  * chosen save field directly instead of calling fileLoadSettingsForFolder
  * (which also applies the chosen file's audio volume to the front end). */
-static void saveFront(enum WatchSettingField field, int value)
+static void saveFrontField(int folder, enum WatchSettingField field, int value)
 {
-    save_data *save = chosenSave();
-    if (!save || !fileGamePakProbe()) return;
+    save_data *save = validSave(folder);
+    if (!save) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: save field %d in Bond file %d: no valid save (CRC?)", field, folder + 1);
+        return;
+    }
+    if (!fileGamePakProbe()) {
+        sysLogPrintf(LOG_WARNING, "watchsettings: save field %d in Bond file %d: EEPROM absent, edit not saved", field, folder + 1);
+        return;
+    }
     if (value < 0) value = 0;
     if (field == WATCH_SETTING_MUSIC || field == WATCH_SETTING_FX) {
         if (value > 32767) value = 32767;
@@ -183,22 +232,40 @@ static void saveFront(enum WatchSettingField field, int value)
         save->options = merged;
     }
     fileWriteSave(save);
-    sysLogPrintf(LOG_INFO, "watchsettings: persisted field %d in Bond file %d", field, chosen + 1);
+    sysLogPrintf(LOG_INFO, "watchsettings: persisted field %d in Bond file %d", field, folder + 1);
 }
 
 void watchSettingsSet(enum WatchSettingField field, int value, int commit)
 {
     if ((unsigned)field >= WATCH_SETTING_COUNT || !watchSettingsAvailable()) return;
     if (frontScreen()) {
+        SDL_AtomicLock(&uiLock);
         if (commit) {
-            saveFront(field, value);
+            int f = chosen;
             stagedField = -1;
+            SDL_AtomicUnlock(&uiLock);
+            saveFrontField(f, field, value);
         } else {
             stagedField = field; stagedFolder = chosen; staged[field] = value;
+            SDL_AtomicUnlock(&uiLock);
         }
         return;
     }
     SDL_AtomicLock(&lock);
+    /* D352: coalesce to one pending command per field. A fast slider drag
+     * enqueues many detents per frame; the game thread then applies only
+     * the latest value (commit = OR of the pending commits), so the audio
+     * setters fire once per frame instead of once per detent. */
+    for (int i = 0; i < count; i++) {
+        struct Command *c = &cmds[(head + i) % CMD_CAP];
+        if (c->field == (int)field) {
+            c->value = value;
+            c->commit |= commit;
+            snapshot[field] = value;
+            SDL_AtomicUnlock(&lock);
+            return;
+        }
+    }
     struct Command cmd = { snapFolder, field, value, commit };
     if (count < CMD_CAP) {
         cmds[(head + count++) % CMD_CAP] = cmd;
@@ -211,7 +278,21 @@ void watchSettingsSet(enum WatchSettingField field, int value, int commit)
 
 void watchSettingsCommit(enum WatchSettingField field)
 {
-    if ((unsigned)field >= WATCH_SETTING_COUNT || !watchSettingsAvailable()) return;
+    if ((unsigned)field >= WATCH_SETTING_COUNT) return;
+    if (frontScreen()) {
+        /* D352: a commit is meaningful only if a drag staged an edit; a
+         * plain click with no file selected stays a silent no-op. */
+        int pending;
+        SDL_AtomicLock(&uiLock);
+        pending = stagedField == (int)field && stagedFolder == chosen && chosen >= FOLDER1;
+        SDL_AtomicUnlock(&uiLock);
+        if (!pending) return;
+    } else if (!watchSettingsAvailable()) {
+        /* D352: the UI showed the new value (snapshot) but the stage is not
+         * active, so the persist cannot run -- make the drop visible. */
+        sysLogPrintf(LOG_WARNING, "watchsettings: commit dropped, no active Bond target (field %d)", field);
+        return;
+    }
     watchSettingsSet(field, watchSettingsRead(field), 1);
 }
 
@@ -250,6 +331,18 @@ static void applyValue(enum WatchSettingField field, int value)
 
 void watchSettingsGameTick(void)
 {
+    /* This hook runs on the game thread after a gfxFrameMsgQ receive, even
+     * during load. D352: HOLD pending commands (do not drain) until a stage
+     * is active -- a slider-release commit must not be silently discarded
+     * during a level/menu transition. Each command's folder is re-checked
+     * against selected_folder_num at apply time, so a stale cross-file edit
+     * is still dropped, never misapplied. */
+    if (!stageActive() || !g_CurrentPlayer) {
+        SDL_AtomicLock(&lock);
+        snapFolder = -1;
+        SDL_AtomicUnlock(&lock);
+        return;
+    }
     struct Command batch[CMD_CAP];
     int n;
     SDL_AtomicLock(&lock);
@@ -258,15 +351,6 @@ void watchSettingsGameTick(void)
     head = (head + n) % CMD_CAP;
     count = 0;
     SDL_AtomicUnlock(&lock);
-
-    /* This hook runs on the game thread after a gfxFrameMsgQ receive, even
-     * during load; do not call GE audio/player APIs until a stage is active. */
-    if (!stageActive() || !g_CurrentPlayer) {
-        SDL_AtomicLock(&lock);
-        snapFolder = -1;
-        SDL_AtomicUnlock(&lock);
-        return;
-    }
     for (int i = 0; i < n; i++) {
         struct Command *c = &batch[i];
         if (c->folder != selected_folder_num ||
