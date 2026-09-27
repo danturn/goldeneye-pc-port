@@ -2206,7 +2206,17 @@ void frontCleanUpWalletBond(void)
 void init_menu05_fileselect(void)
 {
     s32 size = 0x6e000;
+#ifdef PORT
+    /* File-select folders (M-201): the PC wallet model is 0x1664C bytes and
+     * loads at the start of this buffer with a 0x17000 reservation (D45, see
+     * load_walletbond), not N64's 0xA000. Scratch placed after it at the N64
+     * offset 4096*10 landed INSIDE the wallet model, corrupting the folder
+     * body/photo geometry once written. Same N64 budget: 0x85000 - 0x17000
+     * == 0x78000 - 0xA000 == 0x6e000. Layout-only. */
+    Gfx* DL = (Gfx *)(ptr_logo_and_walletbond_DL + 0x17000);
+#else
     Gfx* DL = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+#endif
     int i;
 
     prev_keypresses = FALSE;
@@ -6612,7 +6622,15 @@ void load_briefing_text_for_stage(void)
     s32 argg;
 
     // what is this
+#ifdef PORT
+    /* File-select folders (M-201): past the PC wallet model's 0x17000
+     * reservation (see init_menu05_fileselect). The briefing data loaded here
+     * overwrote the wallet model tail -> folder bodies/photos vanished after
+     * backing out of a file. Layout-only. */
+    temp_s0 = (Gfx *)(ptr_logo_and_walletbond_DL + 0x17000);
+#else
     temp_s0 = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+#endif
 
     // alright
     argg = 0x200;

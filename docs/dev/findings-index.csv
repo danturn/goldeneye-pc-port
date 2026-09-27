@@ -218,4 +218,5 @@ D336,FIXED,"Frigate (and any level) ""all polygons break except the gun"" after 
 D337,FIXED,Aim modes folded (user decision):,FIXED (2026-09-26 bookkeeping:
 D338,FIXED,"Input.AimRange (F10 ""Aim range""):",FIXED (2026-09-26 bookkeeping:
 D339,OPEN,"#92 (low-end ~30 fps, Celeron N3060 / HD 400) —","OPEN (2026-09-26, user:"
-D341,FIXED,"Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).",FIXED (M-201): two fast3d defects —
+D341,FIXED,"Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).","FIXED (M-201, user-verified 2026-09-27):"
+D342,FIXED,"File select: folder bodies and Bond photos vanish after selecting a file and backing out (user, v0.4.0, 2026-09-26).","FIXED (M-201, user-verified):"

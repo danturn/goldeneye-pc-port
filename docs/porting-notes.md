@@ -277,6 +277,10 @@ IDO accepts a struct that redeclares an inherited member name (`inherits ObjectR
 
 The offline model converter sizes each record's trailing arrays from its count field. Check what the *runtime consumer* does with that count before trusting its name: GE's op-22 `DisplayListPrimaryRecord.numVertices` is really the number of star-flash ARMS, and `dorottex()` reads `count*4` vertices (PD names it `stargunfire.unk00` and reads `unk00*4`). Sizing by the field name dropped 3/4 of every muzzle star; the missing vertices came from neighbouring sidecar bytes and drew as spikes. For every record type, derive the copied extent from the reading loop, and cross-check PD's typed struct.
 
+### A-buf. Growing one region of a shared buffer must move every hard-coded offset after it (D342)
+
+When a PC-larger asset gets a bigger reservation inside a shared scratch buffer (D45: the wallet model 0xA000 -> 0x17000 in `ptr_logo_and_walletbond_DL`), grep for every other user of that buffer that computes a fixed offset (`base + 4096*10`). Those still point into the old boundary and silently overwrite the enlarged asset; the corruption only shows when the asset is not reloaded.
+
 ## B. 16-byte PC `Gfx` / `Vtx` vs 8-byte N64
 
 Any buffer reservation, `memcpy` size, slot stride, or pool budget

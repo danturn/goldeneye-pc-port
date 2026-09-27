@@ -626,7 +626,8 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D337 | **Aim modes folded (user decision): N64 (default) = the N64 aim model with the mouse fed through the game's integrator at PD's damp (D332 made default); CENTRED (PC) opt-in; Q/L and Toggle-aim now route mouse aim like RMB; pad/keyboard aim no longer swallowed by the mouse integration.** — full `## D337` entry at file tail | FIXED (2026-09-26 bookkeeping: shipped; user reports it feels good in v0.4.0 play). Earlier: IMPLEMENTED (port/src/input.c + optionsoverlay.c); headless-measured with new scripted-mouse harness; golden 3/3; Win + Linux builds. Open: N64-range calibration decision. |
 | D338 | **`Input.AimRange` (F10 "Aim range"): PC (default, GEPD/mouse-injector full-screen crosshair) or N64 (original stick limits: 65% of half-width, camera turn from ~49%).** — full `## D338` entry at file tail | FIXED (2026-09-26 bookkeeping: shipped; user reports it feels good in v0.4.0 play). Earlier: IMPLEMENTED + measured (PC 98%/72%, N64 65%/49%); golden 3/3; Win + Linux builds. |
 | D339 | **#92 (low-end ~30 fps, Celeron N3060 / HD 400) — measured CPU budget: game thread ~0.2–0.35 ms/frame, render-thread display-list pass 0.4–1.8 ms/frame on this box; CPU very likely not the bottleneck. New `GE_PERFSTAT=1` probe (render phases, tris/batches, game-thread busy, GPU timer query).** — full `## D339` entry at file tail | OPEN (2026-09-26, user: review toward the end of v0.4.0; needs a test machine with similar HD 400-class hardware). Earlier: INVESTIGATING — probe landed; target-hardware numbers needed before any fix. |
-| D341 | **Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).** — full `## D341` entry at file tail | FIXED (M-201): two fast3d defects — the 1-cycle blood texrect sampled a stale tile-1 declaration via the D236 LOD rule, and the in-place-regenerated dyn-pool texture hit a stale address-keyed cache entry. |
+| D341 | **Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).** — full `## D341` entry at file tail | FIXED (M-201, user-verified 2026-09-27): two fast3d defects — the 1-cycle blood texrect sampled a stale tile-1 declaration via the D236 LOD rule, and the in-place-regenerated dyn-pool texture hit a stale address-keyed cache entry. |
+| D342 | **File select: folder bodies and Bond photos vanish after selecting a file and backing out (user, v0.4.0, 2026-09-26).** — full `## D342` entry at file tail | FIXED (M-201, user-verified): scratch placed at the N64 offset +0xA000 of `ptr_logo_and_walletbond_DL` landed inside the larger PC wallet model; moved past its 0x17000 reservation. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -12279,7 +12280,7 @@ Adversarial pre-ship review of the whole v0.3.0 window (147 commits since v0.2.2
 - **Fix:** size op-22 vertex regions as `16*4*nv` in both tools. `d43_emit.py ntsc-final` re-run: ALL CHECKS PASSED (round-trip field validation, region tiling, buffer bounds); 512 sidecars regenerated. After: `src[6..7]=(289,±20)` real arm vertices; the M16 renders a clean 6-arm star (`scratch/d303_after.png`). Affects every star-flash weapon. Golden gate 3/3.
 - **Note:** `data/pcmodels-*` is generated (gitignored). Existing installs must re-run `python3 tools_pc/d43_emit.py <region>`; bundles run the shipped emitter.
 
-**Status: FIXED (M-201, headless-verified 2026-09-26; user visual check owed).**
+**Status: FIXED (M-201, user-verified 2026-09-27).**
 
 ## D304 — Mouse sensitivity menu overhaul (user request, 2026-09-18): aim speed/turn speed sliders weren't "1:1" and had too little range.
 
@@ -13510,5 +13511,19 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 
 **Verified:** headless boot capture — the blood now runs down from the top over the gun barrel as on N64 (`scratch/blood_after.png`). Golden gate 3/3. User visual check owed.
 
-**Status: FIXED (M-201, headless-verified 2026-09-26).**
+**Status: FIXED (M-201, user-verified 2026-09-27).**
+
+## D342 — File select: folder bodies and Bond photos vanish after selecting a file and backing out (M-201, 2026-09-26)
+
+**Report:** select a file, back out to file select: the folders draw only their outlines; bodies and Bond photos are gone. Reproduced headless (`SkipIntro=1`, `GE_INPUTSCRIPT="400:A;700:B"`).
+
+**Cause (layout-only, A1-adjacent):** the file-select folders are `PROP_WALLETBOND` model instances loaded at the start of `ptr_logo_and_walletbond_DL`. On PC that model expands to 0x1664C bytes and was given a 0x17000 reservation (D45) instead of N64's 0xA000, but two users of the space AFTER it kept the N64 offset `4096*10` (+0xA000): `init_menu05_fileselect`'s scratch DL (budget 0x6e000) and `load_briefing_text_for_stage` (briefing data). On PC both write into the middle of the wallet model. `load_walletbond` only reloads the model when the instances were freed (coming from the legal screen), so after main menu → back, the overwritten model was drawn: outlines intact, body/photo geometry corrupt.
+
+**Ruled out first:** GL texture-cache staleness on pool reuse (a queued texLoad-address invalidation made no difference; reverted).
+
+**Fix (`src/game/front.c`, `#ifdef PORT`):** both sites use `ptr_logo_and_walletbond_DL + 0x17000`. The budget is unchanged: 0x85000 (PC buffer) - 0x17000 == 0x78000 - 0xA000 == 0x6e000.
+
+**Verified:** user playtest (select/back out repeatedly, folders and photos intact); golden gate 3/3.
+
+**Status: FIXED (M-201, user-verified 2026-09-27).**
 
