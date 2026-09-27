@@ -50,6 +50,7 @@
 #include "input.h"
 #include "fs.h"
 #include "romdata.h"
+#include "watchsettings.h"
 #include "crash.h"
 
 #if defined(PLATFORM_WINDOWS)
@@ -706,6 +707,10 @@ s32 osRecvMesg(OSMesgQueue *mq, OSMesg *msg, s32 flag)
     d60logRecv(mq, m); /* TEMP D60 */
     pthread_cond_signal(&pq->cond);
     pthread_mutex_unlock(&pq->lock);
+    /* gfxFrameMsgQ is consumed only by boss.c's game thread. Apply queued
+     * F10 watch edits there, after releasing the OS queue lock; the SDL
+     * input/scheduler and render threads never touch GE watch/save state. */
+    if (mq == &gfxFrameMsgQ) watchSettingsGameTick();
     return 0;
 }
 

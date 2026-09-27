@@ -248,6 +248,7 @@ void frontOptionsMenuUpdate(void)
 static void goBack(void)
 {
     playSfx(DOOR_METAL_CLOSE2_SFX);
+    if (s_dragRow >= 0) optionsRowCommit(s_dragRow);
     s_dragRow = -1;
     if (s_level == 1) {
         s_level = 0;
@@ -322,6 +323,7 @@ void frontOptionsMenuInterface(void)
         if (joyGetButtons(PLAYER_1, A_BUTTON | Z_TRIG)) {
             optionsRowSetFraction(s_dragRow, ((double)cursor_h_pos - BAR_X0) / (BAR_X1 - BAR_X0));
         } else {
+            optionsRowCommit(s_dragRow);
             s_dragRow = -1;
         }
     }

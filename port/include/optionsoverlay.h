@@ -54,6 +54,7 @@ int         optionsRowIsSlider(int i);
 int         optionsRowNeedsRestart(int i);
 double      optionsRowFraction(int i);
 void        optionsRowSetFraction(int i, double f);
+void        optionsRowCommit(int i); /* slider release; watch rows persist once */
 void        optionsRowValueText(int i, char *out, int n);
 void        optionsRowAdjust(int i, int dir);
 

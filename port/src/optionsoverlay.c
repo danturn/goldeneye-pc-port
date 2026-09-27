@@ -38,6 +38,9 @@
 #define _SHIFTR(v, s, w) ((u32)(((u32)(v) >> (s)) & ((0x01 << (w)) - 1)))
 #endif
 #include <PR/gbi.h>
+#include <bondconstants.h>
+
+extern MENU current_menu;
 
 #include "platform.h"
 #include "system.h"
@@ -45,6 +48,7 @@
 #include "video.h"
 #include "input.h"
 #include "optionsoverlay.h"
+#include "watchsettings.h"
 #include "../fast3d/gfx_api.h"
 
 /* D324 class: -Iinclude resolves <math.h> to GE's N64 stub, which does not
@@ -69,11 +73,13 @@ extern s16   viGetY(void);
 /* ------------------------------------------------------------------------ */
 
 enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSCAP,
-       ROW_HEADER /* D237: non-selectable category label */ };
+       ROW_HEADER, ROW_BOND_FILE /* explicit chooser (front end only) */ };
 
 /* D346: wording pass -- Nightdive/Turok + PD-port conventions: title-case
  * On/Off, no all-caps value strings. Display-only; config stores 0/1 either way. */
 static const char *const kOnOff[]     = { "Off", "On", NULL };
+static const char *const kReverse[]   = { "Reverse", "Upright", NULL };
+static const char *const kHold[]      = { "Hold", "Toggle", NULL };
 static const char *const kTexFilter[] = { "Nearest", "Bilinear", "3-Point", NULL };
 static const char *const kAimMode[]   = { "N64", "Centred (PC)", NULL };   /* D337 */
 static const char *const kAimRange[]  = { "PC", "N64", NULL };             /* D338 */
@@ -105,6 +111,8 @@ static const int kResList[][2] = {
 static int s_resFit[NUM_RES];   /* indices into kResList that fit the desktop */
 static int s_resFitN = 0;
 static int s_resSel  = 0;       /* index into s_resFit */
+static int s_dragRow = -1;      /* scheduler-thread mouse drag */
+static SDL_atomic_t s_dragWatchField; /* field+1, host may close F10 mid-drag */
 
 struct Row {
     const char        *key;
@@ -141,19 +149,19 @@ static struct Row rows[] = {
     { "Video.FpsCap",             "Frame rate cap",   ROW_FPSCAP, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Video.MSAA",               "Anti-aliasing",    ROW_MSAA,   0,    NULL,       1, 0, 0,   0,0,0,0,0 },
     { "Video.TextureFilter",      "Texture filter",   ROW_ENUM,   1,    kTexFilter, 0, 0, 0,   0,0,0,0,0 },
-    { "Video.Anisotropy",         "Anisotropic filtering",ROW_SLIDER, 1, NULL,      0, 0, 0,   0,0,0,0,0, NULL, "x" },
+    { .key="Video.Anisotropy", .label="Anisotropic filtering", .kind=ROW_SLIDER, .step=1, .unit="x" },
     /* D346b: the old VIEW section (FOV / widescreen / draw distance) is merged
      * into VIDEO -- one Nightdive-style "video" section; rows keep order. */
-    { "Video.FovScale",           "FOV scale",        ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%" },
+    { .key="Video.FovScale", .label="FOV scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
     /* D334: native widescreen (world projected at the window aspect, Hor+).
      * While on, "Widescreen auto FOV" has no effect (it was the stretch-era
      * vertical-FOV compensation). */
     { "Video.NativeWidescreen",   "Native widescreen",ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Video.WidescreenAuto",     "Widescreen auto FOV",ROW_TOGGLE,1,   kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Video.SafeAreaCrop",       "Crop overscan",    ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.DrawDistance",       "Draw distance",    ROW_SLIDER, 25,   NULL,       0, 0, 0,   0,0,0,0,0, "Video.DrawDistanceAutoFov", "%" },
+    { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.DrawDistanceAutoFov", .unit="%" },
     { "Video.DrawDistanceAutoFov","Draw dist. follows FOV",ROW_TOGGLE,1,kOnOff,     0, 0, 0,   0,0,0,0,0 },
-    { "Video.LodDistance",        "LOD distance",     ROW_SLIDER, 25,   NULL,       0, 0, 0,   0,0,0,0,0, "Video.LodDistanceAutoFov", "%" },
+    { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.LodDistanceAutoFov", .unit="%" },
     { "Video.LodDistanceAutoFov", "LOD dist. follows FOV",ROW_TOGGLE,1,kOnOff,      0, 0, 0,   0,0,0,0,0 },
     /* Aim row edits Input.AimModeSens -- the knob the default GEPD aim path
      * actually uses (Input.MouseAimSpeed only feeds the legacy velocity-stick
@@ -184,6 +192,25 @@ static struct Row rows[] = {
     /* { "Input.AimModeSens",        "Mouse aim speed",  ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
     /* { "Input.MouseTurnSpeed",     "Mouse turn speed", ROW_SLIDER, 5, NULL, 0, 0, 0, 0,0,0,0,0 }, */
     /* { "Input.SensLink",           "Link aim/turn sens",ROW_TOGGLE,1, kOnOff, 0, 0, 0, 0,0,0,0,0 }, */
+    { .key="__HdrBond", .label="BOND FILE", .kind=ROW_HEADER, .found=1 },
+    { .key="__BondFile", .label="Edit file", .kind=ROW_BOND_FILE, .found=1 },
+    { .key="Bond.Look", .label="Look up/down (watch; stacks)", .kind=ROW_TOGGLE,
+      .names=kReverse, .found=1, .uiMax=1, .cfgMax=1 },
+    { .key="Bond.AutoAim", .label="Auto-aim", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
+    { .key="Bond.AimControl", .label="Aim control", .kind=ROW_TOGGLE,
+      .names=kHold, .found=1, .uiMax=1, .cfgMax=1 },
+    { .key="Bond.Sight", .label="Sight on screen", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
+    { .key="Bond.LookAhead", .label="Look ahead", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
+    { .key="Bond.Ammo", .label="Ammo on screen", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1 },
+    { .key="__HdrBondAudio", .label="AUDIO (BOND FILE)", .kind=ROW_HEADER, .found=1 },
+    { .key="Bond.Music", .label="Music volume", .kind=ROW_SLIDER, .step=128,
+      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
+    { .key="Bond.FX", .label="FX volume", .kind=ROW_SLIDER, .step=128,
+      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
     { "__HdrMouse",              "MOUSE / AIM",      ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.MouseSensitivity",   "Mouse sensitivity",ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.MouseInvertY",       "Invert look (mouse)",ROW_TOGGLE, 1,  kOnOff,     0, 0, 0,   0,0,0,0,0 },
@@ -205,8 +232,8 @@ static struct Row rows[] = {
     { "Input.AimRange",           "Aim range",        ROW_ENUM,   1,    kAimRange,  0, 0, 0,   0,0,0,0,0, "Input.AimMode" },
     { "__HdrPad",                "CONTROLLER",       ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     { "Input.PadLookInvertY",     "Invert look (controller)",ROW_TOGGLE,1,kOnOff,   0, 0, 0,   0,0,0,0,0 },
-    { "Input.PadDeadzone",        "Stick deadzone",   ROW_SLIDER, 500,  NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%", 300 },
-    { "Input.PadTriggerPct",      "Trigger threshold",ROW_SLIDER, 1,    NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%" },
+    { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500, .unit="%", .dispDiv=300 },
+    { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1, .unit="%" },
     /* D181/Game.ScreenShakeIntensity: user testing (v0.2.1) found the slider
      * "basically useless" -- viShake() is only called from explosion.c, so it
      * scales explosion shake alone; it never touches the always-on walking
@@ -219,7 +246,7 @@ static struct Row rows[] = {
     { "__HdrGame",               "GAME",             ROW_HEADER, 0,    NULL,       0, 0, 0,   0,0,0,0,0 },
     /* D226: scales the ammo counter, pickup / status messages and dialogue
      * about their screen anchors. 100% = original, nothing emitted. */
-    { "Game.HudScale",            "HUD scale",        ROW_SLIDER, 5,    NULL,       0, 0, 0,   0,0,0,0,0, NULL, "%" },
+    { .key="Game.HudScale", .label="HUD scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
     { "Game.SkipIntro",           "Skip intro",       ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Video.DisplayFPS",         "Show FPS",         ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
     { "Game.NoHitFlash",          "No hit flash",     ROW_TOGGLE, 1,    kOnOff,     0, 0, 0,   0,0,0,0,0 },
@@ -384,7 +411,10 @@ static void overlayUpdateVisible(void)
 {
     s_visN = 0;
     for (int i = 0; i < NUM_ROWS; i++) {
-        if (!(rows[i].hidePtr && *rows[i].hidePtr != 0)) {
+        /* The file chooser belongs to the GE front-end screen, not F10.
+         * F10 in-stage always targets the active Bond file. */
+        if (rows[i].kind != ROW_BOND_FILE &&
+            !(rows[i].hidePtr && *rows[i].hidePtr != 0)) {
             s_visIdx[s_visN++] = i;
         }
     }
@@ -484,7 +514,8 @@ static void overlayInit(void)
 
     for (int i = 0; i < NUM_ROWS; i++) {
         if (rows[i].kind == ROW_RES || rows[i].kind == ROW_ACTION ||
-            rows[i].kind == ROW_HEADER) {
+            rows[i].kind == ROW_HEADER || rows[i].kind == ROW_BOND_FILE ||
+            watchSettingsFieldForKey(rows[i].key) >= 0) {
             rows[i].found = 1;   /* not config-backed */
             continue;
         }
@@ -543,6 +574,8 @@ static void overlayInit(void)
 
 static double rowGet(const struct Row *r)
 {
+    int field = watchSettingsFieldForKey(r->key);
+    if (field >= 0) return (double)watchSettingsRead(field);
     if (!r->found || !r->ptr) {
         return 0.0;
     }
@@ -575,12 +608,19 @@ static struct Row *rowByKey(const char *key)
 
 static int s_linkDepth = 0;   /* re-entrancy guard for the sens link below */
 
-static void rowSet(struct Row *r, double v)
+static void rowSet(struct Row *r, double v);
+
+static void rowSetCommit(struct Row *r, double v, int commit)
 {
     double lo = rowLo(r), hi = rowHi(r);
     if (lo != hi) {
         if (v < lo) v = lo;
         if (v > hi) v = hi;
+    }
+    int field = watchSettingsFieldForKey(r->key);
+    if (field >= 0) {
+        watchSettingsSet(field, (int)lround(v), commit);
+        return;
     }
     switch (r->type) {
     case CONFIG_OPT_INT:   *(int *)r->ptr = (int)lround(v); break;
@@ -621,11 +661,18 @@ static void rowSet(struct Row *r, double v)
     }
 }
 
+static void rowSet(struct Row *r, double v) { rowSetCommit(r, v, 1); }
+
 static void rowAdjust(struct Row *r, int dir)
 {
     if (!r->found || r->kind == ROW_HEADER) {   /* D237: headers have no value */
         return;
     }
+    if (r->kind == ROW_BOND_FILE) {
+        if (current_menu == MENU_PC_OPTIONS) watchSettingsChooseFile(dir);
+        return;
+    }
+    if (watchSettingsFieldForKey(r->key) >= 0 && !watchSettingsAvailable()) return;
     double v = rowGet(r);
     switch (r->kind) {
     case ROW_TOGGLE:
@@ -688,6 +735,10 @@ static void rowAdjust(struct Row *r, int dir)
 void optionsOverlayToggle(void)
 {
     overlayInit();
+    if (s_open) {
+        int pending = SDL_AtomicSet(&s_dragWatchField, 0);
+        if (pending > 0) watchSettingsCommit(pending - 1);
+    }
     s_open = !s_open;
     sysLogPrintf(LOG_INFO, "optionsoverlay: %s", s_open ? "opened" : "closed");
     if (!s_open) {
@@ -747,7 +798,7 @@ static void sliderSetFromX(struct Row *r, double ox)
     double v = lo + f * (hi - lo);
     double step = (r->step > 0.0) ? r->step : 1.0;
     v = lround(v / step) * step;
-    rowSet(r, v);
+    rowSetCommit(r, v, 0); /* slider drag: save only on release */
 }
 
 /* D314 (findings.md): F10 menu items flicker/mis-land on the file-select
@@ -762,14 +813,14 @@ static int s_d314Enabled = -1;   /* -1 = not yet resolved */
 void optionsOverlayHandleInput(void)
 {
     static int prevUp, prevDn, prevLf, prevRt, prevLmb, prevRmb;
-    static int dragRow = -1;
     /* D347: hold-to-repeat state (18/4-frame cadence, same as the options
      * screen's D345(e)/(f) blocks). */
     static int navDir = 0, navTimer = 0, adjDir = 0, adjTimer = 0;
 
     if (!s_open) {
         prevUp = prevDn = prevLf = prevRt = prevLmb = prevRmb = 0;
-        dragRow = -1;
+        s_dragRow = -1;
+        SDL_AtomicSet(&s_dragWatchField, 0);
         navDir = adjDir = 0;
         SDL_AtomicSet(&s_wheelPending, 0);
         return;
@@ -906,7 +957,9 @@ void optionsOverlayHandleInput(void)
                     struct Row *r = &rows[s_visIdx[hoverVis]];
                     if (r->kind == ROW_SLIDER && r->found) {
                         sliderSetFromX(r, ox);
-                        dragRow = s_visIdx[hoverVis];
+                        s_dragRow = s_visIdx[hoverVis];
+                        int field = watchSettingsFieldForKey(r->key);
+                        SDL_AtomicSet(&s_dragWatchField, field + 1);
                     } else {
                         rowAdjust(r, +1);   /* toggle / cycle forward (wraps) */
                     }
@@ -914,11 +967,16 @@ void optionsOverlayHandleInput(void)
             }
         }
         /* drag a slider */
-        if (lmb && dragRow >= 0 && rows[dragRow].kind == ROW_SLIDER) {
-            sliderSetFromX(&rows[dragRow], ox);
+        if (lmb && s_dragRow >= 0 && rows[s_dragRow].kind == ROW_SLIDER) {
+            sliderSetFromX(&rows[s_dragRow], ox);
         }
         if (!lmb) {
-            dragRow = -1;
+            if (s_dragRow >= 0) {
+                int field = watchSettingsFieldForKey(rows[s_dragRow].key);
+                if (field >= 0) watchSettingsCommit(field);
+            }
+            s_dragRow = -1;
+            SDL_AtomicSet(&s_dragWatchField, 0);
         }
         /* right press in the value column: cycle back / decrement */
         if (rmb && !prevRmb && hoverVis >= 0 && !onClose && ox >= bx0 &&
@@ -951,6 +1009,16 @@ static Gfx *fillRect(Gfx *gdl, s32 x0, s32 y0, s32 x1, s32 y1,
 static void valueText(const struct Row *r, char *out, int n)
 {
     double v = rowGet(r);
+    if (r->kind == ROW_BOND_FILE) {
+        int f = watchSettingsFolder();
+        if (f < 0) snprintf(out, n, "Select file");
+        else snprintf(out, n, "File %d", f + 1);
+        return;
+    }
+    if (watchSettingsFieldForKey(r->key) >= 0 && !watchSettingsAvailable()) {
+        snprintf(out, n, "Select file");
+        return;
+    }
     if (r->kind == ROW_RES) {
         if (videoIsFullscreen()) {
             snprintf(out, n, "(fullscreen)");
@@ -1185,7 +1253,8 @@ int optionsRowIsHeader(int i)
 int optionsRowIsShown(int i)
 {
     struct Row *r = rowAt(i);
-    return r && r->found && !(r->hidePtr && *r->hidePtr);
+    return r && r->found && !(r->hidePtr && *r->hidePtr) &&
+           (r->kind != ROW_BOND_FILE || current_menu == MENU_PC_OPTIONS);
 }
 
 const char *optionsRowLabel(int i)
@@ -1226,7 +1295,16 @@ void optionsRowSetFraction(int i, double f)
     if (f > 1.0) f = 1.0;
     double step = (r->step > 0.0) ? r->step : 1.0;
     double v = rowLo(r) + f * (rowHi(r) - rowLo(r));
-    rowSet(r, lround(v / step) * step);
+    rowSetCommit(r, lround(v / step) * step, 0);
+}
+
+void optionsRowCommit(int i)
+{
+    struct Row *r = rowAt(i);
+    if (r) {
+        int field = watchSettingsFieldForKey(r->key);
+        if (field >= 0) watchSettingsCommit(field);
+    }
 }
 
 void optionsRowValueText(int i, char *out, int n)
