@@ -1211,20 +1211,24 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         }
         if (actHeld(ks, IA_CANCEL))     /* D145: Escape is in the default Cancel bind */
             button |= GE_CONT_B;
-        /* v0.4.0 M3: reload (B tap, same as any B press) and crouch
-         * (hold, or a latched toggle). Both are unbound by default (the
-         * N64-original layout), so this is a no-op out of the box; the
-         * game's B-context logic decides reload-vs-crouch as on N64. */
+        /* v0.4.0 M3: reload (B tap, same as any B press). Unbound in the
+         * N64 layout (no-op out of the box). */
         if (actHeld(ks, IA_RELOAD))
             button |= GE_CONT_B;
+        /* D375: crouch = C-DOWN while in aim (insight) mode -- that is
+         * what bondview2.c reads (crouchDown = insightaimmode && D-bit,
+         * lines 5318/5579); the B button is NOT the crouch input. S
+         * (IA_BACK, also C-down) crouches while aiming exactly as on
+         * N64. Hold, or latched toggle; a latch is never carried into
+         * a menu. */
         int crouchNow = actHeld(ks, IA_CROUCH);
         if (crouchMode == 1) {
             if (crouchNow && !s_crouchHeldPrev) s_crouchLatch ^= 1;
-            if (menuMode) s_crouchLatch = 0;  /* never carry B into a menu */
-            if (s_crouchLatch) button |= GE_CONT_B;
+            if (menuMode) s_crouchLatch = 0;  /* never carry C-down into a menu */
+            if (s_crouchLatch) button |= GE_CONT_D;
             s_crouchHeldPrev = crouchNow;
         } else if (crouchNow) {
-            button |= GE_CONT_B;
+            button |= GE_CONT_D;
         }
         if (actHeld(ks, IA_LEAN_L))
             button |= GE_CONT_L;

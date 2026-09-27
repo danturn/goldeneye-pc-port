@@ -251,3 +251,4 @@ D371,FIXED,"GEPD key-layout preset + reload/crouch bindings, v0.4.0 modern optio
 D372,FIXED,"Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).",FIXED (headless-verified; awaiting user live accept):
 D373,FIXED,"In-game crosshair on/off + colour (v0.4.0 modern options wave M2, 2026-09-27).",FIXED (user live-tested; rule-2 sign-off recorded 2026-09-27):
 D374,FIXED,"GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27).",FIXED (headless + user live-tested):
+D375,FIXED,Crouch wired to the wrong pad bit:,"FIXED (in tree, build clean; user re-test owed):"

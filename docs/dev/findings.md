@@ -659,6 +659,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D372 | **Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).** full `## D372` entry at file tail | FIXED (headless-verified; awaiting user live accept): one-row `Video.LowEndMode` in F10 VIDEO; ON writes FpsCap 30 + MSAA x1 (restart), OFF restores compiled defaults (60/2). Registered key persists through orderly exit. |
 | D373 | **In-game crosshair on/off + colour (v0.4.0 modern options wave M2, 2026-09-27).** full `## D373` entry at file tail | FIXED (user live-tested; rule-2 sign-off recorded 2026-09-27): `Video.CrosshairHide` (0 = on, N64) + `Video.CrosshairColor` (7 tints, 0 = white) in F10 GRAPHICS; #ifdef PORT hook in gunfire.c gunDrawSight (the wave's only rule-2 item). |
 | D374 | **GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27).** full `## D374` entry at file tail | FIXED (headless + user live-tested): GEPD playtest found Ctrl fired the gun (stale persisted [Input.Bind] Fire=Left Ctrl masked the preset) and the FPS default made no sense for a mouse FPS. D374: GEPD is now Input.Layout=0 (the default; N64 layout = 1); only EXPLICIT per-key overrides beat the preset. One-off ini flip: pre-D374 `Layout = 1` (ex-GEPD) is now 0. |
+| D375 | **Crouch wired to the wrong pad bit: B is not the crouch input (v0.4.0 M3 playtest, 2026-09-27).** full `## D375` entry at file tail | FIXED (in tree, build clean; user re-test owed): `IA_CROUCH`/latch now emit C-down (`GE_CONT_D`); the engine's crouch is `insightaimmode && D_CBUTTONS` (bondview2.c 5318/5579) -- crouch only works while aiming, same as N64 Z + C-down. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -14470,3 +14471,26 @@ clean exit persists `Layout = 0`. `Layout = 1`: "layout N64". Ctrl no
 longers fires (Fire unset under the preset); crouch/reload/E-use per
 preset. **Owed:** user re-playtest (Ctrl crouch, E use, Q cycle) before
 the wave closes.
+
+## D375 -- Crouch wired to the wrong pad bit (v0.4.0 M3 playtest, 2026-09-27)
+
+**User report:** "crouch still does not work" after D374. The ini was checked
+first: clean (`Crouch =` empty, preset applies) -- **not the cause**.
+
+**Diagnosis:** the engine never reads B for crouch. bondview2.c:5318/5579:
+`moveData.crouchDown = insightaimmode && (buttons & (D_JPAD | D_CBUTTONS))`
+(keyboard/stick variant: `insightaimmode && stickY < -30`). N64 crouch was
+**Z (aim) + C-down**. M3's `IA_CROUCH -> GE_CONT_B` (and the toggle latch)
+was inert -- the bit the game reads was never set.
+
+**Fix (port-layer only, `port/src/input.c`):** IA_CROUCH hold + the
+`CrouchMode=1` latch now emit `GE_CONT_D` (0x0004, C-down). Side effect,
+N64-faithful: S (IA_BACK, already C-down for "back") also crouches while
+aiming, exactly as C-down did on N64. Crouch therefore only works **while
+in aim (insight) mode** -- holding RMB/Left Shift + Left Ctrl. On release
+(or leaving aim) the player stands (bondview2's `crouchUp` branch).
+
+**Verification:** build clean; clean boot + exit. **Owed:** user live
+re-test (aim + Ctrl, both hold and F10 Toggle mode). Cross-tag: the D373
+entry's "emits B" wording was superseded by D375 (reload still emits B;
+crouch no longer does).
