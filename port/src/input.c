@@ -122,7 +122,6 @@ extern s32 g_ClockTimer;
  * MENU_INVALID (-1) means the front end never ran (bare -level_XX boot):
  * treat that as in-game so direct-launch mouse-look is unaffected. */
 extern int current_menu;
-#define GE_MENU_FILE_SELECT 5
 #define GE_MENU_RUN_STAGE  11
 #define GE_MENU_INVALID    (-1)
 /* D169: the front-end cursor lives in the game's virtual-screen field, which
@@ -947,7 +946,6 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                                                            SDL_CONTROLLER_BUTTON_BACK) : 0;
         if (selNow && !padSelectPrev) optionsOverlayToggle();
         padSelectPrev = selNow;
-        frontOptionsFeedPad(0);   /* D343: the options panel gets nothing meanwhile */
         optionsOverlayHandleInput();
         if (stick_x) *stick_x = 0;
         if (stick_y) *stick_y = 0;
@@ -1468,7 +1466,8 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
          * Deck). The game never reads BACK, so nothing is withheld. */
         {
             int selNow = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_BACK);
-            if (selNow && !padSelectPrev) optionsOverlayToggle();
+            /* D343: not on the PC options screen (one options UI at a time). */
+            if (selNow && !padSelectPrev && !frontOptionsBlocksOverlay()) optionsOverlayToggle();
             padSelectPrev = selNow;
         }
     }
@@ -1479,14 +1478,6 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         button = scriptApply(button);
         sx = scriptCurSX;
         sy = scriptCurSY;
-    }
-
-    /* D343: the file-select options panel is open. The stick still reaches
-     * the game (it moves front.c's crosshair, which is the panel's pointer);
-     * the buttons go to the panel instead, so front.c sees no presses. */
-    if (idx == 0 && current_menu == GE_MENU_FILE_SELECT && frontOptionsIsOpen()) {
-        frontOptionsFeedPad(button);
-        button = 0;
     }
 
     if (sx > STICK_MAX)  sx = STICK_MAX;

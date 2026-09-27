@@ -2,14 +2,15 @@
 #define PORT_FRONTOPTIONS_H
 
 /*
- * D343: PC options on the file-select screen (port/src/frontoptions.c).
+ * D343: PC options as a GE front-end screen, MENU_PC_OPTIONS
+ * (port/src/frontoptions.c).
  *
  * Hooks:
+ *   front.c  the five MENU_* dispatch sites : frontOptionsMenu{Init,Update,
+ *            Interface,Draw} and the debug name (all #ifdef PORT)
  *   front.c  constructor_menu05_fileselect : optionsFileSelectLabel() draws the
- *            "Options" label, or the options panel while it is open
- *   input.c  inputComputePad(0)            : while open on file select, the
- *            buttons go to frontOptionsFeedPad() and the game gets 0 (the
- *            stick still moves the game's crosshair)
+ *            file-select entry label and enters MENU_PC_OPTIONS on a click
+ *   video.c / input.c : F10 / Select don't open the overlay on this screen
  */
 
 #include <PR/ultratypes.h>
@@ -19,9 +20,13 @@
 extern "C" {
 #endif
 
-Gfx *optionsFileSelectLabel(Gfx *gdl);   /* game thread */
-int  frontOptionsIsOpen(void);           /* any thread */
-void frontOptionsFeedPad(unsigned held); /* input thread */
+void frontOptionsMenuInit(void);
+void frontOptionsMenuUpdate(void);
+void frontOptionsMenuInterface(void);
+Gfx *frontOptionsMenuDraw(Gfx *DL);
+
+Gfx *optionsFileSelectLabel(Gfx *gdl);   /* file-select hook */
+int  frontOptionsBlocksOverlay(void);    /* 1 while MENU_PC_OPTIONS is up */
 
 #ifdef __cplusplus
 }

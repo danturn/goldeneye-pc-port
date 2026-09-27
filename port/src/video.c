@@ -30,6 +30,7 @@
 #include "video.h"
 #include "input.h"
 #include "optionsoverlay.h"
+#include "frontoptions.h"
 
 #include "../fast3d/gfx_api.h"
 #include "../fast3d/gfx_sdl.h"
@@ -735,7 +736,11 @@ void videoPumpEvents(void)
             } else if (ev.key.keysym.sym == SDLK_F12 && !ev.key.repeat) {
                 screenshotReq = 1;
             } else if (ev.key.keysym.sym == SDLK_F10 && !ev.key.repeat) {
-                optionsOverlayToggle();   /* F10: port-layer options overlay */
+                /* F10: port-layer options overlay -- not on the PC options
+                 * screen (D343: one options UI at a time). */
+                if (optionsOverlayIsOpen() || !frontOptionsBlocksOverlay()) {
+                    optionsOverlayToggle();
+                }
             } else if (ev.key.keysym.sym == SDLK_ESCAPE && !ev.key.repeat) {
                 /* Overlay open: ESC closes it (and is swallowed). Otherwise
                  * WI-1: in click-to-lock mode ESC frees the captured cursor
