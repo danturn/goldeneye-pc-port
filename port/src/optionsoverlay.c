@@ -8,9 +8,9 @@
  *
  * The panel adapts to whatever 2D space it is drawn in (320x240 in-game vs
  * 440x330 on front-end screens -- viSetXY differs) and scrolls when the row
- * list outgrows the viewport (wheel / arrows at the edges). Cyclic rows
- * (MSAA, texture filter, resolution, toggles) wrap in both directions; the
- * manual % rows (draw/LOD distance) are hidden while their "auto" toggle is on.
+ * list outgrows the viewport (wheel / arrows at the edges). F10 opens at a
+ * category list; each category has its own short page and Back row. Cyclic
+ * rows (MSAA, texture filter, resolution, toggles) wrap in both directions.
  *
  * Text + fill helpers are the game's own (textRender / microcode_constructor /
  * gDPFillRectangle) reached by extern -- same pattern input.c uses to read
@@ -66,6 +66,8 @@ struct font;
 struct fontchar;
 extern struct font     *ptrFontBankGothic;
 extern struct fontchar *ptrFontBankGothicChars;
+extern struct font     *ptrFontZurichBold;
+extern struct fontchar *ptrFontZurichBoldChars;
 extern Gfx  *microcode_constructor(Gfx *gdl);
 extern Gfx  *textRender(Gfx *gdl, s32 *x, s32 *y, char *text, struct fontchar *chars,
                         struct font *font, u32 colour, s32 width, s32 height,
@@ -134,8 +136,8 @@ struct Row {
     void              *ptr;
     double             cfgMin, cfgMax;
 
-    /* Hidden while the option named here is nonzero (a manual % row
-     * disappears while its "auto" toggle is on). Resolved to hidePtr at init. */
+    /* Optional conditional row visibility (e.g. Aim range while centred).
+     * Resolved to hidePtr at init. */
     const char        *hiddenIfOn;
     int               *hidePtr;
 
@@ -167,7 +169,7 @@ static struct Row rows[] = {
      * watchSettingsActiveFolder(). All rows use designated initializers
      * (D351 class). */
     { .key="__HdrInput", .label="INPUT", .kind=ROW_HEADER },
-    { .key="Input.MouseSensitivity", .label="Mouse sensitivity", .kind=ROW_SLIDER, .step=5 },
+    { .key="Input.MouseSensitivity", .label="Mouse sensitivity", .kind=ROW_SLIDER, .step=5 }, /* calibrated UI midpoint = raw 100 */
     { .key="Input.MouseInvertY", .label="Invert look (mouse)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* Input.PdMouseAim (findings D332): the Perfect Dark port's mouse-aim
      * model. The port only accumulates the mouse; the game's own crosshair
@@ -186,8 +188,8 @@ static struct Row rows[] = {
      * style is CENTRED (PC), where the crosshair doesn't travel. */
     { .key="Input.AimRange", .label="Aim range", .kind=ROW_ENUM, .step=1, .names=kAimRange, .hiddenIfOn="Input.AimMode" },
     { .key="Input.PadLookInvertY", .label="Invert look (controller)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500, .unit="%", .dispDiv=300 },
-    { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1, .unit="%" },
+    { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500 },
+    { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1 },
     { .key="__ResetInput", .label="Reset to defaults", .kind=ROW_ACTION },
 
     { .key="__HdrGameplay", .label="GAMEPLAY", .kind=ROW_HEADER },
@@ -247,10 +249,10 @@ static struct Row rows[] = {
     { .key="Video.NativeWidescreen", .label="Native widescreen", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.WidescreenAuto", .label="Widescreen auto FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.SafeAreaCrop", .label="Crop overscan", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.DrawDistanceAutoFov", .unit="%" },
-    { .key="Video.DrawDistanceAutoFov", .label="Draw dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .hiddenIfOn="Video.LodDistanceAutoFov", .unit="%" },
-    { .key="Video.LodDistanceAutoFov", .label="LOD dist. follows FOV", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    /* 100..400% of authored distance; 250% is the midpoint (50/100).
+     * Legacy AutoFov ini keys remain supported but no longer hide sliders. */
+    { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .uiMin=100, .uiMax=400 },
+    { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .uiMin=100, .uiMax=400 },
     /* D304: the per-mode aim/turn-sensitivity sliders and the "Link" toggle
      * that papered over their decoupling risk were pulled from the menu
      * (user feedback after the D304 widening); the ONE master
@@ -275,9 +277,9 @@ static struct Row rows[] = {
      * A port-level master volume (M3) will join here as Turok's
      * Master/Sound/Music trio. */
     { .key="Bond.Music", .label="Music volume", .kind=ROW_SLIDER, .step=128,
-      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
+      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328, .saveScoped=1 },
     { .key="Bond.FX", .label="FX volume", .kind=ROW_SLIDER, .step=128,
-      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328 },
+      .uiMax=32767, .cfgMax=32767, .found=1, .unit="%", .dispDiv=328, .saveScoped=1 },
     { .key="__ResetAudio", .label="Reset to defaults", .kind=ROW_ACTION },
 
     /* D353's DISPLAY section renamed VIDEO (the presentation knobs), with
@@ -300,20 +302,19 @@ static struct Row rows[] = {
 static int  s_inited = 0;
 static volatile int s_open = 0;
 static int  s_sel = 0;        /* selection, index into s_visIdx (visible list) */
+static int  s_section = -1;   /* -1 = category list; otherwise rows[] header index */
+static SDL_atomic_t s_backPending; /* ESC is received on the host thread */
 
-/* Visible-row list: rows whose hiddenIfOn option is nonzero are omitted
- * (manual % rows hide while their auto toggle is on). Rebuilt every frame in
- * overlayUpdateVisible(); s_scroll is the first visible-list entry drawn. */
+/* Visible-row list: category headers on the root page, or the active
+ * section's Back header and content (including conditional rows). Built
+ * on the scheduler thread; s_scroll is the first displayed entry. */
 static int  s_visIdx[NUM_ROWS];
 static int  s_visN = 0;
 static int  s_scroll = 0;
 static SDL_atomic_t s_wheelPending;   /* D314: host-thread wheel notches */
 
-/* D213: optional on-screen FPS readout (PD parity: Video.DisplayFPS). Drawn
- * top-right whenever enabled, independent of the F10 panel. Config-only knob
- * (kept off the 13-row panel, which is at its layout limit) -- matches PD,
- * whose DisplayFPS is also file-only. Default 0 => emit path unchanged =>
- * golden dumps byte-identical. */
+/* D213: optional on-screen FPS readout (PD parity: Video.DisplayFPS).
+ * Drawn top-right whenever enabled, independent of the F10 panel. */
 static int      s_showFps = 0;
 static char     s_fpsText[16] = "";
 
@@ -347,106 +348,94 @@ static void fpsTick(void)
  * emit path and the mouse hit-testing in optionsOverlayHandleInput().
  * BankGothic caps are ~9 units tall here, so rows need ~16 units of pitch and
  * values are right-aligned to the panel edge to survive the wide font. */
-#define OV_X0        20
-#define OV_LABEL_X   28
-#define OV_TOP       12
-#define OV_LINE      15                       /* row pitch (13 rows must fit ~240) */
-#define OV_HDR       2                        /* header rows above row 0 (title+hint) */
-/* i is a VISIBLE-POSITION (already scroll-adjusted by the caller). */
-#define OV_ROW_Y(i)  (OV_TOP + ((i) + OV_HDR) * OV_LINE)
+#define OV_TOP   8
+#define OV_LINE  16
+/* Dark 2D watch-style overlay; the in-stage watch's 3D model is not loaded
+ * here. All rendering AND hit-testing take coordinates from this layout;
+ * 320x240 stages and 440x330 front screens share the same geometry. */
+struct OvLayout {
+    s32 left, right, top, sectionY, contentY, bottom, footerY;
+    s32 labelX, valueR, barX0, barX1, maxRows;
+};
 
-/* How many rows fit between the header and the bottom edge of whatever 2D
- * space we are in right now (320x240 in-game, 440x330 on front-end screens --
- * viSetXY differs, see src/game/front.c). More rows than this => scroll. */
-static int maxVisibleRows(void)
+static struct OvLayout overlayLayout(void)
 {
-    int n = (viGetY() - 6 - OV_TOP - OV_HDR * OV_LINE) / OV_LINE;
-    if (n < 4) {
-        n = 4;
-    }
-    return n;
+    struct OvLayout o;
+    s32 w = viGetX(), h = viGetY();
+    s32 cardW = w - 16;
+    if (cardW > 376) cardW = 376;
+    o.left = (w - cardW) / 2;
+    o.right = o.left + cardW;
+    o.top = OV_TOP;
+    o.sectionY = o.top + 31;
+    o.contentY = o.top + 49;
+    o.labelX = o.left + 18;
+    o.valueR = o.right - 12;
+    o.barX1 = o.right - 65;
+    o.barX0 = o.barX1 - 74;
+    o.maxRows = (h - 6 - o.contentY - 24) / OV_LINE;
+    if (o.maxRows < 4) o.maxRows = 4;
+    /* Root has five categories. A section's title/Back sits in its own
+     * pinned band; only the content rows consume this scrollable area. */
+    int contentN = s_visN - (s_section >= 0 ? 1 : 0);
+    int drawn = contentN < o.maxRows ? contentN : o.maxRows;
+    o.bottom = o.contentY + drawn * OV_LINE + 24;
+    if (o.bottom > h - 6) o.bottom = h - 6;
+    o.footerY = o.bottom - 15;
+    return o;
 }
-#define OV_RIGHT     (viGetX() - OV_X0)       /* right edge for right-aligned text */
-#define OV_NUM_W     36                       /* reserved width for a slider's number */
-#define OV_BAR_X     150
 
-/* Slider fill bar span in overlay space (shared by emit + hit-testing). */
+static int maxVisibleRows(void) { return overlayLayout().maxRows; }
+
+/* Shared with slider dragging and its render path. */
 static void sliderBarSpan(s32 *x0, s32 *x1)
 {
-    *x0 = OV_BAR_X;
-    *x1 = OV_RIGHT - OV_NUM_W;
-    if (*x1 < *x0 + 16) {
-        *x1 = *x0 + 16;
-    }
+    struct OvLayout o = overlayLayout();
+    *x0 = o.barX0;
+    *x1 = o.barX1;
 }
 
-/* Visible position (0..s_visN-1) the given overlay-space y falls in, or -1.
- *
- * D304 fix: this used to loop over ALL s_visN entries (0..s_visN-1)
- * regardless of which ones are actually scrolled into view and drawn this
- * frame -- OV_ROW_Y(p - s_scroll) is a plain linear function of p, so a row
- * sitting just past the last visibly-drawn one (pLast, see the emit path)
- * still produces a geometrically valid, in-range Y band immediately below
- * the panel's real bottom edge. A click near that boundary (real-pixel-to-
- * virtual-2D-space rounding in the ox/oy scale-up, or simply a slightly low
- * click on the last visible row) could therefore resolve to the NEXT,
- * invisible, scrolled-off-the-bottom row instead of the one actually drawn
- * there. Concretely: with "All unlocked" sitting in the last visible slot,
- * this let a click on it silently hit "Quit to desktop" (the very next row)
- * instead -- reported as "I clicked unlock all and I think it crashed"
- * (user, 2026-09-18): the game didn't crash, __QuitToDesktop's ROW_ACTION
- * fired and closed it via the game's normal exit path. Fix: bound the scan
- * to the same [s_scroll, pLast] range the draw loop actually renders.
- *
- * D316 fix: the band used to be [Y-3, Y+12) -- 3 units above OV_ROW_Y but
- * 12 below it, a systematic downward bias baked in independent of the
- * mouse-mapping bug above. Centered here on OV_ROW_Y so a borderline click
- * no longer favors the row below. */
+/* Visible position or -1. Match the rendered [s_scroll, pLast] window
+ * exactly (D304: never hit the invisible row below Quit) and centre the
+ * hit band on the drawn row (D316). The section title has its own pinned
+ * hit band and is always the selectable Back row, even while scrolling. */
 static int overlayRowAtY(double oy)
 {
-    int maxV = maxVisibleRows();
-    int pLast = (s_visN - s_scroll < maxV) ? s_visN - 1 : s_scroll + maxV - 1;
+    struct OvLayout o = overlayLayout();
+    if (s_section >= 0 && oy >= o.sectionY - OV_LINE / 2 &&
+        oy < o.sectionY + OV_LINE / 2) return 0; /* pinned Back/title */
+    int pLast = s_scroll + o.maxRows - 1;
+    if (pLast >= s_visN) pLast = s_visN - 1;
     for (int p = s_scroll; p <= pLast; p++) {
-        double top = OV_ROW_Y(p - s_scroll) - OV_LINE / 2;
-        if (oy >= top && oy < top + OV_LINE) {
-            return p;
-        }
+        double top = o.contentY + (p - s_scroll) * OV_LINE - OV_LINE / 2;
+        if (oy >= top && oy < top + OV_LINE) return p;
     }
     return -1;
 }
 
 /* Rebuild the visible-row list and keep the selection in range. */
-/* D237: move a visible-list position by dir (+1/-1) to the next row that
- * is not a category header; stays put at the ends. */
+/* Move through the current category list or section (including its Back row). */
 static int overlayStepSel(int pos, int dir)
 {
-    int p = pos;
-    for (;;) {
-        int q = p + dir;
-        if (q < 0 || q >= s_visN) {
-            /* nothing selectable that way: if we started on a header, try
-             * the other direction once so we never rest on one */
-            if (rows[s_visIdx[p]].kind == ROW_HEADER && dir > 0) {
-                return overlayStepSel(pos, -1);
-            }
-            return (rows[s_visIdx[p]].kind == ROW_HEADER) ? pos : p;
-        }
-        p = q;
-        if (rows[s_visIdx[p]].kind != ROW_HEADER) {
-            return p;
-        }
-    }
+    int q = pos + dir;
+    return (q < 0 || q >= s_visN) ? pos : q;
 }
 
 static void overlayUpdateVisible(void)
 {
     s_visN = 0;
     for (int i = 0; i < NUM_ROWS; i++) {
-        /* The file chooser belongs to the GE front-end screen, not F10.
-         * F10 in-stage always targets the active Bond file. */
-        if (rows[i].kind != ROW_BOND_FILE &&
-            !(rows[i].hidePtr && *rows[i].hidePtr != 0)) {
-            s_visIdx[s_visN++] = i;
+        /* Category list: only headers. Section: its header serves as Back,
+         * followed by its settings. The file chooser belongs to the front. */
+        if (s_section < 0) {
+            if (rows[i].kind == ROW_HEADER) s_visIdx[s_visN++] = i;
+        } else if (i == s_section) {
+            s_visIdx[s_visN++] = i; /* Back */
+        } else if (i > s_section) {
+            if (rows[i].kind == ROW_HEADER) break;
+            if (rows[i].kind != ROW_BOND_FILE &&
+                !(rows[i].hidePtr && *rows[i].hidePtr))
+                s_visIdx[s_visN++] = i;
         }
     }
     if (s_visN == 0) {   /* cannot happen (toggles have no hide source) */
@@ -457,11 +446,6 @@ static void overlayUpdateVisible(void)
     }
     if (s_sel >= s_visN) {
         s_sel = s_visN - 1;
-    }
-    /* D237: never rest on a category header -- step to the nearest row
-     * below it (or above, at the end of the list). */
-    if (rows[s_visIdx[s_sel]].kind == ROW_HEADER) {
-        s_sel = overlayStepSel(s_sel, +1);
     }
 }
 
@@ -482,32 +466,27 @@ static void overlayUpdateVisible(void)
 static void overlayUpdateScroll(void)
 {
     int maxV = maxVisibleRows();
-    if (s_visN <= maxV) {
-        s_scroll = 0;
+    int first = s_section >= 0 ? 1 : 0; /* section header stays pinned */
+    int count = s_visN - first;
+    if (count <= maxV) {
+        s_scroll = first;
         return;
     }
-    if (s_sel < s_scroll) {
+    if (s_scroll < first) s_scroll = first;
+    if (s_sel >= first && s_sel < s_scroll) {
         s_scroll = s_sel;
     } else if (s_sel > s_scroll + maxV - 1) {
         s_scroll = s_sel - (maxV - 1);
     }
-    if (s_scroll < 0) {
-        s_scroll = 0;
-    }
-    if (s_scroll > s_visN - maxV) {
-        s_scroll = s_visN - maxV;
-    }
+    if (s_scroll > s_visN - maxV) s_scroll = s_visN - maxV;
 }
 
 /* The close box brackets the title row at the panel's right edge. */
-#define OV_CB_X0   (OV_RIGHT - 14)
-#define OV_CB_X1   (OV_RIGHT + 7)
-#define OV_CB_Y0   (OV_TOP - 3)
-#define OV_CB_Y1   (OV_TOP + 12)
 static int overlayInCloseBox(double ox, double oy)
 {
-    return ox >= OV_CB_X0 && ox <= OV_CB_X1 &&
-           oy >= OV_CB_Y0 && oy <= OV_CB_Y1;
+    struct OvLayout o = overlayLayout();
+    return ox >= o.right - 40 && ox <= o.right - 5 &&
+           oy >= o.top + 3 && oy <= o.top + 22;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -611,7 +590,22 @@ static void overlayInit(void)
     const char *e = getenv("GE_OPTIONSOVERLAY");
     if (e && atoi(e) != 0) {
         s_open = 1;
-        sysLogPrintf(LOG_INFO, "optionsoverlay: auto-opened (GE_OPTIONSOVERLAY)");
+        /* Diagnostic screenshots: 1 = category root, 2..6 = the five
+         * sections. This is only a boot probe; normal F10 always opens
+         * at the category root. */
+        int page = atoi(e) - 2;
+        if (page >= 0 && page < 5) {
+            int found = 0;
+            for (int i = 0; i < NUM_ROWS; i++) {
+                if (rows[i].kind == ROW_HEADER && found++ == page) {
+                    s_section = i;
+                    s_sel = 1;
+                    break;
+                }
+            }
+            overlayUpdateVisible();
+        }
+        sysLogPrintf(LOG_INFO, "optionsoverlay: auto-opened (GE_OPTIONSOVERLAY=%s)", e);
     }
 }
 
@@ -639,6 +633,40 @@ static double rowHi(const struct Row *r)
     return (r->uiMin != r->uiMax) ? r->uiMax : r->cfgMax;
 }
 
+/* Player-facing calibrated input controls: the original raw defaults are
+ * deliberate (100% mouse speed, 7000/30000 stick deadzone, 23% trigger
+ * travel). Show each as 50/100, without changing input.c, ini ranges,
+ * reset values, or either endpoint. Both UIs and F10 hit/drag use the same
+ * piecewise mapping, so the shown number always matches the filled bar. */
+static double calibratedDefault(const struct Row *r)
+{
+    if (!strcmp(r->key, "Input.MouseSensitivity")) return 100.0;
+    if (!strcmp(r->key, "Input.PadDeadzone")) return 7000.0;
+    if (!strcmp(r->key, "Input.PadTriggerPct")) return 23.0;
+    return -1.0;
+}
+static double rowFractionAt(const struct Row *r, double v)
+{
+    double lo = rowLo(r), hi = rowHi(r), def = calibratedDefault(r);
+    if (hi <= lo) return 0.0;
+    if (v < lo) v = lo;
+    if (v > hi) v = hi;
+    if (def > lo && def < hi)
+        return v <= def ? 0.5 * (v - lo) / (def - lo)
+                        : 0.5 + 0.5 * (v - def) / (hi - def);
+    return (v - lo) / (hi - lo);
+}
+static double rowValueAtFraction(const struct Row *r, double f)
+{
+    double lo = rowLo(r), hi = rowHi(r), def = calibratedDefault(r);
+    if (f < 0.0) f = 0.0;
+    if (f > 1.0) f = 1.0;
+    if (def > lo && def < hi)
+        return f <= 0.5 ? lo + (def - lo) * f * 2.0
+                        : def + (hi - def) * (f - 0.5) * 2.0;
+    return lo + (hi - lo) * f;
+}
+
 static struct Row *rowByKey(const char *key)
 {
     for (int i = 0; i < NUM_ROWS; i++) {
@@ -662,13 +690,26 @@ static void rowSetCommit(struct Row *r, double v, int commit)
     }
     int field = watchSettingsFieldForKey(r->key);
     if (field >= 0) {
-        watchSettingsSet(field, (int)lround(v), commit);
+        int want = (int)lround(v);
+        /* Held drags poll far more often than the mouse moves to a new
+         * slider detent. Don't enqueue another audio update for the same
+         * value; release still commits via watchSettingsCommit(). */
+        if (watchSettingsRead(field) != want)
+            watchSettingsSet(field, want, commit);
         return;
     }
     switch (r->type) {
-    case CONFIG_OPT_INT:   *(int *)r->ptr = (int)lround(v); break;
-    case CONFIG_OPT_UINT:  *(unsigned int *)r->ptr = (unsigned int)(v < 0 ? 0 : lround(v)); break;
-    case CONFIG_OPT_FLOAT: *(float *)r->ptr = (float)v; break;
+    case CONFIG_OPT_INT:
+        if (*(int *)r->ptr == (int)lround(v)) return;
+        *(int *)r->ptr = (int)lround(v); break;
+    case CONFIG_OPT_UINT: {
+        unsigned int want = (unsigned int)(v < 0 ? 0 : lround(v));
+        if (*(unsigned int *)r->ptr == want) return;
+        *(unsigned int *)r->ptr = want; break;
+    }
+    case CONFIG_OPT_FLOAT:
+        if (*(float *)r->ptr == (float)v) return;
+        *(float *)r->ptr = (float)v; break;
     default: return;
     }
 
@@ -676,7 +717,12 @@ static void rowSetCommit(struct Row *r, double v, int commit)
      * is read straight off the pointer by its owner every frame/poll. */
     if (strcmp(r->key, "Video.Fullscreen") == 0) {
         videoRequestFullscreen((int)lround(v));
-    } else if (strncmp(r->key, "Video.", 6) == 0 && !r->restart) {
+    } else if (strncmp(r->key, "Video.", 6) == 0 && !r->restart &&
+               strcmp(r->key, "Video.DrawDistance") != 0 &&
+               strcmp(r->key, "Video.LodDistance") != 0) {
+        /* These two distance knobs are read directly by the render path.
+         * Reapplying VSync/texture/GL image state every drag detent only
+         * stalls frames; they do not need videoStartFrame's config pass. */
         videoRequestLiveConfig();
     }
 
@@ -826,17 +872,15 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Input.PadDeadzone",       7000 },/* = STICK_DEADZONE (7000) */
     { "Input.PadTriggerPct",     23 },  /* = 23 */
     /* GRAPHICS (port/src/video.c initializers) */
-    { "Video.MSAA",                 4 },   /* = 4 */
+    { "Video.MSAA",                 2 },   /* = 2 */
     { "Video.TextureFilter",        1 },   /* = 1 (bilinear) */
     { "Video.Anisotropy",           4 },   /* = 4 */
     { "Video.FovScale",            100 },  /* = 100 */
     { "Video.NativeWidescreen",      1 },  /* = 1 */
     { "Video.WidescreenAuto",        1 },  /* = 1 */
     { "Video.SafeAreaCrop",          1 },  /* = 1 */
-    { "Video.DrawDistance",        150 },  /* = 150 (D218) */
-    { "Video.DrawDistanceAutoFov",   1 },  /* = 1 (D218) */
-    { "Video.LodDistance",         150 },  /* = 150 (D249) */
-    { "Video.LodDistanceAutoFov",    0 },  /* = 0 (standalone perf lever) */
+    { "Video.DrawDistance",        250 },  /* midpoint: 50/100 */
+    { "Video.LodDistance",         250 },  /* midpoint: 50/100 */
     /* GAMEPLAY ini rows (port/src/video.c initializers) */
     { "Game.SkipIntro",   0 },   /* = 0 */
     { "Game.NoHitFlash",  0 },   /* = 0 */
@@ -857,8 +901,8 @@ static double kResetDefault(const char *key)
 }
 
 /* The section's DECLARED row range (its header through the next header) --
- * NOT the visible list, so conditionally hidden rows (the manual draw/LOD %
- * sliders while their auto-FOV toggles are on) are reset too; their live
+ * NOT the visible list, so conditionally hidden rows (e.g. Aim range while
+ * centred) are reset too; their live
  * values are written through the same ptr/rowSet path, visibility
  * irrelevant. Per row, its OWN scope is reset: watch rows -> the selected
  * file's BLANKSAVEDATA values through the normal commit path (front: direct
@@ -950,11 +994,22 @@ void optionsOverlayToggle(void)
         if (pending > 0) watchSettingsCommit(pending - 1);
     }
     s_open = !s_open;
+    if (s_open) {
+        s_section = -1;
+        s_sel = s_scroll = 0;
+    }
+    SDL_AtomicSet(&s_backPending, 0);
     sysLogPrintf(LOG_INFO, "optionsoverlay: %s", s_open ? "opened" : "closed");
     if (!s_open) {
         optionsResetClear();   /* D356: closing the overlay disarms a pending reset */
         configSave();
     }
+}
+
+void optionsOverlayBack(void)
+{
+    /* Called from SDL's host event pump; navigation is scheduler-owned. */
+    if (s_open) SDL_AtomicSet(&s_backPending, 1);
 }
 
 int optionsOverlayIsOpen(void)
@@ -1006,7 +1061,7 @@ static void sliderSetFromX(struct Row *r, double ox)
     double f = (ox - bx0) / (double)(bx1 - bx0);
     if (f < 0) f = 0;
     if (f > 1) f = 1;
-    double v = lo + f * (hi - lo);
+    double v = rowValueAtFraction(r, f);
     double step = (r->step > 0.0) ? r->step : 1.0;
     v = lround(v / step) * step;
     rowSetCommit(r, v, 0); /* slider drag: save only on release */
@@ -1020,6 +1075,10 @@ static void sliderSetFromX(struct Row *r, double ox)
  * a file-select repro. Env-gated, cached once (not re-queried per frame --
  * see D302: a hot-path getenv() regression cost a real bug before). */
 static int s_d314Enabled = -1;   /* -1 = not yet resolved */
+
+/* Shared by paint and mouse input: the area right of a setting's name
+ * changes it; its name only selects it. Reset actions use the whole row. */
+static int overlayControlSpan(int i, s32 *x0, s32 *x1);
 
 void optionsOverlayHandleInput(void)
 {
@@ -1049,11 +1108,42 @@ void optionsOverlayHandleInput(void)
      * visible (a stage poll would otherwise leave it locked/hidden). */
     inputSuspendForOverlay();
 
+    /* D361: regression probe on the ACTUAL joyPoll/F10 thread (not the
+     * game-thread GE_WSPROBE_FRONT hook). A front-end write used to block
+     * forever in joyDisablePoll waiting for this very poll to acknowledge it.
+     * Opt-in only, once after the file-select save becomes available. */
+    {
+        static int probe = -1, readyTicks = 0;
+        if (probe < 0) probe = getenv("GE_WSPROBE_F10FRONT") ? 1 : 0;
+        if (probe == 1 && current_menu == MENU_FILE_SELECT && watchSettingsAvailable() &&
+            ++readyTicks >= 120) {
+            probe = 2;
+            sysLogPrintf(LOG_INFO, "wsf10front: queue Music+FX from controller poll");
+            watchSettingsSet(WATCH_SETTING_MUSIC, 4096, 1);
+            watchSettingsSet(WATCH_SETTING_FX, 4096, 1);
+        }
+    }
+
     /* D356: a pending reset arm expires after 3 s or when the selection
      * leaves the armed row; the overlay's selection is s_visIdx[s_sel]. */
-    optionsResetMaintain(s_visIdx[s_sel]);
+    overlayUpdateVisible();
+    if (SDL_AtomicSet(&s_backPending, 0)) {
+        if (s_section >= 0) {
+            int hdr = s_section;
+            s_section = -1;
+            overlayUpdateVisible();
+            s_sel = 0;
+            while (s_sel + 1 < s_visN && s_visIdx[s_sel] != hdr) s_sel++;
+            s_scroll = 0;
+            optionsResetClear();
+        } else {
+            optionsOverlayToggle();
+            return;
+        }
+    }
+    optionsResetMaintain(s_section < 0 ? -1 : s_visIdx[s_sel]);
 
-    overlayUpdateVisible();   /* % rows may have appeared/vanished (auto toggles) */
+    /* % rows may have appeared/vanished after a setting change. */
     overlayApplyWheel();      /* D314: wheel notches queued by the host thread */
     overlayUpdateScroll();
 
@@ -1123,14 +1213,31 @@ void optionsOverlayHandleInput(void)
         if (dir != 0) {
             adjDir = dir;
             adjTimer = 18;
-            rowAdjust(&rows[s_visIdx[s_sel]], dir);
+            if (s_section < 0) {
+                s_section = s_visIdx[s_sel];
+                s_sel = 1;
+                s_scroll = 0;
+                overlayUpdateVisible();
+                adjDir = 0;
+            } else if (s_sel == 0) {
+                int hdr = s_section;
+                s_section = -1;
+                overlayUpdateVisible();
+                s_sel = 0;
+                while (s_sel + 1 < s_visN && s_visIdx[s_sel] != hdr) s_sel++;
+                s_scroll = 0;
+                optionsResetClear();
+                adjDir = 0;
+            } else {
+                rowAdjust(&rows[s_visIdx[s_sel]], dir);
+            }
         } else if ((rt || lf) && adjDir != 0) {
             if (--adjTimer <= 0) {
                 adjTimer = 4;
                 /* D356: reset actions are edge-triggered -- the held-repeat
                  * re-fires adjust rows but must never re-fire a reset (a held
                  * key could arm AND confirm, or commit repeatedly). */
-                if (!isResetRow(&rows[s_visIdx[s_sel]]))
+                if (s_section >= 0 && s_sel != 0 && !isResetRow(&rows[s_visIdx[s_sel]]))
                     rowAdjust(&rows[s_visIdx[s_sel]], adjDir);
             }
         } else {
@@ -1159,28 +1266,38 @@ void optionsOverlayHandleInput(void)
          * new row back into the cursor and made the bottom twitch/echo).
          * Selection moves only by click, wheel, or arrows. */
 
-        /* left press. A click in the label column only focuses the row; a
-         * click in the value/control column (>= the bar-span start) changes
-         * it -- so clicking to select a toggle doesn't also flip it. */
-        s32 bx0, bx1;
-        sliderBarSpan(&bx0, &bx1);
+        /* Clicking the name selects; anywhere to its right changes the
+         * setting. Reset actions use the whole row. */
         if (lmb && !prevLmb) {
             if (onClose) {
                 optionsOverlayToggle();   /* close + configSave */
                 return;
             }
-            if (hoverVis >= 0 && rows[s_visIdx[hoverVis]].kind != ROW_HEADER) {
+            if (hoverVis >= 0) {
                 s_sel = hoverVis;         /* explicit click -> select */
                 overlayUpdateScroll();
-                if (ox >= bx0) {
-                    struct Row *r = &rows[s_visIdx[hoverVis]];
-                    if (r->kind == ROW_SLIDER && r->found) {
-                        sliderSetFromX(r, ox);
-                        s_dragRow = s_visIdx[hoverVis];
-                        int field = watchSettingsFieldForKey(r->key);
-                        SDL_AtomicSet(&s_dragWatchField, field + 1);
-                    } else {
-                        rowAdjust(r, +1);   /* toggle / cycle forward (wraps) */
+                if (rows[s_visIdx[hoverVis]].kind == ROW_HEADER) {
+                    int hdr = s_visIdx[hoverVis];
+                    if (s_section < 0) { s_section = hdr; s_sel = 1; }
+                    else { s_section = -1; s_sel = 0; optionsResetClear(); }
+                    s_scroll = 0;
+                    overlayUpdateVisible();
+                    if (s_section < 0)
+                        while (s_sel + 1 < s_visN && s_visIdx[s_sel] != hdr) s_sel++;
+                } else {
+                    int i = s_visIdx[hoverVis];
+                    s32 x0, x1;
+                    if (overlayControlSpan(i, &x0, &x1) && ox >= x0 && ox < x1) {
+                        struct Row *r = &rows[i];
+                        if (r->kind == ROW_SLIDER && r->found &&
+                            ox >= overlayLayout().barX0 && ox <= overlayLayout().barX1) {
+                            sliderSetFromX(r, ox);
+                            s_dragRow = i;
+                            int field = watchSettingsFieldForKey(r->key);
+                            SDL_AtomicSet(&s_dragWatchField, field + 1);
+                        } else {
+                            rowAdjust(r, +1);   /* toggle / cycle forward (wraps) */
+                        }
                     }
                 }
             }
@@ -1197,12 +1314,16 @@ void optionsOverlayHandleInput(void)
             s_dragRow = -1;
             SDL_AtomicSet(&s_dragWatchField, 0);
         }
-        /* right press in the value column: cycle back / decrement */
-        if (rmb && !prevRmb && hoverVis >= 0 && !onClose && ox >= bx0 &&
-            rows[s_visIdx[hoverVis]].kind != ROW_HEADER) {
-            s_sel = hoverVis;
-            overlayUpdateScroll();
-            rowAdjust(&rows[s_visIdx[hoverVis]], -1);
+        /* Right press in the same change region: cycle back. */
+        if (rmb && !prevRmb && hoverVis >= 0 && !onClose && s_section >= 0) {
+            int i = s_visIdx[hoverVis];
+            s32 x0, x1;
+            if (!isResetRow(&rows[i]) && overlayControlSpan(i, &x0, &x1) &&
+                ox >= x0 && ox < x1) {
+                s_sel = hoverVis;
+                overlayUpdateScroll();
+                rowAdjust(&rows[i], -1);
+            }
         }
     }
 
@@ -1284,6 +1405,19 @@ static void valueText(int i, char *out, int n)
         else          snprintf(out, n, "%d FPS", fps);
         return;
     }
+    if (calibratedDefault(r) >= 0.0) {
+        snprintf(out, n, "%d/100", (int)lround(rowFractionAt(r, v) * 100.0));
+        return;
+    }
+    /* Distance sliders are normalized to a 0..100 UI while retaining the
+     * original percent-based ini format (250% = 50/100). */
+    if (strcmp(r->key, "Video.DrawDistance") == 0 ||
+        strcmp(r->key, "Video.LodDistance") == 0) {
+        int normalized = (int)lround((v - 100.0) / 3.0);
+        if (normalized < 0) normalized = 0; /* legacy LOD ini < 100 */
+        snprintf(out, n, "%d/100", normalized);
+        return;
+    }
     /* D346: integer sliders -- optional raw->display divide + unit suffix. */
     if (r->dispDiv > 0) {
         v = (double)(int)lround(v / (double)r->dispDiv);
@@ -1320,6 +1454,104 @@ static Gfx *drawTextR(Gfx *gdl, s32 xr, s32 y, const char *str, u32 colour)
     return drawText(gdl, xr - measureText(str), y, str, colour);
 }
 
+/* The N64 watch pages use Bank Gothic with a dim/bright green palette.
+ * Reuse that same loaded font here, without invoking watch rendering. */
+static struct font *bodyFont(void) { return ptrFontBankGothic; }
+static struct fontchar *bodyChars(void) { return ptrFontBankGothicChars; }
+static s32 bodyWidth(const char *str)
+{
+    s32 h = 0, w = 0;
+    textMeasure(&h, &w, (char *)str, bodyChars(), bodyFont(), 0);
+    return w;
+}
+static Gfx *drawBody(Gfx *gdl, s32 x, s32 y, const char *str, u32 colour)
+{
+    s32 px = x, py = y;
+    return textRender(gdl, &px, &py, (char *)str, bodyChars(), bodyFont(),
+                      colour, viGetX(), viGetY(), 0, 0);
+}
+static Gfx *drawBodyR(Gfx *gdl, s32 xr, s32 y, const char *str, u32 colour)
+{
+    return drawBody(gdl, xr - bodyWidth(str), y, str, colour);
+}
+
+/* No per-value boxes: the full strip after the rendered setting name is
+ * active, even if there's space between its name and its bar/value. Its
+ * boundary is capped at the label's clipping limit for long names. */
+static int overlayControlSpan(int i, s32 *x0, s32 *x1)
+{
+    struct OvLayout o = overlayLayout();
+    const struct Row *r = &rows[i];
+    char val[64];
+    if (r->kind == ROW_HEADER || (r->kind == ROW_SLIDER && !r->found))
+        return 0;
+    *x1 = o.right - 7;
+    if (isResetRow(r)) {
+        *x0 = o.left + 7; /* reset is an action, not a setting name */
+    } else {
+        valueText(i, val, sizeof(val));
+        s32 limit = r->kind == ROW_SLIDER ? o.barX0 :
+                    o.valueR - bodyWidth(val) - 7;
+        if (r->restart) limit = o.barX0 - 6;
+        *x0 = o.labelX + bodyWidth(r->label) + 4;
+        if (*x0 > limit) *x0 = limit;
+    }
+    return *x1 > *x0;
+}
+/* In the watch-style panel, instructions/scope annotations are deliberately
+ * a second font and cool-grey ink, not another setting in green Gothic. */
+static struct font *metaFont(void)
+{
+    return ptrFontZurichBold && ptrFontZurichBoldChars ? ptrFontZurichBold : bodyFont();
+}
+static struct fontchar *metaChars(void)
+{
+    return ptrFontZurichBold && ptrFontZurichBoldChars ? ptrFontZurichBoldChars : bodyChars();
+}
+static s32 metaWidth(const char *str)
+{
+    s32 h = 0, w = 0;
+    textMeasure(&h, &w, (char *)str, metaChars(), metaFont(), 0);
+    return w;
+}
+static Gfx *drawMeta(Gfx *gdl, s32 x, s32 y, const char *str, u32 colour)
+{
+    s32 px = x, py = y;
+    return textRender(gdl, &px, &py, (char *)str, metaChars(), metaFont(),
+                      colour, viGetX(), viGetY(), 0, 0);
+}
+/* Label column may be narrow at 320x240. Never paint over a slider/value. */
+static int sectionIsMixedScope(int header)
+{
+    if (header < 0) return 0;
+    int scoped = 0, global = 0;
+    for (int i = header + 1; i < NUM_ROWS && rows[i].kind != ROW_HEADER; i++) {
+        if (rows[i].kind == ROW_ACTION) continue;
+        if (rows[i].saveScoped) scoped = 1;
+        else global = 1;
+    }
+    return scoped && global;
+}
+
+static Gfx *drawBodyFit(Gfx *gdl, s32 x, s32 y, s32 maxW, const char *str, u32 colour)
+{
+    char out[80];
+    snprintf(out, sizeof(out), "%s", str);
+    if (maxW < 12) return gdl;
+    if (bodyWidth(out) > maxW) {
+        int n = (int)strlen(out);
+        while (n > 1) {
+            out[--n] = 0;
+            if (n + 2 < (int)sizeof(out)) {
+                out[n] = '.'; out[n + 1] = '.'; out[n + 2] = 0;
+            }
+            if (bodyWidth(out) <= maxW) break;
+            out[n] = 0;
+        }
+    }
+    return drawBody(gdl, x, y, out, colour);
+}
+
 Gfx *optionsOverlayEmit(void)
 {
     if (!s_inited) {
@@ -1352,26 +1584,10 @@ Gfx *optionsOverlayEmit(void)
 
     const s32 W = viGetX();
     const s32 H = viGetY();
-    const s32 right = OV_RIGHT;
-    const s32 panelTop = OV_TOP - 9;
-    /* Last visible position actually drawn (window may be shorter than the
-     * list at small 2D viewports -- the rest is reached by scrolling).
-     * D304 fix: the "everything fits" branch was `s_visN - s_scroll`, which
-     * is a COUNT, not the last valid 0-based index -- since that branch only
-     * runs when s_scroll==0 (overlayUpdateScroll's own invariant), this
-     * evaluated to `s_visN`, one past the last valid entry, so both draw
-     * loops below (`for (p = s_scroll; p <= pLast; p++)`) read one row past
-     * the end of `s_visIdx[]`/`rows[]` on any 2D viewport large enough to fit
-     * the whole list without scrolling (e.g. the larger front-end 440x330
-     * screen once a couple of rows are pulled from the menu, as just
-     * happened above). Should be `s_visN - 1`, matching overlayRowAtY's
-     * identical fix. */
-    const int maxV  = maxVisibleRows();
-    const int pLast = (s_visN - s_scroll < maxV) ? s_visN - 1
-                                                 : s_scroll + maxV - 1;
-    const s32 panelBottom = OV_ROW_Y(pLast) + OV_LINE / 2 + 3;
-    s32 bx0, bx1;
-    sliderBarSpan(&bx0, &bx1);
+    struct OvLayout o = overlayLayout();
+    int pLast = s_scroll + o.maxRows - 1;
+    if (pLast >= s_visN) pLast = s_visN - 1;
+    const s32 bx0 = o.barX0, bx1 = o.barX1;
     Gfx *gdl = s_buf;
 
     gDPPipeSync(gdl++);
@@ -1379,84 +1595,107 @@ Gfx *optionsOverlayEmit(void)
     gDPSetTexturePersp(gdl++, G_TP_NONE);
     gDPSetScissor(gdl++, G_SC_NON_INTERLACE, 0, 0, W, H);
 
-    /* ---- pass 1: all fills (G_CC_PRIMITIVE) ---- */
-    gdl = fillRect(gdl, 0, 0, W, H, 0, 0, 0, 150);                       /* dim */
-    gdl = fillRect(gdl, OV_X0 - 8, panelTop, W - (OV_X0 - 8), panelBottom,
-                   8, 10, 24, 210);                                     /* panel */
-    gdl = fillRect(gdl, OV_CB_X0, OV_CB_Y0, OV_CB_X1, OV_CB_Y1,
-                   150, 40, 40, 235);                                   /* close */
-
+    /* Dark glass like the previous F10 overlay; green ink and highlights
+     * follow GE's watch options (options.c's Bank Gothic/0xA0FFA0F0).
+     * No dossier paper, gold, 3D watch model or new assets. */
+    gdl = fillRect(gdl, 0, 0, W, H, 0, 0, 0, 150);
+    gdl = fillRect(gdl, o.left, o.top, o.right, o.bottom,
+                   5, 17, 13, 225);
+    gdl = fillRect(gdl, o.left + 8, o.top + 25, o.right - 8, o.top + 26,
+                   56, 135, 73, 195);
+    /* Help is a separate control strip, not another setting row. */
+    gdl = fillRect(gdl, o.left + 3, o.footerY - 5, o.right - 3, o.bottom - 2,
+                   1, 9, 7, 235);
+    gdl = fillRect(gdl, o.left + 8, o.footerY - 5, o.right - 8, o.footerY - 4,
+                   55, 102, 68, 170);
+    /* No row panels or control boxes. Selection is the brighter text in
+     * pass 2; only a slider's actual track/knob gets a background. */
     for (int p = s_scroll; p <= pLast; p++) {
         const struct Row *r = &rows[s_visIdx[p]];
-        s32 rowY = OV_ROW_Y(p - s_scroll);
-        if (p == s_sel) {
-            gdl = fillRect(gdl, OV_X0 - 4, rowY - 3, W - (OV_X0 - 4),
-                           rowY + OV_LINE - 4, 40, 46, 96, 220);
-        }
+        s32 rowY = o.contentY + (p - s_scroll) * OV_LINE;
         if (r->kind == ROW_SLIDER && r->found) {
-            double lo = rowLo(r), hi = rowHi(r);
-            double f = (hi > lo) ? (rowGet(r) - lo) / (hi - lo) : 0.0;
-            if (f < 0) f = 0; if (f > 1) f = 1;
-            s32 by = rowY + 3;
-            gdl = fillRect(gdl, bx0, by, bx1, by + 5, 60, 60, 70, 220);
-            gdl = fillRect(gdl, bx0, by, bx0 + (s32)((bx1 - bx0) * f), by + 5,
-                           210, 200, 90, 255);
+            double f = rowFractionAt(r, rowGet(r));
+            s32 by = rowY + 3; /* INSIDE the row's hit band, not the next row */
+            gdl = fillRect(gdl, bx0, by, bx1, by + 2, 31, 68, 44, 205);
+            gdl = fillRect(gdl, bx0, by, bx0 + (s32)((bx1 - bx0) * f), by + 2,
+                           59, 200, 87, 255);
+            s32 knob = bx0 + (s32)((bx1 - bx0) * f);
+            gdl = fillRect(gdl, knob - 1, by - 2, knob + 2, by + 4,
+                           160, 255, 160, 255);
         }
     }
 
     /* ---- pass 2: text ---- */
     gdl = microcode_constructor(gdl);
 
-    gdl = drawText(gdl, OV_X0, OV_TOP, "PC OPTIONS", 0xffe040ff);
-    gdl = drawText(gdl, OV_X0, OV_TOP + OV_LINE,
-                   "select: scroll/click, change: mouse/arrows",
-                   0x8890a0ff);                                        /* hint line */
-    gdl = drawText(gdl, (OV_CB_X0 + OV_CB_X1) / 2 - measureText("X") / 2,
-                   OV_TOP, "X", 0xffffffff);                            /* close glyph */
+    gdl = drawBody(gdl, o.left + 10, o.top + 8, "PC OPTIONS", 0xa0ffa0ff);
+    gdl = drawBodyR(gdl, o.right - 14, o.top + 8, "X", 0xa0ffa0ff);
+    if (s_section < 0) {
+        gdl = drawMeta(gdl, o.labelX, o.sectionY, "SELECT A CATEGORY", 0x829e91ff);
+    } else {
+        const struct Row *hdr = &rows[s_section];
+        gdl = drawBody(gdl, o.left + 12, o.sectionY, "< BACK", 0xa0ffa0ff);
+        s32 titleX = o.left + 80;
+        gdl = drawBody(gdl, titleX, o.sectionY, hdr->label, 0xa0ffa0ff);
+        if (hdr->saveScoped) {
+            int f = watchSettingsActiveFolder();
+            char note[24];
+            if (f < 0) snprintf(note, sizeof(note), "(none)");
+            else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
+            gdl = drawBody(gdl, titleX + bodyWidth(hdr->label) + 5,
+                           o.sectionY, note, 0x829e91ff);
+        } else if (!strcmp(hdr->key, "__HdrInput")) {
+            gdl = drawBody(gdl, titleX + bodyWidth(hdr->label) + 5,
+                           o.sectionY, "(50 = default)", 0x829e91ff);
+        }
+    }
 
     for (int p = s_scroll; p <= pLast; p++) {
         const struct Row *r = &rows[s_visIdx[p]];
-        s32 rowY = OV_ROW_Y(p - s_scroll);
-        u32 col = (p == s_sel) ? 0xffffffff : 0xc0c0c8ff;
+        s32 rowY = o.contentY + (p - s_scroll) * OV_LINE;
+        u32 ink = !r->found ? 0x498053ff :
+                  p == s_sel ? 0xa0ffa0ff : 0x66ca77ff;
         char val[48];
-
-        if (r->kind == ROW_HEADER) {   /* D237 category label, no value */
-            gdl = drawText(gdl, OV_X0, rowY, (char *)r->label, 0xffe040ff);
-            /* D356: sections that contain per-file rows carry the active
-             * file in the header ("GAMEPLAY (File 1)"), PD-style -- in-stage
-             * the active file, front end the resolved front target. */
-            if (r->saveScoped) {
-                int f = watchSettingsActiveFolder();
-                char note[16];
-                if (f < 0) snprintf(note, sizeof(note), "(none)");
-                else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
-                gdl = drawText(gdl, OV_X0 + measureText(r->label) + 6, rowY, note, 0x909090ff);
-            }
+        if (s_section < 0) {
+            gdl = drawBody(gdl, o.labelX, rowY, r->label, ink);
             continue;
         }
-        gdl = drawText(gdl, OV_LABEL_X, rowY, (char *)r->label,
-                       r->found ? col : 0x808080ff);
-        /* D357: per-file rows in the mixed-scope section carry a dim
-         * "(per profile)" tag -- "stored separately in each profile";
-         * the section title says which one is active. */
-        if (r->saveScoped && r->kind != ROW_HEADER) {
-            gdl = drawText(gdl, OV_LABEL_X + measureText(r->label) + 5, rowY,
-                           "(per profile)", 0x909090ff);
+        valueText(s_visIdx[p], val, sizeof(val));
+        s32 valueW = bodyWidth(val);
+        s32 labelEnd = r->kind == ROW_SLIDER ? bx0 : o.valueR - valueW - 7;
+        if (r->restart) labelEnd = bx0 - 6;
+        gdl = drawBodyFit(gdl, o.labelX, rowY, labelEnd - o.labelX,
+                          r->label, ink);
+        /* Only GAMEPLAY mixes profile and global values. Its four profile
+         * toggles have space for a real, subdued word; AUDIO is wholly
+         * profile-scoped and says so in its section title. */
+        if (r->saveScoped && sectionIsMixedScope(s_section)) {
+            s32 tagX = o.labelX + bodyWidth(r->label) + 4;
+            if (tagX + bodyWidth("(profile)") < labelEnd - 2)
+                gdl = drawBody(gdl, tagX, rowY, "(profile)", 0x829e91ff);
         }
         if (!r->found) {
-            gdl = drawTextR(gdl, right, rowY, "(n/a)", 0x808080ff);
+            gdl = drawBodyR(gdl, o.valueR, rowY, "(n/a)", 0x498053ff);
             continue;
         }
-
-        valueText(s_visIdx[p], val, sizeof(val));
         if (r->restart) {
-            /* value left of the bar span, "(restart)" pinned to the edge */
-            gdl = drawText(gdl, bx0, rowY, val, col);
-            gdl = drawTextR(gdl, right, rowY, "(restart)", 0x909090ff);
+            gdl = drawBody(gdl, bx0, rowY, val, ink);
+            gdl = drawBodyR(gdl, o.valueR, rowY, "(restart)", 0x498053ff);
         } else {
-            gdl = drawTextR(gdl, right, rowY, val, col);
+            u32 valueInk = (strcmp(val, "On") == 0 ||
+                            (isResetRow(r) && strcmp(val, "Confirm") == 0))
+                           ? 0xa0ffa0ff : ink;
+            gdl = drawBodyR(gdl, o.valueR, rowY, val, valueInk);
         }
     }
+    gdl = drawMeta(gdl, o.left + 11, o.footerY, "CONTROLS:", 0xa6baaaff);
+    gdl = drawBody(gdl, o.left + 16 + metaWidth("CONTROLS:"), o.footerY,
+                   s_section < 0 ? "ENTER SELECT   F10 CLOSE" :
+                   "RIGHT: CHANGE   ESC BACK   F10 CLOSE", 0x829e91ff);
+    if (s_visN - (s_section >= 0 ? 1 : 0) > o.maxRows)
+        gdl = drawBodyR(gdl, o.right - 10, o.sectionY,
+                        s_scroll > (s_section >= 0 ? 1 : 0) ? "^ v" : "v",
+                        0x80d58bff);
 
     gDPPipeSync(gdl++);
     gSPEndDisplayList(gdl++);
@@ -1541,8 +1780,7 @@ double optionsRowFraction(int i)
     if (!r || rowHi(r) <= rowLo(r)) {
         return 0.0;
     }
-    double f = (rowGet(r) - rowLo(r)) / (rowHi(r) - rowLo(r));
-    return f < 0.0 ? 0.0 : (f > 1.0 ? 1.0 : f);
+    return rowFractionAt(r, rowGet(r));
 }
 
 /* D356: raw value (the fraction accessors are bar geometry only); the
@@ -1562,7 +1800,7 @@ void optionsRowSetFraction(int i, double f)
     if (f < 0.0) f = 0.0;
     if (f > 1.0) f = 1.0;
     double step = (r->step > 0.0) ? r->step : 1.0;
-    double v = rowLo(r) + f * (rowHi(r) - rowLo(r));
+    double v = rowValueAtFraction(r, f);
     rowSetCommit(r, lround(v / step) * step, 0);
 }
 

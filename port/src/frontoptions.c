@@ -498,6 +498,8 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             if (f < 0) snprintf(note, sizeof(note), "(none)");
             else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
             DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
+        } else if (strcmp(optionsRowLabel(s_pageHdr[s_page]), "INPUT") == 0) {
+            DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, "(50 = default)", INK_DIM);
         }
 
         /* D356: the top profile row (item 0, not in the row table; the label
@@ -534,10 +536,11 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             }
             DL = ink(DL, ROW_X, y, label, INK);
 
-            /* D357: per-file rows in the mixed-scope section carry a dim
-             * "(per profile)" tag -- "stored separately in each profile";
-             * the section title says which one is active. */
-            if (optionsRowIsSaveScoped(i)) {
+            /* Only GAMEPLAY mixes ini and profile options. AUDIO is wholly
+             * profile-scoped and already has (Profile N) in its title; an
+             * inline tag there would collide with the volume slider. */
+            if (optionsRowIsSaveScoped(i) &&
+                strcmp(optionsRowLabel(s_pageHdr[s_page]), "GAMEPLAY") == 0) {
                 DL = ink(DL, ROW_X + measureW(label) + 4, y, "(per profile)\n", INK_DIM);
             }
 

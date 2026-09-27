@@ -35,6 +35,8 @@ extern "C" {
 
 /* Toggle open/closed. On the closing edge the config is saved. */
 void optionsOverlayToggle(void);
+/* ESC: back to categories, or close from the category list (host-thread request). */
+void optionsOverlayBack(void);
 
 /* 1 while the overlay is on screen. */
 int optionsOverlayIsOpen(void);

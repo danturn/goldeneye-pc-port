@@ -644,6 +644,17 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D356 | **Settings regroup: Turok-style pages renamed to functional sections (INPUT/GAMEPLAY/GRAPHICS/AUDIO/VIDEO) with PD-style "(File N)" scoping annotations, the redundant N64-watch rows (`Bond.Look`, `Bond.AimControl`) off the menu surface, and a real per-section Reset-to-defaults (two-step arm->confirm, watch rows to BLANKSAVEDATA via the D352 commit path, ini rows to the port's C initializers; `__Resolution` a documented exclusion) replacing the Turok reset rows the PC build never honored (2026-09-27).** — full `## D356` entry at file tail | FIXED (port-only, `port/src/optionsoverlay.{h,c}` + `port/src/watchsettings.{h,c}` + `port/src/frontoptions.c`; plan `docs/dev/D356-SETTINGS-REGROUP-PLAN.md`): 5 sections all below MAX_PROWS, hidden rows D181/D216-style (keys + watch paths stay live), edge-triggered reset with 3 s arm window + maintain/clear disarm, GE_WSPROBE_RESET front + in-stage probes headless-verified (all sections failures=0, scope isolation OK, saved bytes 0xFF), GE_WSPROBE/GE_WSPROBE_FRONT regressions clean. |
 | D358 | **D356 level-1 overlap: the front options save-file row (item 0) painted under the first content row, and `s_hl` (item-numbered) was indexed straight into `s_rowIdx` (content-numbered) -- wrong-row adjusts, a dead last row, a one-past read, wrong highlight (2026-09-27).** — full `## D358` entry at file tail | FIXED (port-only, `port/src/frontoptions.c`): content rows draw at `rowY(k+1)`; all `s_hl` -> `s_rowIdx` uses take `s_hl-1`; A-press guards `s_hl >= 1 && s_hl <= s_rowN`; hit-test/cursor untouched (already item-numbered). Companion: "(save)" tag -> "(profile)". |
 | D359 | **Settings UI file terminology settled on the end-user term "Profile": the screen mixed five terms ("Save file"/"File N"/"(profile)"/"Select file"/"(no file)"), and the manual's "game file" reads as the program's own files in modern PC usage (2026-09-27).** — full `## D359` entry at file tail | LANDED (port-only, `frontoptions.c` + `optionsoverlay.c` + comments): top row `Profile`/`N`, annotation `(Profile N)`/`(none)`, per-file row tag `(per profile)`, F10 value `Select a profile`; identifiers/ini keys unchanged (display-layer only). Manual "game file" -> "profile" sync TODO (port-owned doc, not in repo). |
+| D360 | **F10 INPUT heading scrolled away; F10 navigation and distance defaults (2026-09-27).** — full `## D360` entry at file tail | IMPLEMENTED (port-only): F10 root category list + per-section Back; distance sliders normalized to 0–100, default 50/100 (250% authored distance), 2x MSAA default. Compiled and linked to a separate test binary (live game locked main executable); manual playtest owed. |
+| D361 | **Main-menu F10 Audio freezes the game: EEPROM save from joyPoll deadlocks waiting for its own poll ack (2026-09-27).** — full `## D361` entry at file tail | FIXED (port-only, `port/src/watchsettings.c` + F10 probe in `optionsoverlay.c`): queue front F10 save edits to game thread; actual poll-thread Music+FX commits tested with existing and fresh EEPROM, orderly quit, user's ini/save restored. |
+| D362 | **F10 GoldenEye dossier-style visual refresh (2026-09-27).** — full `## D362` entry at file tail | CLOSED (superseded by D363 after user playtest): paper/Zurich/gold look rejected. The pinned section heading and shared layout/hit geometry remain. |
+| D363 | **F10 return to a dark overlay with the N64 watch's green/Bank Gothic visual language (2026-09-27).** — full `## D363` entry at file tail | FIXED (palette/font user-approved, 2026-09-27); D364 follows up on profile tags, click alignment and slider calibration. |
+| D364 | **Settings UI feedback: replace P legend; F10 slider click band misses drawn bar; input defaults visually off-centre (2026-09-27).** — full `## D364` entry at file tail | FIXED (user mostly accepted; D365 follows up on annotation size and click targets). |
+| D365 | **F10 annotation hierarchy and visible mouse change targets (2026-09-27).** — full `## D365` entry at file tail | IMPLEMENTED (`optionsoverlay.c`): dim Bank Gothic profile annotation (not oversized Zurich); `CONTROLS:` Zurich heading, smaller Bank Gothic instructions; boxed right-hand controls + hover and matching bounded click x. NTSC build/link/stage capture pass; live click assessment owed. |
+| D366 | **Input calibration label: call 50 the default, not original (2026-09-27).** — full `## D366` entry at file tail | PARTIAL: label changed in both UIs; numeric parity with external GEPD bundle needs its actual settings before changing input defaults. Built, stage tested in D367; user playtest owed. |
+| D367 | **F10 full-width control boxes misaligned with their contents (2026-09-27).** — full `## D367` entry at file tail | SUPERSEDED by D368 after user playtest: per-value boxes remained confusing. |
+| D368 | **Simplify F10 click targets: setting name selects, the rest changes (2026-09-27).** — full `## D368` entry at file tail | INPUT RULE KEPT; tinted strips user-rejected, removed in D369. |
+| D369 | **Remove F10 row boxes/strips entirely (2026-09-27).** — full `## D369` entry at file tail | FIXED (awaiting live acceptance): no row backgrounds, control rectangles or hover paint; selected setting distinguished by brighter text, slider tracks remain. Input rule from D368 unchanged. |
+| D370 | **F10 distance/volume drags hurt frame rate (2026-09-27).** — full `## D370` entry at file tail | PARTIAL (user live test): mostly improved; rapid spam can still lower FPS. Unchanged-detent/audio and Draw/LOD reapply fixed; other image sliders still request full video pass (live log shows frequent FOV passes). No further churn without focused repro. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13997,3 +14008,304 @@ display-layer concern only (principle 3).
 
 **TODO:** update the instruction manual's "game file" to "profile"
 (port-owned doc, not in this repo).
+
+## D360 — F10 category navigation and modern-display distance defaults (2026-09-27)
+
+**Reported:** F10's INPUT header was offscreen above Mouse sensitivity when
+scrolling; the long flat list was hard to navigate. Draw/LOD distance auto
+switches obscured the controls and N64-scale pop-in looked like a port bug.
+4x default MSAA was too expensive for low-end hardware.
+
+**Fix (port-only):** F10 opens on a five-category list, and entering a
+category shows its header (with Back) and settings together. Keyboard,
+controller, mouse and wheel all use the same per-page list. ESC backs out of
+a section, then closes from the category list; F10/Start/X still close.
+Front-end PC Options already had category pages and shares the row table.
+Removed AutoFov controls from both menus (ini keys remain for legacy files),
+and exposed both distance sliders at all times. Stored values remain percent
+of authored distance; the UI displays 0–100, where 50/100 maps to 250%.
+Fresh and SteamOS defaults are 250% draw and LOD distance, 2x MSAA. Reset
+uses the same new defaults. Existing ini settings are preserved; old LOD
+values below the menu minimum (100%) can still be edited via ini. Note:
+these higher distances increase visible geometry/pool demand; test on
+open levels and low-end GPUs before claiming performance parity.
+
+**Verification:** `git diff --check` clean. `build-pc.sh ntsc-final`
+initially failed because GCC could not create temporary files in
+`C:\Windows\`; configuring C/C++ with `-pipe` built all 248 objects.
+The existing executable was locked by a running `ge007.x86_64` process,
+so the same linker response file was linked to
+`scratch/cc-tmp/ge007-check.exe` successfully. No live game was interrupted.
+Manual mouse/pad/ESC, reset, and 50/100 rendering/perf checks are owed.
+
+## D361 — F10 Audio on the main menu locks up: self-deadlock in EEPROM poll gate (2026-09-27)
+
+**User repro:** fresh v0.4.0 playtest, change an AUDIO slider from F10
+on the main menu → game locks (not merely an inaudible volume change).
+
+**Exact chain:** F10 input is processed inside `inputComputePad()` called
+by `osContStartReadData()` in `joyPoll()` (`src/joy.c:500`). D354 routed
+front-context watch edits through `watchSettingsSet()` → `saveFrontField()`
+on that same poll thread. Both `fileGamePakProbe()` and `fileWriteSave()` call
+`joyGamePakProbe/LongWrite()` → `joyDisablePoll()` → blocking receive on
+`g_ContDisablePollReceiveMessageQueue`. Only `joyPoll()` can send the
+acknowledgement (`src/joy.c:434`), but it is itself blocked inside the
+F10 edit: deterministic self-deadlock. D354's claim that one settings
+surface meant this thread's writes were safe was incorrect; serialization
+between editors does not make the controller-poll handshake re-entrant.
+
+**Fix (port-only):** front F10 writes now coalesce in a small locked
+folder/field queue. `watchSettingsGameTick()` drains commits on the game
+thread before its non-stage early return and runs `saveFrontField()` there,
+with no lock held across EEPROM I/O. The on-screen value is staged before
+enqueue for immediate feedback, then cleared only after the matching commit.
+The separate stage queue and the direct front options screen path retain
+their prior behavior. `GE_WSPROBE_F10FRONT=1` is an opt-in regression probe
+called from F10's actual controller-poll input path at file select (once,
+after a valid save is available), committing Music+FX to 4096.
+
+**Verified:** NTSC incremental build/link succeeded. Native Windows test
+with `GE_OPTIONSOVERLAY=1`, `Game.SkipIntro=1` and the poll-thread probe
+logged the queue plus both Music/FX field persist events and exited via
+`GE_QUITFRAME=700` (with existing EEPROM **and** absent EEPROM on boot).
+The pre-existing game-thread `GE_WSPROBE_FRONT=120` front-path regression
+also persisted Music 255→32 and quit normally. The user's ini and EEPROM
+were copied aside and restored byte-identically after each run. Manual
+mouse slider/section-reset and stage transition checks remain owed.
+
+## D362 — F10 GoldenEye dossier-style visual refresh (2026-09-27)
+
+**Request:** restyle F10 to match GoldenEye, following
+`docs/dev/F10-GE-STYLE-PLAN.md`. Existing front Options already uses the
+in-game dossier; in-stage F10 needs a lighter port-owned 2D equivalent.
+
+**Implementation (port-only):** replace the blue/black panel with a dark
+scene scrim and warm paper card/shadow/rules, Zurich Bold menu ink (Bank
+Gothic fallback during early font loading), MI6 gold masthead, dark-red
+active values and slider fills/knobs, numbered GE-style category labels,
+faint black selected-row highlights. The active section's Back/title/Profile
+band stays pinned while content scrolls, so INPUT never disappears above
+Mouse sensitivity. A short `P` gutter marker and footer legend retain
+per-profile scoping without the old `(per profile)` label/value collision
+at 320px. One `OvLayout` drives render, max rows, slider/drag coordinates,
+mouse row-hit bands and close box. No config, input binding, save format,
+N64 game-code, or F10 audio queue changes. `GE_OPTIONSOVERLAY=2..6`
+optionally auto-opens a particular section for deterministic screenshots
+(`=1` remains the category root).
+
+**Verification:** NTSC compile/link clean; native-Windows `GE_PCDUMP`
+front-end root and GRAPHICS capture plus 320x240 stage GRAPHICS capture
+(no crash/overflow; orderly `GE_QUITFRAME` exit). Captures:
+`scratch/d362-test/` (local, not distributed). User ini and EEPROM restored
+byte-identically after each run. A final tiny title/footer polish rebuild
+compiled, but the running playtest held `build-pc/ge007.x86_64.exe` open;
+linked identical objects to `scratch/d362-test/ge007-d362.exe`, and the
+local `scratch/playtest_v040.bat` installed that binary on the next
+closed-game launch (guards against a concurrent game process; installed exe
+size/timestamp match the staged build). Live human
+review of palette, label fit, mouse clicks/drag/wheel, controller focus,
+back/close, longest GRAPHICS labels and the F10 Audio regression is owed.
+**User follow-up:** dossier/paper styling rejected; see D363 for the dark,
+watch-green successor. D362 is retained as the design/iteration record.
+
+## D363 — F10 returns to a dark overlay, restyled after GE's green watch (2026-09-27)
+
+**User feedback on D362:** "make it more like how it was but use the watch
+style as a reference — green, that other font etc." The watch's actual
+options pages (`src/game/options.c:3524+`, `:3825+`) use Bank Gothic and
+mint/bright green ink (`0xA0FFA0F0` selected, muted green unselected).
+The paper card, Zurich Bold, gold, red, numbered categories and dossier
+branding from D362 were not the desired direction.
+
+**Fix (port-only):** restore the original F10's simple dark translucent
+panel and full-screen dim; use the existing Bank Gothic font for all rows,
+subdued green for ordinary text and bright watch green for selection,
+active values and slider knobs/fill. The `PC OPTIONS` title and close `X`
+replace MI6/CLOSE; category names return to their uppercase row labels.
+Keep D360's two-level navigation and D362's shared layout/hit geometry,
+scrolling and pinned section heading; no setting behavior or save changes.
+The mixed-scope profile marker stays short to avoid 320px overlap.
+
+**Verification:** NTSC build/link clean. `GE_OPTIONSOVERLAY=4`,
+`GE_PCDUMP=160-160` with native Windows `GE_QUITFRAME=170` passed in both
+front/menu and `-level_09` stage contexts at 640x480: dark panel and green
+pixels present (front/stage captures in `scratch/d363-test/`), no errors,
+orderly exit. User ini and EEPROM restored byte-identically after both.
+Live review of colour, text, click/drag/wheel, controller, ESC/close and
+F10 Audio remains owed.
+**User follow-up:** palette/font approved, but P shorthand, low-contrast
+legend, slider mouse hit position and off-centre input defaults need work;
+see D364.
+
+## D364 — Profile scope, F10 slider hitbox and calibrated input displays (2026-09-27)
+
+**Reported:** user likes D363's palette but not `P` / `P = PROFILE`;
+controls legend reads like setting text; clicking the visible F10 slider
+requires aiming above the bar; Input defaults such as deadzone and trigger
+show ~23% rather than a visually centred 50/100 or 5/10.
+
+**Diagnosis:** the F10 bar was at `rowY + 10..12` (knob `+8..14`), but
+`overlayRowAtY` assigns the row only within `rowY - 8..+8`: the bar/knob
+landed in the NEXT row's hit band. The input values were physically correct
+(raw `MouseSensitivity=100` of 1..500; `PadDeadzone=7000` of 0..30000,
+~21% full-stick travel; `PadTriggerPct=23` of 1..99), but the UI treated
+them as linear full-range sliders rather than calibrated defaults. AUDIO's
+`Bond.Music`/`Bond.FX` rows were watch-backed but lacked `.saveScoped`, so
+the promised `(Profile N)` title was missing despite every Audio row being
+per-profile.
+
+**Fix (port-only):** move F10 slider bar to `rowY+3..5` and knob to
+`rowY+1..7`, both entirely inside the row's `-8..+8` click band. The one
+shared slider-bar geometry still drives dragging. Give the control legend
+its own dark inset strip with muted-grey Zurich text (Bank Gothic remains
+for SETTINGS); likewise use a separate font/colour for scope notes. Remove
+`P`/legend. Tag each saved Gameplay toggle `(profile)` beside its label
+when measured space permits; Audio is entirely per-profile, so its title
+now carries `(Profile N)` (both UIs) and no per-row tags. The front dossier
+also suppresses redundant inline Audio tags. Input's three calibrated
+sliders now display 0–100, mapping each *unchanged* raw default to 50/100
+via a two-segment monotonic map preserving raw minimum and maximum; bars,
+mouse drags and the shared front options screen use that same map. A
+`(50 = original)` note explains the scale. Other sliders (audio %, texture
+filter x, FOV/HUD %) keep their physical units and authored defaults.
+Reset still writes the original raw defaults, config/ini values are unchanged,
+and input sensitivity/deadzone/trigger behavior is untouched.
+
+**Verification:** NTSC build/link clean. Native-Windows `GE_OPTIONSOVERLAY=2`
++ `-level_09` stage screenshot at 640x480 and orderly `GE_QUITFRAME=180`
+pass, with the user ini/EEPROM restored byte-identically after the run.
+Mouse click/drag on real 4:3/16:9 front/stage, reset and visible tooltip
+fit still need an interactive user pass. User accepted most of D364 but
+requested smaller profile annotation, a `Controls:` heading with smaller
+instructions, and a visible mouse-change target; see D365.
+
+## D365 — F10 annotations and bounded mouse-change controls (2026-09-27)
+
+**Reported:** `(profile)` is visibly larger than its setting label; the
+Controls legend should read `Controls:` with smaller following instructions;
+it isn't visually clear that a label click *selects* but the right column
+*changes* a setting.
+
+**Fix:** Bank Gothic (the smaller watch font already used for row labels)
+now renders dim profile tags and section scope notes instead of the larger
+Zurich Bold. The footer's `CONTROLS:` heading keeps Zurich Bold, but its
+instructions use smaller, dim Bank Gothic, including `BOX: CHANGE` within
+sections. Draw subtle green-bordered dark control boxes around every section
+row's right-hand interactive area, brightening the hovered box without
+moving keyboard selection. Restrict left/right mouse changes to the same
+bounded x region; label clicks still select only. Coordinates are mapped
+through `gfx_get_ui_screen_rect` for hover as for input, preserving the
+safe-area crop behavior (D316). No game logic or saved data touched.
+
+**Verification:** NTSC compile/link and 640x480 `GE_OPTIONSOVERLAY=2`
+`-level_09` frame-160 capture with clean frame-180 quit; ini and EEPROM
+restored byte-identically after testing. During compilation the user's
+existing game process held the exe, so it was first linked to a staged
+scratch path rather than overwritten; final build linked directly after
+that process exited. Mouse hover/click in a live window is still owed.
+
+## D366 — Input slider calibration: “default,” not “original” (2026-09-27)
+
+**Request:** user prefers the GEPD bundle as the standard for input and
+wants the `(50 = original)` note to read `(50 = default)`.
+
+**Fix:** changed both settings UIs' Input-header text to `(50 = default)`.
+`calibratedDefault()` still maps the port's current *real* defaults
+(`MouseSensitivity=100`, `PadDeadzone=7000`, `PadTriggerPct=23`) to 50/100,
+and `kResetDefaults` agrees with `input.c`. No live config or save edited.
+**Caveat:** GEPD's emulator bundle is an external reference; this checkout
+has a stub in `reference/mouse-injector/` and its `GEPD-INPUT-PLAN.md` records
+its camera aim formulas, but neither has an authoritative bundle controller
+config for all three numbers. The port's 38/50 per-mode mouse speeds were
+user-calibrated for its own FOV. Don't claim numeric parity with the GEPD
+bundle or re-tune default input feel without the user's bundle configuration.
+
+**Verification:** NTSC compile and staged link succeed. The active user's
+playtest held `build-pc/ge007.x86_64.exe`, so the new binary was linked to
+`scratch/d366-test/` and the local v040 launcher installs it only after the
+running game exits. No stage smoke test while the user's save is active. The user later exited;
+D367 includes the subsequent native stage smoke test of both changes.
+
+## D367 — F10 control frames aligned with their actual clickable contents (2026-09-27)
+
+**Reported:** D365's full-width rectangles do not align with their text
+contents. Root cause: every row used a fixed `[barX0, right-7)` box despite
+right-aligned toggles/enum text near `right-12`, slider bars ending much
+earlier at `barX1`, and reset actions having their button in the *label*
+column (empty value until armed). This advertised empty space as clickable
+and left the reset's real target unframed.
+
+**Fix:** `overlayControlSpan()` now calculates the actual button region per
+row: tight around slider tracks, around measured right-aligned values, or
+around the reset label; non-interactive/unavailable slider rows get no box.
+Both mouse buttons and hover use that same geometry, so moving the mouse
+only highlights a genuinely clickable area. The narrower border fits the
+Bank Gothic text's vertical footprint. Label clicks on ordinary settings
+still only select; clicking the framed reset label invokes its existing
+two-step confirmation. No game logic or config/default value changes.
+
+**Verification:** NTSC compile/link passed, native 640x480
+`GE_OPTIONSOVERLAY=2 -level_09` stage capture and orderly frame-180 exit;
+ini/EEPROM restored byte-for-byte. Mouse click/hover and confirmation remain
+to be feel-checked live. User's immediate playtest found remaining boxes
+wrong; replaced by the simpler D368 rule.
+
+## D368 — F10: name selects, right-of-name changes (2026-09-27)
+
+**User decision:** stop trying to frame each differently sized value; all
+of the row except the setting name should change it. D367's boxed controls
+were still misleading in a live test.
+
+**Fix (port-only):** `overlayControlSpan` now starts after the measured
+Bank Gothic setting name (capped at its label-column clipping edge) and
+extends to the panel's right edge. It is used by mouse hover, left/right
+click and a single subtly tinted strip with a thin left divider; the
+per-value borders are gone. Clicking a name still focuses without changing.
+A slider click on its track positions/drags; clicking elsewhere to the right
+of its name changes it by one step instead of snapping to the minimum or
+maximum. Reset is an action, so its whole row activates the existing
+confirmation. The footer now says `RIGHT: CHANGE`. No config/save or game
+logic changes. NTSC build/link passes; live mouse check still owed.
+
+## D369 — Remove F10 per-row paint (2026-09-27)
+
+User still saw boxes in D368 because the tinted per-row change strips and
+selected-row rectangles were still painted. Removed **all** of those from
+`optionsOverlayEmit()` (including hover paint). Selected text remains
+brighter, sliders retain only their track and knob, and the existing dark
+panel/Controls footer remain. Mouse hit behavior from D368 is unchanged.
+NTSC compile and staged link pass; a running playtest still holds the old
+exe, so the local launcher will install `scratch/d369-test/ge007-d369.exe`
+only after the game exits. No save/ini touched.
+
+## D370 — Avoid redundant work during F10 slider drags (2026-09-27)
+
+**Reported:** dragging Draw/LOD distance, Music or FX volume drops FPS.
+**Diagnosis:** `sliderSetFromX` runs on every controller poll while LMB is
+held, including repeated polls over the *same snapped value*. `rowSetCommit`
+then re-enqueues watch audio updates and, for *any* `Video.*` key, requests a
+`videoStartFrame` live-config pass: `set_swap_interval`, FPS cap, texture
+filter, image state and a log line. Draw/LOD multipliers are already read
+straight from their config pointers by the render path, so no such pass is
+needed. The active playtest log has hundreds of `video: live config applied`
+lines and multiple watch-setting persists; log alone does not isolate all
+of those calls to one knob. Physically increasing Draw/LOD can independently
+increase rendering load, which this fix will not hide.
+
+**Fix (port-only `optionsoverlay.c`):** early-return before live-apply/queue
+when a snapped value has not changed (including queued watch settings); held
+mouse polls no longer repeat the same audio setter or GL state work. Retain
+slider-release `watchSettingsCommit` so a drag persists exactly once. Exempt
+only `Video.DrawDistance` and `Video.LodDistance` from
+`videoRequestLiveConfig`; all other Video keys retain their old live-apply
+semantics. Audio updates still preview live for genuinely changed detents.
+No user config/save or game code edited. NTSC compile + staged link passed;
+active Windows game initially held the executable; the local launcher
+installed the staged binary on the user's next safe launch (now running).
+Live FPS retest (ideally compare dragging
+Music/FX while paused vs simply raising Draw/LOD values) owed.
+**User playtest:** "it can still drop it down if you spam it but mostly good."
+Residual not isolated: the latest playtest log shows repeated full video
+config passes while changing FOV (not Draw/LOD) and several watch EEPROM
+persists; sustained high Draw/LOD also increases actual GPU work. Parked as
+polish until a focused repro identifies which slider/spam pattern dominates.

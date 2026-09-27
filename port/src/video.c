@@ -51,12 +51,12 @@ static struct GfxRenderingAPI *renderingAPI;
 static int initDone = 0;
 
 /*
- * [Video] ge007.ini knobs. Every default reproduces the previously-hardcoded
- * behaviour, so a fresh config or a missing [Video] section changes nothing.
+ * [Video] ge007.ini knobs. Draw/LOD and MSAA defaults favour a clean picture
+ * at modern resolutions without requiring 4x anti-aliasing.
  */
 static int cfgVSync         = 1;   /* swap interval: 0 = off, 1 = on            */
 static int cfgFpsCap        = 60;  /* frame cap in fps; 0 = uncapped (vsync); menu only exposes 30/60 */
-static int cfgMSAA          = 4;   /* 1/2/4/8 samples; default 4 (modern ports ship AA on; snaps down to the highest supported level) */
+static int cfgMSAA          = 2;   /* 1/2/4/8 samples; 2x default is lighter on low-end GPUs */
 static int cfgTexFilter     = 1;   /* 0 = nearest, 1 = bilinear (default), 2 = N64 3-point + trilinear */
 static int cfgFixMipTex     = 1;   /* RC2: clip mip-contaminated texture uploads to base height */
 static int cfgDetailBaseTile = 1;  /* D236: TEXTURETYPE_DETAIL -> sample the base image, not the detail tile */
@@ -65,10 +65,10 @@ static int cfgFovScale      = 100; /* D211: percent of the original vertical FOV
 static int cfgWidescreenAuto = 1;  /* WIDESCREEN-FOV-PLAN Phase 4: auto-scale vertical FOV by window aspect ratio; on by default, no-op at 4:3 */
 static int cfgNativeWidescreen = 1; /* D334 (WIDESCREEN-FOV-PLAN Phase 2): project the world at the real window aspect (Hor+); no-op at 4:3 */
 static int cfgHudScale = 100;        /* D226: HUD text/ammo scale %, 100 = original (no emission) */
-static int cfgDrawDistance      = 150; /* D218: percent of the level's authored far-clip/fog distance. Default raised 100->150 for v0.2.0: at the authored N64 distance, props visibly fade in just before they become visible on modern displays (Dam alarms / wall switches); 150 is the value the Steam Deck preset playtest-validated. 100 = unchanged N64. */
-static int cfgDrawDistanceAutoFov = 1;   /* D218: couple draw distance to Video.FovScale unless DrawDistance is set explicitly */
-static int cfgLodDistance         = 150; /* D249: percent scale on the geometry/model LOD-swap distance. Default raised 100->150 for v0.2.0 (same pop-in family as DrawDistance: LOD-swapped props like Dam's alarms/wall switches faded in at range); 150 matches the Steam Deck preset. 100 = unchanged N64. */
-static int cfgLodDistanceAutoFov  = 0;   /* off by default -- unlike DrawDistance, this is meant as a standalone perf lever, not something that should silently get more expensive as FovScale widens */
+static int cfgDrawDistance      = 250; /* % of authored far clip; 250% is the UI's 50/100 midpoint */
+static int cfgDrawDistanceAutoFov = 0; /* legacy ini option, no longer exposed in the menu */
+static int cfgLodDistance         = 250; /* % of authored geometry LOD distance; 50/100 in the UI */
+static int cfgLodDistanceAutoFov  = 0; /* legacy ini option, no longer exposed in the menu */
 static int cfgAniso         = 4;   /* D212: anisotropic filtering samples; 4 = the value fast3d already applied (no visual delta at default) */
 static int cfgSafeAreaCrop  = 1;   /* crop the N64 TV-overscan safe-area margin (visible as black top/bottom bars on PC) instead of showing it; on by default */
 static int cfgFullscreen    = 0;   /* 0 = windowed, 1 = borderless fullscreen   */
@@ -200,7 +200,7 @@ f32 portScaleFovY(f32 fovy, s32 isTitleScreen)
  * both the far clip plane and the fog-saturation distance (levels are tuned
  * for the stock ~60deg FOV), plus the character/prop fog-visibility-fade
  * cutoff (src/game/propobj.c chrobjFogVisRangeRelated/sub_GAME_7F054C58).
- * Video.DrawDistanceAutoFov (default on) couples the multiplier to
+ * Video.DrawDistanceAutoFov (legacy ini option, default off) couples the multiplier to
  * Video.FovScale so a wider FOV doesn't clip its own newly visible far
  * geometry -- or fade NPCs out early -- against distances tuned for the
  * narrower original view (D218's "blue artifacting"; the M-121 live
@@ -213,7 +213,7 @@ f32 portScaleFovY(f32 fovy, s32 isTitleScreen)
  * glow" on far Dam tunnel geometry, so auto coupling is now 4x FovScale)
  * to give headroom (max portFovScale is 1.5 at Video.FovScale's registered
  * ceiling of 150, so 4x tops out at 6.0x -- ceiling raised to match).
- * Identity (1.0f) at both defaults, bit-for-bit no-op. NOTE: end-to-end
+ * Identity (1.0f) at DrawDistance=100 with auto-FOV off. NOTE: end-to-end
  * re-check of fogLoadCurrentEnvironment (bgfog.c) found the fog RAMP
  * itself (not just the far-clip cutoff) already scales correctly with
  * this multiplier -- g_ScaledFarFogIntensity/scaled_far_fog_dist both
@@ -244,14 +244,14 @@ f32 portDrawDistanceMultiplier(void)
  * "closer", so this function returns the INVERSE of the requested percent:
  * Video.LodDistance=200 (keep full detail twice as far, more cost) ->
  * 0.5x on the distance term; =50 (drop to lower detail twice as soon, less
- * cost -- the perf lever) -> 2.0x. Video.LodDistanceAutoFov (default OFF,
- * unlike DrawDistanceAutoFov) can couple it to Video.FovScale the same
+ * cost -- the perf lever) -> 2.0x. Video.LodDistanceAutoFov (legacy ini
+ * option, default OFF) can couple it to Video.FovScale the same
  * direction as draw distance if ever wanted; off by default so this stays a
  * standalone dial and doesn't quietly add cost as FovScale widens. Clamped
  * to a [0.25, 4.0] distance multiplier (== effective LodDistance 25-400%) --
  * far outside that band either does nothing visible (LOD never triggers) or
- * thrashes every frame. Identity (1.0f) at the Video.LodDistance=100
- * default, bit-for-bit no-op. */
+ * thrashes every frame. Identity (1.0f) at Video.LodDistance=100
+ * with auto-FOV off. */
 f32 portLodDistanceMultiplier(void)
 {
     f32 pct;
@@ -376,10 +376,9 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
  * first-run path saves these values to disk and every later launch reads the
  * file (user changes via F10 win outright); if an ini already exists its
  * values overwrite everything here. So this is a first-launch preset only.
- * 1280x800 is the Deck's native panel resolution; MSAA 4 + VSync is
- * comfortable headroom for the A11 GPU; DrawDistance/LodDistance at 150%
- * because the authored N64 fade distances read "things pop in just before
- * you can see them" on a sharp 7" close-up panel (e.g. the Dam lock).
+ * 1280x800 is the Deck's native panel resolution; 2x MSAA + VSync keep
+ * GPU cost modest. Draw/LOD distances use the standard midpoint (250%)
+ * to avoid obvious N64-era pop-in on modern displays.
  * Note: the panel is 16:10 and the game renders 4:3, so this stretches
  * uniformly like any non-4:3 window today (letterboxing is the parked
  * WIDESCREEN-FOV-PLAN). */
@@ -389,9 +388,9 @@ void videoApplySteamOSDefaults(void)
     cfgWinW         = 1280;
     cfgWinH         = 800;
     cfgVSync        = 1;
-    cfgMSAA         = 4;
-    cfgDrawDistance = 150;
-    cfgLodDistance  = 150;
+    cfgMSAA         = 2;
+    cfgDrawDistance = 250;
+    cfgLodDistance  = 250;
 }
 
 /* Set by videoRequestLiveConfig() (F10 overlay, host thread); consumed on the
@@ -742,12 +741,12 @@ void videoPumpEvents(void)
                     optionsOverlayToggle();
                 }
             } else if (ev.key.keysym.sym == SDLK_ESCAPE && !ev.key.repeat) {
-                /* Overlay open: ESC closes it (and is swallowed). Otherwise
+                /* Overlay open: ESC backs out of a category, then closes (swallowed). Otherwise
                  * WI-1: in click-to-lock mode ESC frees the captured cursor
                  * (and is swallowed); else it falls through to input.c where
                  * it feeds the N64 B button (D145). */
                 if (optionsOverlayIsOpen()) {
-                    optionsOverlayToggle();
+                    optionsOverlayBack();
                 } else {
                     inputReleaseCapture();
                 }

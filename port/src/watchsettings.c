@@ -67,12 +67,18 @@ static int staged[WATCH_SETTING_COUNT];
 static int stagedField = -1, stagedFolder = -1;
 static SDL_SpinLock uiLock;
 
-/* Bounded producer (F10 scheduler) -> consumer (game thread) queue. Snapshot
- * is also guarded; no game/watch reads from F10 render or input paths. */
+/* Bounded producer (F10 controller poll) -> consumer (game thread) queues.
+ * Snapshot is also guarded; F10 input/render never call GE save routines. */
 struct Command { int folder, field, value, commit; };
 #define CMD_CAP 128
 static struct Command cmds[CMD_CAP];
 static int head, count;
+/* Front-end F10 also runs on the controller poll thread. fileWriteSave()
+ * calls joyDisablePoll() and waits for that SAME thread to acknowledge it:
+ * writing here deadlocks. Keep front commits separate from stage commands;
+ * the game-thread tick drains them without touching the controller thread. */
+static struct Command frontCmds[CMD_CAP];
+static int frontCount;
 static int snapshot[WATCH_SETTING_COUNT];
 static int snapFolder = -1;
 static SDL_SpinLock lock;
@@ -159,8 +165,8 @@ int watchSettingsActiveFolder(void)
     return validSave(f) ? f : -1;
 }
 
-/* D356: queued field commands awaiting the game thread (0 in front
- * contexts -- nothing is queued there). Drives the in-stage reset probe's
+/* D356: stage commands awaiting the game thread (front F10 uses a separate
+ * queue). Drives the in-stage reset probe's
  * dispatch check (plan §5.8). */
 int watchSettingsQueueCount(void)
 {
@@ -344,14 +350,39 @@ void watchSettingsSet(enum WatchSettingField field, int value, int commit)
     if (!stageActive()) {
         int f = frontFolder();
         SDL_AtomicLock(&uiLock);
-        if (commit) {
-            stagedField = -1;
+        if (!optionsOverlayIsOpen()) {
+            /* The front options screen and dev probes run on the game thread. */
+            if (commit) stagedField = -1;
+            else { stagedField = field; stagedFolder = f; staged[field] = value; }
             SDL_AtomicUnlock(&uiLock);
-            saveFrontField(f, field, value);
-        } else {
-            stagedField = field; stagedFolder = f; staged[field] = value;
-            SDL_AtomicUnlock(&uiLock);
+            if (commit) saveFrontField(f, field, value);
+            return;
         }
+        /* F10 is polled from joyPoll() via osContStartReadData. Even a
+         * fileGamePakProbe here deadlocks: joyDisablePoll waits for joyPoll's
+         * acknowledgement. Stage the value for UI feedback and enqueue ONLY
+         * under a short lock; the game thread does the EEPROM I/O. */
+        stagedField = field; stagedFolder = f; staged[field] = value;
+        SDL_AtomicUnlock(&uiLock);
+        SDL_AtomicLock(&lock);
+        int i;
+        for (i = 0; i < frontCount; i++) {
+            if (frontCmds[i].folder == f && frontCmds[i].field == (int)field) break;
+        }
+        if (i == frontCount && frontCount >= CMD_CAP) {
+            SDL_AtomicUnlock(&lock);
+            sysLogPrintf(LOG_WARNING, "watchsettings: front command queue full; edit not applied");
+            return;
+        }
+        if (i == frontCount) {
+            frontCount++;
+            frontCmds[i].commit = 0;
+        }
+        frontCmds[i].folder = f;
+        frontCmds[i].field = field;
+        frontCmds[i].value = value;
+        frontCmds[i].commit = commit || frontCmds[i].commit;
+        SDL_AtomicUnlock(&lock);
         return;
     }
     SDL_AtomicLock(&lock);
@@ -446,6 +477,26 @@ static void applyValue(enum WatchSettingField field, int value)
 
 void watchSettingsGameTick(void)
 {
+    /* Drain F10 front-end commits on the game thread. This MUST run before
+     * the early return for non-stage contexts below. Never hold the queue
+     * lock through fileWriteSave/joyDisablePoll: joyPoll must stay runnable. */
+    struct Command frontBatch[CMD_CAP];
+    int nf;
+    SDL_AtomicLock(&lock);
+    nf = frontCount;
+    memcpy(frontBatch, frontCmds, (size_t)nf * sizeof(frontBatch[0]));
+    frontCount = 0;
+    SDL_AtomicUnlock(&lock);
+    for (int i = 0; i < nf; i++) {
+        struct Command *c = &frontBatch[i];
+        if (c->commit) saveFrontField(c->folder, (enum WatchSettingField)c->field, c->value);
+        SDL_AtomicLock(&uiLock);
+        if (stagedFolder == c->folder && stagedField == c->field &&
+            staged[c->field] == c->value && c->commit)
+            stagedField = -1;
+        SDL_AtomicUnlock(&uiLock);
+    }
+
     /* D356: the GE_WSPROBE_RESET env gate drives the real reset UI dispatch
      * (arm -> confirm -> handler, no bypass) through optionsoverlay.c's
      * probe hooks. Each phase waits for its context to be stable (~120

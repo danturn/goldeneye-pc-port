@@ -236,3 +236,14 @@ D355,FIXED,F10/options Music slider inaudible in-stage:,"FIXED (port-only, port/
 D356,FIXED,"Settings regroup: Turok-style pages renamed to functional sections (INPUT/GAMEPLAY/GRAPHICS/AUDIO/VIDEO) with PD-style ""(File N)"" scoping annotations, the redu…","FIXED (port-only, port/src/optionsoverlay.{h,c} + port/src/watchsettings.{h,c} + port/src/frontoptions.c; plan docs/dev/D356-SETTINGS-REGROUP-PLAN.md):"
 D358,FIXED,D356 level-1 overlap:,"FIXED (port-only, port/src/frontoptions.c):"
 D359,PARTIAL,"Settings UI file terminology settled on the end-user term ""Profile"":","LANDED (port-only, frontoptions.c + optionsoverlay.c + comments):"
+D360,OPEN,F10 INPUT heading scrolled away; F10 navigation and distance defaults (2026-09-27).,IMPLEMENTED (port-only):
+D361,FIXED,Main-menu F10 Audio freezes the game:,"FIXED (port-only, port/src/watchsettings.c + F10 probe in optionsoverlay.c):"
+D362,CLOSED,F10 GoldenEye dossier-style visual refresh (2026-09-27).,CLOSED (superseded by D363 after user playtest):
+D363,FIXED,F10 return to a dark overlay with the N64 watch's green/Bank Gothic visual language (2026-09-27).,"FIXED (palette/font user-approved, 2026-09-27); D364 follows up on profile tags, click alignment and slider calibration."
+D364,FIXED,Settings UI feedback:,FIXED (user mostly accepted; D365 follows up on annotation size and click targets).
+D365,OPEN,F10 annotation hierarchy and visible mouse change targets (2026-09-27).,IMPLEMENTED (optionsoverlay.c):
+D366,PARTIAL,Input calibration label:,PARTIAL: label changed in both UIs; numeric parity with external GEPD bundle needs its actual settings before changing input defaults.
+D367,?,F10 full-width control boxes misaligned with their contents (2026-09-27).,SUPERSEDED by D368 after user playtest:
+D368,?,Simplify F10 click targets:,"INPUT RULE KEPT; tinted strips user-rejected, removed in D369."
+D369,FIXED,Remove F10 row boxes/strips entirely (2026-09-27).,FIXED (awaiting live acceptance):
+D370,PARTIAL,F10 distance/volume drags hurt frame rate (2026-09-27).,PARTIAL (user live test):
