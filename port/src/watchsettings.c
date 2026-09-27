@@ -20,6 +20,9 @@ extern void fileWriteSave(save_data *save);
 extern s32 fileGamePakProbe(void);
 extern void fileGenerateCRC(u8 *start, u8 *end, save_data *result);
 extern void sub_GAME_7F0A91A0(u16 volume);
+extern void musicTrack1ApplySeqpVol(u16 volume);
+extern u16 musicTrack1GetVolume(void);
+extern u16 get_mTrack2Vol(void);
 extern void fileBuildWriteNewSave(u32 folder);
 extern void set_cur_player_look_vertical_inverted(u32 value);
 extern void cur_player_set_aim_control(u32 value);
@@ -37,6 +40,11 @@ static int stageActive(void);   /* defined below; the choose-file guard uses it 
 static int wsProbeTick = -1;
 static int wsProbeTickN = 0;
 static int wsProbePhase = 0;   /* 0=armed, 1=queued (log pre), 2=done (log post) */
+
+/* D355: per-activation flag for the level-start BGM resync (reset whenever the
+ * stage is not active, so the next activation resyncs again -- lv.c:364
+ * re-pins the BGM player to VOLUME_MAX on every level start). */
+static int wsStageWasActive = 0;
 
 
 static const char *const keys[WATCH_SETTING_COUNT] = {
@@ -353,7 +361,19 @@ static void applyValue(enum WatchSettingField field, int value)
     if (field <= WATCH_SETTING_FX && value > 32767) value = 32767;
     else if (field > WATCH_SETTING_FX) value = !!value;
     switch (field) {
-    case WATCH_SETTING_MUSIC: set_mTrack2Vol((u16)value); break;
+    case WATCH_SETTING_MUSIC:
+        /* D355: the slider's value drives the X-track (track 2) via the game's
+         * own setter, but in-stage BGM is track 1, which the game pins to
+         * VOLUME_MAX at level start (lv.c:364) and never rescales from
+         * mTrack2Vol in solo -- so the N64 watch (and the F10 before this)
+         * could not change the music a player was actually hearing. The MP
+         * path already does exactly this resync (mpmenu.c:354 feeds
+         * get_mTrack2Vol() to musicTrack1ApplySeqpVol); mirror it here so a
+         * F10/options Music change is audible on the BGM player in real time
+         * (FX already was). Port-side only; the N64 watch path is untouched. */
+        set_mTrack2Vol((u16)value);
+        musicTrack1ApplySeqpVol((u16)value);
+        break;
     case WATCH_SETTING_FX: sub_GAME_7F0A91A0((u16)value); break;
     case WATCH_SETTING_LOOK: set_cur_player_look_vertical_inverted(value); break;
     case WATCH_SETTING_AUTOAIM: cur_player_set_autoaim(value); break;
@@ -374,6 +394,7 @@ void watchSettingsGameTick(void)
      * against selected_folder_num at apply time, so a stale cross-file edit
      * is still dropped, never misapplied. */
     if (!stageActive() || !g_CurrentPlayer) {
+        wsStageWasActive = 0;
         /* D354: one-shot fallback -- if not a single folder holds a valid
          * save (wiped/corrupt eeprom), build the game's own blank save for
          * file 1 (game thread, so the EEPROM write is on the owning thread)
@@ -423,6 +444,13 @@ void watchSettingsGameTick(void)
         SDL_AtomicUnlock(&lock);
         return;
     }
+    /* D355: level start pins the BGM player to VOLUME_MAX (lv.c:364) before
+     * init_watch re-applies the saved music value to the X track; resync the
+     * BGM (track 1) to the same live value once per activation so the player's
+     * music setting survives level starts, not just live F10 edits. */
+    if (!wsStageWasActive && musicTrack1GetVolume() != get_mTrack2Vol())
+        musicTrack1ApplySeqpVol(get_mTrack2Vol());
+    wsStageWasActive = 1;
     struct Command batch[CMD_CAP];
     int n;
     SDL_AtomicLock(&lock);
@@ -447,8 +475,8 @@ void watchSettingsGameTick(void)
     if (wsProbePhase == 0 && wsProbeTickN++ == (size_t)wsProbeTick) {
         wsProbePhase = 1;
         save_data *save = validSave(selected_folder_num);
-        sysLogPrintf(LOG_INFO, "wsprobe: pre  music=%d fx=%d save.music=%d save.fx=%d (folder %d, %d queued)",
-                     get_mTrack2Vol(), call_sndGetSfxSlotFirstNaturalVolume(),
+        sysLogPrintf(LOG_INFO, "wsprobe: pre  music=%d fx=%d t1=%d save.music=%d save.fx=%d (folder %d, %d queued)",
+                     get_mTrack2Vol(), call_sndGetSfxSlotFirstNaturalVolume(), musicTrack1GetVolume(),
                      save ? (int)save->music_vol : -1, save ? (int)save->sfx_vol : -1,
                      (int)selected_folder_num, n);
         watchSettingsSet(WATCH_SETTING_MUSIC, 4096, 1);
@@ -456,8 +484,8 @@ void watchSettingsGameTick(void)
     } else if (wsProbePhase == 1 && wsProbeTickN++ == (size_t)wsProbeTick + 1) {
         wsProbePhase = 2;
         save_data *save = validSave(selected_folder_num);
-        sysLogPrintf(LOG_INFO, "wsprobe: post music=%d fx=%d save.music=%d save.fx=%d",
-                     get_mTrack2Vol(), call_sndGetSfxSlotFirstNaturalVolume(),
+        sysLogPrintf(LOG_INFO, "wsprobe: post music=%d fx=%d t1=%d save.music=%d save.fx=%d",
+                     get_mTrack2Vol(), call_sndGetSfxSlotFirstNaturalVolume(), musicTrack1GetVolume(),
                      save ? (int)save->music_vol : -1, save ? (int)save->sfx_vol : -1);
     }
     int values[WATCH_SETTING_COUNT];
