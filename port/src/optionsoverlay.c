@@ -1097,3 +1097,89 @@ Gfx *optionsOverlayEmit(void)
     }
     return s_buf;
 }
+
+/* ------------------------------------------------------------------------ */
+/* D343: "Options" label on the file-select screen (route B entry point,     */
+/* docs/dev/OPTIONS-MENU-PLAN.md §4). Drawn from the single #ifdef PORT hook */
+/* in constructor_menu05_fileselect, so it is part of GE's own front-end     */
+/* frame (fades with it, D335 pillarbox applies). Clicking it opens the F10  */
+/* overlay.                                                                  */
+/*                                                                           */
+/* Thread map: the hook runs on the game's main thread; the overlay's open   */
+/* flag is read by the scheduler thread (input poll + gfx_run). So the hook  */
+/* only posts a request, which optionsOverlayPollRequests() applies from the */
+/* input poll (same shape as the D314 wheel queue).                          */
+/* ------------------------------------------------------------------------ */
+
+extern struct font     *ptrFontZurichBold;
+extern struct fontchar *ptrFontZurichBoldChars;
+extern float cursor_h_pos;
+extern float cursor_v_pos;
+extern s32   folder_selected_for_deletion;
+extern int   menu_update;                     /* MENU enum (signed, -1 = none) */
+extern s32   g_MenuTimer;
+extern u16   joyGetButtonsPressedThisFrame(s8 contpadnum, u16 mask);
+extern ALBank *g_musicSfxBufferPtr;             /* music.h; sndPlaySfx comes via snd.h */
+
+#define FSOPT_MENU_INVALID  (-1)
+#define FSOPT_PRESS_MASK    (0x8000 | 0x2000 | 0x1000)  /* A | Z | START, as front.c */
+#define FSOPT_SFX_DOOR_LOCK 222   /* DOOR_LOCK_SFX: Copy/Erase's own click sound */
+#define FSOPT_TEXT_RIGHT    392   /* right edge of the Erase label's text */
+#define FSOPT_TEXT_Y        24    /* dark strip above the right-hand folder */
+#define FSOPT_HIT_PAD       4
+
+static const char kFsOptLabel[]   = "Options";    /* ASCII only: issue #87 / D295 */
+static const char kFsOptLabelNL[] = "Options\n";
+static SDL_atomic_t s_openRequest;
+
+void optionsOverlayPollRequests(void)
+{
+    if (SDL_AtomicSet(&s_openRequest, 0) && !optionsOverlayIsOpen()) {
+        optionsOverlayToggle();
+    }
+}
+
+Gfx *optionsFileSelectLabel(Gfx *gdl)
+{
+    s32 h = 0, w = 0;
+    s32 x, y;
+    int hot;
+
+    /* The overlay swallows pad 0, so front.c's idle timer never resets and
+     * the file select screen jumped to the legal screen after 30 s. Hold it
+     * at 0 while the overlay is open -- the same write front.c makes when a
+     * button is pressed. This hook only runs on MENU_FILE_SELECT, the one
+     * screen where g_MenuTimer is an idle timer (elsewhere it is the intro /
+     * cast-roll clock, which must keep running). */
+    if (optionsOverlayIsOpen()) {
+        g_MenuTimer = 0;
+    }
+
+    s32 unusedw = 0;
+
+    /* textMeasure only counts height for completed lines, so measure the
+     * height with a trailing newline (front.c's folder text does the same). */
+    textMeasure(&unusedw, &w, (char *)kFsOptLabel, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+    textMeasure(&h, &unusedw, (char *)kFsOptLabelNL, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+    x = FSOPT_TEXT_RIGHT - w;
+    y = FSOPT_TEXT_Y;
+
+    hot = !optionsOverlayIsOpen()
+       && menu_update == FSOPT_MENU_INVALID
+       && folder_selected_for_deletion < 0
+       && cursor_h_pos >= (float)(x - FSOPT_HIT_PAD)
+       && cursor_h_pos <= (float)(x + w + FSOPT_HIT_PAD)
+       && cursor_v_pos >= (float)(y - FSOPT_HIT_PAD)
+       && cursor_v_pos <= (float)(y + h + FSOPT_HIT_PAD);
+
+    if (hot && joyGetButtonsPressedThisFrame(0, FSOPT_PRESS_MASK)) {
+        sndPlaySfx((struct ALBankAlt_s *)g_musicSfxBufferPtr, FSOPT_SFX_DOOR_LOCK, NULL);
+        SDL_AtomicSet(&s_openRequest, 1);
+    }
+
+    /* Same font and white as Copy/Erase; gold (the folder text colour) while
+     * the cursor is over it. */
+    return textRender(gdl, &x, &y, (char *)kFsOptLabel, ptrFontZurichBoldChars,
+                      ptrFontZurichBold, hot ? 0xEBD879FF : 0xFFFFFFFF,
+                      viGetX(), viGetY(), 0, 0);
+}

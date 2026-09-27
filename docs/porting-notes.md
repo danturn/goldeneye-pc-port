@@ -1280,6 +1280,16 @@ GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphfram
 
 ## E. Process / method notes
 
+- **Headless front-end scripts: turn the mouse off (D343).** In menus the
+  pointer follows the real OS mouse (WI-2 absolute tracking), so the desktop
+  mouse moves the in-game cursor mid-`GE_INPUTSCRIPT`. Put
+  `[Input] MouseEnabled = 0` in the pinned test ini. Script "frames" were
+  about one per rendered frame on the file select screen; calibrate with a
+  log, not by assumption.
+- **`textMeasure` height is 0 without a trailing newline (D343).** It only
+  counts completed lines. Measure `"text
+"` when you need a height (front.c's
+  folder text does this); the width is unaffected.
 - **Periodic audio glitches: measure the host audio device before touching
   the pipeline (D322).** A clock-regular overflow/garble pattern (~5 min period,
   ~45 s bursts, independent of level and load) looked like a port timing beat

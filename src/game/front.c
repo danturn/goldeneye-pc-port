@@ -2794,6 +2794,15 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
 
         folder_option_ERASE_bound.right = (f32) (textsize.p[0] + textpos.p[1]);
 
+#ifdef PORT
+        /* D343: PC "Options" label (opens the port settings screen). Draw
+         * only; the hit test and the open live in port/src/optionsoverlay.c. */
+        {
+            extern Gfx *optionsFileSelectLabel(Gfx *gdl);
+            DL = optionsFileSelectLabel(DL);
+        }
+#endif
+
         copypos.f[0] = 225.0f;
         copypos.f[1] = 285.0f;
 

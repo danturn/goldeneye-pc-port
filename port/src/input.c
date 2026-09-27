@@ -933,6 +933,10 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         return 0;
     }
 
+    /* D343: apply a pending open from the file-select "Options" label (posted
+     * on the game thread; the overlay's open flag belongs to this thread). */
+    if (idx == 0) optionsOverlayPollRequests();
+
     /* F10 options overlay: while it is open, controller 0 is fully swallowed
      * (neutral pad, no stick) and the nav keys / wheel / gamepad drive the
      * overlay instead. Mirrors the WI-1 "cursor free in a stage -> withhold

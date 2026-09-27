@@ -85,6 +85,12 @@ or are flagged "restart".
 
 ## 4. Alternative if an in-fiction surface is required later
 
+> **2026-09-27: route B chosen (v0.4.0 intake).** The entry point is on the
+> file select screen, not a main options menu (GE's front end has none). M1
+> landed as D343: an "Options" label that opens the F10 overlay, via one
+> Rule-2 `#ifdef PORT` draw hook. M2 (a GE-styled screen that reuses the
+> overlay's rows) follows.
+
 Route (B): a new front-end screen `constructor_menuXX_pcoptions` +
 `menuXX_pcoptions_navigation` in `front.c` under `#ifdef PORT`, reached from
 a new "PC OPTIONS" row on the main options menu. Each row calls a

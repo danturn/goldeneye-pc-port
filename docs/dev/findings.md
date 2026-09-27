@@ -628,6 +628,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D339 | **#92 (low-end ~30 fps, Celeron N3060 / HD 400) — measured CPU budget: game thread ~0.2–0.35 ms/frame, render-thread display-list pass 0.4–1.8 ms/frame on this box; CPU very likely not the bottleneck. New `GE_PERFSTAT=1` probe (render phases, tris/batches, game-thread busy, GPU timer query).** — full `## D339` entry at file tail | OPEN (2026-09-26, user: review toward the end of v0.4.0; needs a test machine with similar HD 400-class hardware). Earlier: INVESTIGATING — probe landed; target-hardware numbers needed before any fix. |
 | D341 | **Intro gun-barrel blood drip draws as static blocks/lines instead of dripping (user, v0.4.0, 2026-09-26; death blood fine).** — full `## D341` entry at file tail | FIXED (M-201, user-verified 2026-09-27): two fast3d defects — the 1-cycle blood texrect sampled a stale tile-1 declaration via the D236 LOD rule, and the in-place-regenerated dyn-pool texture hit a stale address-keyed cache entry. |
 | D342 | **File select: folder bodies and Bond photos vanish after selecting a file and backing out (user, v0.4.0, 2026-09-26).** — full `## D342` entry at file tail | FIXED (M-201, user-verified): scratch placed at the N64 offset +0xA000 of `ptr_logo_and_walletbond_DL` landed inside the larger PC wallet model; moved past its 0x17000 reservation. |
+| D343 | **File select: PC "Options" label opens the settings overlay (v0.4.0 feature, M1 of the route-B options screen, 2026-09-27); also fixes F10 on file select jumping to the legal screen after 30 s.** — full `## D343` entry at file tail | LANDED (M1): one Rule-2 `#ifdef PORT` draw hook (user sign-off 2026-09-27); click + idle timer A/B verified headless; golden 3/3. User playtest owed. |
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -13530,4 +13531,32 @@ Implemented as `Input.PdMouseAim` (**default off**, because it changes aim feel)
 **Verified:** user playtest (select/back out repeatedly, folders and photos intact); golden gate 3/3.
 
 **Status: FIXED (M-201, user-verified 2026-09-27).**
+
+## D343 — File select: PC "Options" label + F10 idle-timer fix (M1, 2026-09-27)
+
+**Feature (v0.4.0 intake):** PD PC reaches its extended settings through its own menus (Options > Extended). GE has no generic menu system (each `front.c` screen is hand-written) and no front-end options screen, so this is "route B" from `docs/dev/OPTIONS-MENU-PLAN.md` §4: a native-looking entry point on the file select screen. M1 adds the entry point and reuses the existing F10 overlay; M2 (a GE-styled screen) is next.
+
+**Game-code edit (Rule 2, user sign-off 2026-09-27, a feature not an ABI fix):** one additive `#ifdef PORT` block in `constructor_menu05_fileselect` (`src/game/front.c`), right after the Erase label, calling `optionsFileSelectLabel(DL)`. Nothing else in `src/game` changed. Drawing inside GE's own frame means the label fades with screen transitions and gets the D335 pillarbox for free.
+
+**Port side (`port/src/optionsoverlay.c`, `port/src/input.c`):**
+- The label is ASCII "Options" (issue #87 / D295) in Zurich Bold, right-aligned with the Erase text (x 392) at y 24, in the dark strip above the right-hand folder. The bottom row is full; the cursor can reach this spot (clamp 20..420 x 20..310). White normally, gold (`0xEBD879FF`, the folder text colour) when hot.
+- Hot = cursor over the text (+4 px), overlay closed, no pending menu change (`menu_update == -1`), and no erase confirmation open (`folder_selected_for_deletion < 0`). The label is clear of every folder and Copy/Erase hit box, so a press on it only triggers front.c's "clear the Copy/Erase mode" path.
+- The click is A/Z/Start via `joyGetButtonsPressedThisFrame` (the game's interface tick runs before the constructor each frame, so the latched press is valid). A left click is A in menus. It plays `DOOR_LOCK_SFX` (222, Copy/Erase's sound).
+- **Threads:** the hook runs on the game's main thread, but the overlay's open flag is read by the scheduler thread (input poll + `gfx_run`). So the hook only posts an `SDL_atomic_t` request, which `optionsOverlayPollRequests()` applies from `inputComputePad(0)` (the same shape as the D314 wheel queue).
+- `textMeasure` returns a height of 0 for text without a trailing newline, which collapsed the first hit box to one row. The height is now measured from `"Options
+"`.
+
+**Bug fixed along the way (existing since F10 landed):** while the overlay is open it gives front.c a neutral pad, so `interface_menu05_fileselect`'s idle timer (`g_MenuTimer`, `front.c:~2304`) never resets. After 30 s the screen went to the legal screen and the intro attract loop. The hook now sets `g_MenuTimer = 0` while the overlay is open, which is the same write front.c makes when a button is pressed. This is scoped by construction: the hook only runs on MENU_FILE_SELECT, the one screen where `g_MenuTimer` is an idle timer. Elsewhere it is the intro/cast-roll animation clock and must keep running, so a blanket "front-end menu" gate would have frozen the intro logos under F10.
+
+**Verified (Windows native, 640x480 defaults-only ini + `MouseEnabled=0`):**
+- Click: `GE_STARTMENU=5 GE_INPUTSCRIPT="300:SUP,SRIGHT;360:SNONE;370:SLEFT;376:SNONE;420:A"` puts the cursor at (386,20), hot=1, press, and logs `optionsoverlay: opened`. The frame shows the overlay over file select.
+- Idle A/B (`GE_OPTIONSOVERLAY=1`, 45 s, TEMP switch since removed): with the fix, `current_menu` stays 5 for the whole run. Without it, 5 → 23 → 0 (legal) → 1 → 2 (logos).
+- With the overlay closed, the file-select frame differs from the pre-change frame only in the label box (788 px, x 500-571 / y 35-55 at 640x480). There is no file-select golden; the golden gate (Bunker 1) is 3/3.
+- Captures at 854x480 (16:9) and 1120x480 (21:9) show the label and highlight correctly pillarboxed.
+
+**Harness note:** in headless menu runs the menu pointer follows the real OS mouse (WI-2 absolute tracking), so the maintainer's desktop mouse moves the in-game cursor mid-script. Set `[Input] MouseEnabled = 0` in the test ini (porting-notes §E).
+
+**Owed:** a user playtest: mouse hover/click and pad on the label, F10 and label opening the same overlay, leaving it open for more than 30 s, and 16:9 / 21:9. Then M2 (a GE-styled screen) per the local plan.
+
+**Status: LANDED (M1), user playtest owed.**
 
