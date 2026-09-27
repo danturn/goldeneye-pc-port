@@ -191,3 +191,4 @@ build-pyinst/
 # Local working junk (frame captures, timerun state, PPM dumps) - moved here
 # from repo root / scratch on 2026-09-18; never commit.
 /local/
+build-pc-cmd.bat
