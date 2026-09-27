@@ -1375,11 +1375,15 @@ static void import_texture(int i, int tile, bool importReplacement) {
             static int d245_oldtex = -1;
             if (d245_oldtex < 0) d245_oldtex = getenv("GE_D245_OLDTEX") != NULL;
             const uint8_t maskt = rdp.texture_tile[tile].maskt;
+            /* Crop by the TILE line size (the importer's row width): for a
+             * LoadBlock, loaded_texture.line_size_bytes is the whole block, so
+             * testing against it never cropped (M-201 follow-up: the mip rows
+             * then showed as coloured dashes on Frigate's water). */
+            const uint32_t d245_row = rdp.texture_tile[tile].line_size_bytes;
             if (!d245_oldtex && fmt == G_IM_FMT_RGBA && siz == G_IM_SIZ_16b && maskt > 0 && maskt < 12 &&
-                loaded_texture.line_size_bytes > 0 &&
-                loaded_texture.size_bytes > loaded_texture.line_size_bytes * (1u << maskt)) {
+                d245_row > 0 && loaded_texture.size_bytes > d245_row * (1u << maskt)) {
                 LoadedTexture lt = loaded_texture;
-                lt.size_bytes = loaded_texture.line_size_bytes * (1u << maskt);
+                lt.size_bytes = d245_row * (1u << maskt);
                 import_texture_ci8(tile, lt, rdp.tex_lod);
             } else {
                 import_texture_ci8(tile, loaded_texture, rdp.tex_lod);

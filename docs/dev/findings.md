@@ -11624,6 +11624,8 @@ User vs 1964: PC water jittered with player movement, "reset" even standing stil
 
 Ruled out on the way: the animation phases advance by `g_ClockTimer` (rate-independent); `PRIM_LOD_FRAC` and per-tile `uls/ult` offsets are handled by fast3d; `WrapFix` pre-wrap is off by default. A/B switches kept: `GE_D245_OLDVTX=1`, `GE_D245_OLDTEX=1`. Golden gate 3/3; Windows + Linux builds clean.
 
+**Follow-up (2026-09-27): coloured dashes.** User playtest found rows of yellow/green/magenta dashes on Frigate's water, looking down near the horizon. The base-level crop in fix 1 had never run: its test used `loaded_texture.line_size_bytes`, which for a LoadBlock is the whole 1400-byte block, so the upload stayed 32x43 while the tri path normalised V by 32. The mip-chain rows (32-42) were sampled as garbage texels. Crop test now uses the tile's line size (the importer's row width): the dumped import is a clean 32x32 tile (indices 0-23). User-verified, golden gate 3/3.
+
 **Status: FIXED (M-201, user-verified vs 1964, 2026-09-26).**
 
 ## D246 — Tiny pixel strips at the left and right edges of the screen, "like overscan" — look like raw pixels, not 3D graphics (M-116, user QA report).
