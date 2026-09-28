@@ -298,11 +298,12 @@ static struct Row rows[] = {
     { .key="Bond.LookAhead", .label="Look ahead", .kind=ROW_TOGGLE,
       .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
     /* D216/Game.SkipIntro: user report (v0.2.1 testing) that it breaks audio
-     * -- pulled from the menu until root-caused. Not exposed to players; the
-     * config var + lv.c hook stay in place (dead unless an existing ini has
-     * it set, which no menu path can do any more). Do not re-add without
-     * fixing the underlying issue first. */
-    { .key="Game.SkipIntro", .label="Skip intro", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+     * -- pulled from the menu until root-caused; re-exposed since. D408
+     * (2026-09-28): still EXPERIMENTAL -- with it on, a failed/aborted
+     * mission skips the post-mission failure dossier (MENU_MISSION_FAILED)
+     * and returns straight to the menus. Not recommended for regular users;
+     * keep the loud label until both quirks are root-caused. */
+    { .key="Game.SkipIntro", .label="Skip intro (EXPERIMENTAL)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* D232: the community "no damage flash" toggle (suppresses the red/green
      * hit-flash overlay in bondview2). */
     { .key="Game.NoHitFlash", .label="No hit flash", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },

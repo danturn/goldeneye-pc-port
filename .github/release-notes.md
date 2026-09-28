@@ -61,7 +61,8 @@ frame cadence. Fixed at the root; the game now holds a rock-stable 60 fps
   is now **profile**. (D353–D356)
 - The **F10 in-game overlay** was refreshed GE-style: category headers,
   full controller support (value-adjust with hold-to-repeat), fixed pointer/
-  keyboard navigation, and new rows: **Show FPS**, **Skip intro**, pad
+  keyboard navigation, and new rows: **Show FPS**, **Skip intro
+  (experimental)**, pad
   **Invert look / Southpaw / Deadzone / Trigger threshold**. (D237/D345–
   D347/D360–D370)
 - The front end gained a **PC Options screen** beside the file-select bar,
@@ -144,7 +145,10 @@ distances). (D402/D283)
 - **Tanks** (Runway, Streets) can be boarded and exited again — the new
   use/reload button split had removed the B-button tap the engine's tank
   handlers use; B is presented again in tank states, and use keeps its
-  no-reload-fallback semantics everywhere else. (D407)
+  no-reload-fallback semantics everywhere else. A short input lockout during
+  the sit-down animation means a double-tap can't cancel boarding, and in-tank
+  mouse aim has its own **`Tank aim speed`** setting (`Input.TankAimScale`,
+  default 100) so the turret matches your on-foot feel. (D407)
 - File-select background / gun-barrel comb rendering fixed. (D397)
 - Stale-texture artifacts after level transitions fixed. (D235)
 - Distant-geometry dropout on the biggest open levels (Streets, Egyptian)
@@ -249,6 +253,11 @@ All settings available in v0.4.0, in both options screens (front-end
 - **`All unlocked` is experimental** (see above); the fresh-install
   corruption case is fixed, but saves made while it is on are not
   guaranteed recoverable by switching it off. (D387)
+- **`Skip intro` is experimental — not recommended for regular use yet.**
+  With it on, a failed or aborted mission skips the post-mission failure
+  report screen and returns straight to the menus (the mission still records
+  correctly). An older audio quirk on some saves is also still being chased.
+  (D408/D216)
 
 ## Roadmap since v0.3.0 (research, not yet features)
 

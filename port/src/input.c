@@ -98,6 +98,7 @@ extern int gameScriptedCameraActive(void);
 extern bool bond_interact_object(void); /* chrprop.c: use target, no reload fallback */
 extern s32 g_PlayerIsInTank;            /* bondview.c: tank state (D407) */
 extern s32 g_BondCanEnterTank;          /* bondview.c: tank board gate (D407) */
+extern s32 g_EnterTankAudioState;      /* bondview2.c: tank entry/running state (D407) */
 /* gun.c: native weapon-switch entry points (not exposed in gun.h). */
 extern ITEM_IDS get_next_weapon_in_cycle_for_hand(GUNHAND hand, s32 direction);
 extern void gunRequestHandWeaponChange(enum GUNHAND hand, s32 nextWeapon, s32 cycleDirection);
@@ -370,6 +371,12 @@ static int gepdSens       = 38;     /* D194 Input.GepdSens: GEPD SENSITIVITY set
                                         (20 -> 25 "a bit slow" -> 30 user-calibrated match point
                                         -> 38: user asked defaults ~20-35% faster than that) */
 static int aimBand        = 20;     /* aim mode: usable stick range above the 60 gate */
+/* D407: mouse->stick gain multiplier (%, 100 = unchanged) applied ONLY while
+ * aiming in tank. In-tank aim must use the legacy velocity-stick path (the
+ * game's turret code reads raw stick deflection only), whose px->screen feel
+ * differs from the direct-write on-foot models; this knob lets the user dial
+ * the turret to taste without touching on-foot aim. */
+static int tankAimScale   = 100;
 /* D194/D238: default 100 -> 40 (M-123 user calibration). The old gain
  * (MOUSE_TURN_GAIN=6 stick/px) saturated the game's quadratic natural-turn
  * curve at ~13 px/poll, i.e. hipfire ran at full 315 deg/s for any normal
@@ -1612,27 +1619,53 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         int useNow = scriptIsActive() ? s_scriptUse : (actHeld(ks, IA_CANCEL) || padUse);
         int reloadNow = scriptIsActive() ? s_scriptReload : (actHeld(ks, IA_RELOAD) || padReload);
         int playable = inputCanUseGameplayActions(menuMode);
-        if (playable) {
-            if (useNow && !s_useHeldPrev) {
-                bool empty = bond_interact_object();
-                if (configGetInputLog()) sysLogPrintf(LOG_NOTE, "GE_INPUTLOG dedicated use (no target=%d)", empty);
-            }
-        } else if (scriptIsActive() ? s_scriptUse : actHeld(ks, IA_CANCEL)) {
-            /* A on the pad is still native accept outside playable stages. */
-            button |= GE_CONT_B;
-        }
         /* D407: on the N64 the B bit also drives bondview2.c's tank
          * handlers (board when g_BondCanEnterTank, exit while
          * g_PlayerIsInTank). The D378/D393 split above routes E/pad A to a
          * dedicated interact call without presenting B, which left tank
          * board/exit dead on PC (the tank blocks movement but can never be
          * entered -- Runway, Streets). Present B only in the tank states so
-         * E keeps its no-reload-fallback semantics everywhere else. */
-        if (useNow && !s_useHeldPrev
-            && (g_PlayerIsInTank == 1 || g_BondCanEnterTank != 0))
-        {
+         * E keeps its no-reload-fallback semantics everywhere else.
+         * In the tank states the dedicated interact call is ALSO skipped:
+         * on the N64 the use/reload fallback (lv.c:796) runs on the B bit
+         * AFTER the board handler in the same tick, so pre-activating the
+         * tank prop on the input side (propobjInteract ->
+         * RUNTIMEBITFLAG_ACTIVATED, propobj.c) reorders the N64 sequence
+         * and flaps g_BondCanEnterTank between input sampling and the
+         * board check (user: still can't board, 2026-09-28). */
+        int tankState = (g_PlayerIsInTank == 1 || g_BondCanEnterTank != 0);
+        /* D407 (cont.): board-animation lockout. The game's B-tap handler
+         * (bondview2.c) is a toggle: while g_PlayerIsInTank is set, a B tap
+         * is the EXIT path. Boarding commits a ~45-frame (0.75 s) sit blend
+         * during which g_EnterTankAudioState stays TANK_RUN_STATE_NOT_RUNNING;
+         * only once it finishes does the engine SFX start. A key bounce or a
+         * player re-pressing E in that silent window ("nothing is happening")
+         * hits the exit a few frames later and silently cancels the whole
+         * animation -- 2026-09-28 playtest: every attempt was a
+         * board->exit microcycle, so no seat, no engine, and the tank camera
+         * transition reverted ("tries to do something, cancels out"). An N64
+         * player simply presses once and waits; give the keyboard the same
+         * guarantee in the port layer: suppress B from E while the entry
+         * animation is running. Once seated, E = exit again. */
+        static int s_tankBoardLock = 0;
+        s_tankBoardLock = (g_PlayerIsInTank == 1 &&
+                           g_EnterTankAudioState == TANK_RUN_STATE_NOT_RUNNING);
+        if (playable) {
+            if (useNow && !s_useHeldPrev && !tankState) {
+                bool empty = bond_interact_object();
+                if (configGetInputLog()) sysLogPrintf(LOG_NOTE, "GE_INPUTLOG dedicated use (no target=%d)", empty);
+            }
+        } else if ((scriptIsActive() ? s_scriptUse : actHeld(ks, IA_CANCEL)) && !tankState) {
+            /* A on the pad is still native accept outside playable stages.
+             * D407: NOT in tank states -- there B must come only from the
+             * locked edge path below. This mapping is level-triggered on E;
+             * in-tank (playable=false) it would re-present B on any E press,
+             * bypassing the board-animation lockout and re-edging the game's
+             * own exit toggle (2026-09-28: unprobed board->exit microcycles). */
             button |= GE_CONT_B;
         }
+        if (useNow && !s_useHeldPrev && tankState && !s_tankBoardLock)
+            button |= GE_CONT_B;
         if (reloadNow && !s_reloadHeldPrev && playable) {
             attempt_reload_item_in_hand(GUNRIGHT);
             attempt_reload_item_in_hand(GUNLEFT);
@@ -1817,14 +1850,20 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                 /* D194 GEPD-mirror aim: direct crosshair/camera writes, no
                  * look stick (see aimGepdCompute). Keyboard turn (sx/sy set
                  * above) still works. Otherwise fall through to the legacy
-                 * velocity stick below. */
-                if (aimModeGet() == AIMMODE_CENTRED) {
+                 * velocity stick below.
+                 * D407 follow-up: in-tank the game aims the turret from raw
+                 * stick deflection ONLY (bondview2.c HONEY/SOLITARE branch:
+                 * |stick_x|/|stick_y| > 60 -> aimTurn/speedVerta), so the
+                 * direct-write models must be bypassed there and the legacy
+                 * velocity stick emitted instead. */
+                int tankAimStick = (g_PlayerIsInTank == 1);
+                if (!tankAimStick && aimModeGet() == AIMMODE_CENTRED) {
                     /* D333: FPS-style centred aim -- the camera takes the
                      * mouse (same path as hipfire, which also declines on
                      * the watch/pause/cutscene gates) and no stick is
                      * emitted, so the crosshair settles at centre. */
                     hipDirectCompute(edx * lookDtScale, dyLook * lookDtScale);
-                } else if (pdMouseAimEnabled()) {
+                } else if (!tankAimStick && pdMouseAimEnabled()) {
                     /* PD model: accumulate only. The game's own integrator is
                      * driven by the port-supplied turn through the
                      * sub_GAME_7F067FBC hook (see Input.PdMouseAim above). */
@@ -1833,9 +1872,10 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                      * crosshair model -- without this the camera stops
                      * following the crosshair at the screen edge. */
                     aimGepdEdgeScroll();
-                } else if (!aimGepdCompute(edx * lookDtScale, dyLook * lookDtScale)) {
+                } else if (tankAimStick || !aimGepdCompute(edx * lookDtScale, dyLook * lookDtScale)) {
                 double aimEdx = edx * lookDtScale, aimDyLook = dyLook * lookDtScale;
                 double aimSens = (mouseAimSpeed / 100.0) * (mouseSensitivity / 100.0);
+                if (tankAimStick) aimSens *= tankAimScale / 100.0;   /* D407 */
                 double gamma = aimCurveGamma / 100.0;
                 double normX = fabs(aimEdx) * aimSens / AIM_FULL_SPEED_PX;
                 double normY = fabs(aimDyLook) * aimSens / AIM_FULL_SPEED_PX;
@@ -1927,16 +1967,16 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         {
             pcOptionsKeyboardPad(ks, mb, optionsBindingInputBlocked(), &button, &sx, &sy);
             /* D407(b): on this screen the mouse wheel scrolls the row list
-             * (wheel down = step down). Front-end menus otherwise leave the
-             * wheel queue unconsumed in menu mode -- clear it here so a
-             * scroll can't leak into the next stage's weapon cycle (D223). */
+             * -- wheel up = step UP, wheel down = step DOWN (same sign
+             * convention as the W/S keys above: +STICK_MAX = up). The
+             * original mapping had them swapped (2026-09-28 user report).
+             * Front-end menus otherwise leave the wheel queue unconsumed in
+             * menu mode -- clear it here so a scroll can't leak into the
+             * next stage's weapon cycle (D223). */
             if (!optionsBindingInputBlocked())
             {
-                int wheel = 0;
-                if (wheelBack > 0)          { wheel = +1; wheelBack = 0; }
-                else if (wheelFwd > 0)      { wheel = -1; wheelFwd = 0; }
-                if (wheel != 0)
-                    sy = (wheel < 0) ? STICK_MAX : -STICK_MAX;
+                if (wheelBack > 0)      { sy = STICK_MAX;  wheelBack = 0; }   /* wheel up   */
+                else if (wheelFwd > 0)  { sy = -STICK_MAX; wheelFwd = 0; }    /* wheel down */
             }
         }
         menuPrevActive = menuMode;
@@ -2166,7 +2206,6 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         sysLogPrintf(LOG_NOTE, "GE_INPUTLOG cont%d: btn=%04x stick=(%d,%d)",
                      idx, button, sx, sy);
     }
-
     return button;
 }
 
@@ -2705,6 +2744,7 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.AimModeSens", &gepdSens, 1, 500);
     configRegisterInt("Input.GepdSens",    &gepdSens, 1, 500);   /* deprecated alias */
     configRegisterInt("Input.AimBand", &aimBand, 5, 40);
+    configRegisterInt("Input.TankAimScale", &tankAimScale, 10, 300);   /* D407 */
     configRegisterInt("Input.MouseTurnSpeed", &mouseTurnSpeed, 1, 500);
     configRegisterInt("Input.SensLink", &sensLink, 0, 1);
     configRegisterInt("Input.MenuPointerSpeed", &menuPointerSpeed, 10, 500);

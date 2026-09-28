@@ -284,3 +284,4 @@ D404,RESOLVED,"""Aim style: Centred (PC)"" (Input.AimMode=1, D333/D337) has no e
 D405,CLOSED,"fast3d/OpenGL: MSAA above the driver max black-screens; two glBindFramebuffer calls pass an index where a GL name is required (PR #106, italoarruda, 2026-09-25…","CLOSED (2026-09-28). Merged from PR #106 (code file only; security-reviewed clean - port-layer GL state fixes, no external input, no allocations)."
 D406,RESOLVED,front-end PC Options screen:,"RESOLVED (2026-09-28, port-layer only, Steam Deck-validated):"
 D407,PARTIAL,Tanks cannot be boarded/exited on PC —,"PARTIAL (fix landed in v0.4.0, port-only):"
+D408,OPEN,Game.SkipIntro skips the post-mission failure dossier:,"OPEN (cosmetic, not root-caused past the handoff site)."
