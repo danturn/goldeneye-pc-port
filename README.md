@@ -5,34 +5,38 @@
 
 [Download](#download) · [Status](#status) · [Roadmap](#roadmap) · [Building](#building) · [Docs](#documentation) · [Legal](#legal)
 
-A native PC port of _GoldenEye 007_ (Rare, 1997, Nintendo 64), compiled from
-the [GoldenEye 007 decompilation](https://github.com/n64decomp/007): the
-original N64 game running from reconstructed source, not the Xbox 360
-remaster. The N64's graphics coprocessor (RSP) is emulated in software; every
-other hardware surface (video, audio, input, timers, save storage) is shimmed
-in a dedicated `port/` layer, following the architecture of the
-[Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the same
-Rare "Indy" engine family, one hardware generation apart.
+This is a PC port of _GoldenEye 007_ (Rare, 1997, Nintendo 64) — the
+original N64 game, not the Xbox 360 remaster.
 
-**v0.4.0** is out for Windows and Linux (including Steam Deck, where the
-Linux bundle sideloads as-is) and runs the full campaign at a steady 60 fps
-with known rough edges ([Status](#status)). Free to download, build on and
-modify (you bring the ROM).
+The game code is the community [decompilation](https://github.com/n64decomp/007):
+the original game reconstructed as C source, compiled here for x86-64. The
+N64's graphics coprocessor (the RSP) is emulated in software, and the
+remaining console hardware — video, audio, controllers, timers, save memory
+— is replaced by a thin porting layer in `port/`. The approach follows the
+[Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark): the same
+Rare engine family, one hardware generation apart.
 
-**This is a pre-1.0 release, not a finished product.** v1.0 is the target
-for a polished, feature-complete build; until then, expect rough edges,
-missing features, and breaking changes between versions. See
-[Status](#status) for what works today and [Roadmap](#roadmap) for where
-this is headed.
+**News:**
+
+- **2026-09-28** — v0.4.0 released for Windows and Linux (the Linux bundle
+  runs unmodified on Steam Deck). The full campaign plays at 60 fps, and
+  this release was playtested end to end; the remaining known issues are
+  listed under [Status](#status). The bundles are free to download and
+  modify; you supply the ROM.
+
+**This is a pre-1.0 release, not a finished product.** It plays the complete
+game, but expect rough edges, missing features, and occasional breaking
+changes before 1.0. [Status](#status) lists what works and what does not;
+[Roadmap](#roadmap) outlines the direction.
 
 **AI disclosure:** development here was agentic - Claude Pro plus a local
 open-weight model on a single RTX 5090, as of August–September 2026. This
 project is as much a study of *that process* as it is a port: whether
 current LLMs can carry a codebase like this, and what actually goes wrong
 along the way. Judge the result for yourself.
-I'm one person doing this in my spare time, not a team. See
-[Background](#background) for the full setup, timeline, and an honest
-account of what worked and what didn't.
+Development is directed by a single maintainer working in spare time, not a
+team. See [Background](#background) for the full setup, timeline, and an
+honest account of what worked and what didn't.
 
 > [!IMPORTANT]
 > **You must supply your own GoldenEye 007 ROM.** This repository contains no
@@ -82,8 +86,8 @@ listed plainly there.
 campaign is completable end to end (all 20 missions, Agent difficulty,
 playtested), at a steady 60 fps; all 20 solo missions — plus the
 end-of-campaign credits sequence — load, render and run crash-free, verified
-on Windows, Linux and real Steam Deck hardware. Feedback
-is very welcome.
+on Windows, Linux and real Steam Deck hardware. Feedback and bug reports
+are welcome — open an issue.
 
 What a release actually installs (no networking, no telemetry, no ROM or
 game assets shipped) and how faithfully the port tracks the original N64
@@ -167,8 +171,8 @@ overlay is `F10` + arrows/Enter.
 
 ## Roadmap
 
-No fixed timeline or committed feature list — this is spare-time work — but
-directionally, on the way to v1.0:
+No committed timeline — this is spare-time work. Directionally, on the way
+to 1.0:
 
 - Working through the [known issues](#status) above and the fuller list in
   [`docs/dev/findings.md`](docs/dev/findings.md).
@@ -191,8 +195,8 @@ it helps prioritize.
 
 - **Tweak it**: `ge007.ini` and the F10 in-game overlay expose resolution,
   frame cap, MSAA, texture filtering, FOV/draw distance, mouse feel, key
-rebinding, crosshair and vibration; launch with `-fresh` for a clean-slate
-run.
+  rebinding, crosshair and vibration; launch with `-fresh` for a clean-slate
+  run.
 - **Read it**: [`docs/internals.md`](docs/internals.md) maps the
   architecture and the software RSP; [`docs/porting-notes.md`](docs/porting-notes.md)
   is the catalogue of N64→PC bug classes hit along the way. Game logic in
