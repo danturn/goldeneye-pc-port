@@ -282,7 +282,7 @@ to install.
    `prepare-assets/ge007-convert` inside the bundle; you can also run it
    manually; it prints what it's doing.)
 
-**Steam Deck:** sideload the unpacked folder (USB or a file manager), do
+**Steam Deck:** sideload the unpacked folder (SFTP, USB or a file manager), do
 steps 2–3, then add the executable to Games → *Add Game* as a non-Steam
 game. The first launch in Game Mode picks up the Deck preset (native
 1280×800, 2× MSAA, vsync) automatically if no config exists yet.

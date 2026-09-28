@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="{{ '/img/attract-bunker1.png' | relative_url }}">
+  {%- seo -%}
+  {%- include head-custom.html -%}
+</head>
+<body>
+  <header class="site-masthead">
+    <div class="masthead-inner">
+      <a class="masthead-title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+      <div class="masthead-tagline">{{ site.description }}</div>
+      <nav class="masthead-nav">
+        <a href="{{ '/' | relative_url }}">Home</a><span class="nav-sep">·</span>
+        <a href="{{ '/internals' | relative_url }}">Internals</a><span class="nav-sep">·</span>
+        <a href="{{ '/porting-notes' | relative_url }}">Porting notes</a><span class="nav-sep">·</span>
+        <a href="{{ '/building' | relative_url }}">Building</a><span class="nav-sep">·</span>
+        <a href="{{ '/dev-process' | relative_url }}">Dev process</a><span class="nav-sep">·</span>
+        <a href="{{ '/dev/agentic-development' | relative_url }}">Two-agent study</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="doc-content">
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p class="footer-stamp">
+        Last updated 2026-09-28 — v0.4.0
+        <span class="nav-sep">·</span>
+        <a href="https://github.com/jkdansereau/goldeneye-pc-port">GitHub</a>
+        <span class="nav-sep">·</span>
+        <a href="https://github.com/jkdansereau/goldeneye-pc-port/releases">Releases</a>
+      </p>
+      <p class="footer-legal">
+        Non-commercial fan preservation/research project. No ROM or game assets
+        are distributed; you supply a ROM you already own. Not affiliated with
+        or endorsed by Nintendo, Rare, Microsoft, MGM, Danjaq, or EON
+        Productions.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

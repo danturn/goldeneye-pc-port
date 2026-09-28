@@ -1,16 +1,13 @@
 ---
 title: GoldenEye 007 PC Port
-# v0.3.0: status bumped from v0.2.1; Honest-status bullets synced with the
-# README's v0.3.0 known issues (D255/D282/F10-dup/overscan items removed as
-# fixed). Description kept at 133 chars (Bing's 160 limit).
+# v0.4.0: status bumped from v0.3.0; Honest status replaced by the v0.4.0
+# release-notes known issues (rainbow/water/z-fight/cameras/trees/muzzle/
+# stretched-widescreen/gunshot items all fixed; D335b F10-overlay stretch is
+# the new widescreen residual). Description kept short (Bing's 160 limit).
 description: >-
   A native PC port of the 1997 N64 classic, built from decompiled source with
-  a software RSP. v0.3.0 for Windows, Linux and Steam Deck.
+  a software RSP. v0.4.0 for Windows, Linux and Steam Deck.
 ---
-
-<!-- v0.2.1 (Bing SEO): the "# GoldenEye 007 PC Port" h1 was removed here --
-the Cayman masthead already renders the site title as an <h1>, so the page
-was emitting two h1 tags. -->
 
 A native PC port of the original 1997 Nintendo 64 _GoldenEye 007_, compiled
 from the game's [decompiled source](https://github.com/n64decomp/007) with the
@@ -18,19 +15,25 @@ N64's graphics coprocessor (RSP) running in software, the same architecture
 as the [Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the
 same Rare "Indy" engine family, one hardware generation apart.
 
-**Status: v0.3.0.** The full single-player campaign runs at a steady 60 fps
-and is completable end to end (all 20 missions playtested); all 20 missions
-load and run clean on Windows, Linux and Steam Deck, and audio (music + SFX)
-plays throughout. The known rough edges — mostly cosmetic rendering defects,
-stretched-not-native widescreen, and missing features — are listed plainly
-under [Honest status](#honest-status).
+[Download](#download) · [See it running](#see-it-running) · [Honest status](#honest-status) · [Documentation](#documentation)
+
+**Status: v0.4.0.** The full single-player campaign runs at a rock-stable
+60 fps and is completable end to end (all 20 missions playtested on Windows
+and Steam Deck). This release adds **native widescreen** (on by default —
+undistorted world at your display's aspect, 4:3 menus pillarboxed), a
+**complete aim system** (N64 or centred PC style, for mouse *and*
+controller), **in-game key rebinding** with a GEPD-style default layout,
+**crosshair customization**, real **rumble-pak haptics** on supported
+gamepads, and a **rebuilt options overlay** with fine-tuning rows (frame cap,
+MSAA, draw/LOD distance, HUD scale). The remaining rough edges are few and
+mostly cosmetic — listed plainly under [Honest status](#honest-status).
 
 **This is a pre-1.0 release, not a finished product** — v1.0 is the target
 for a polished, feature-complete build; expect rough edges and missing
 features until then. See the
 [README's Roadmap section](https://github.com/jkdansereau/goldeneye-pc-port#roadmap)
-for direction (PAL/JP support, real widescreen, LAN multiplayer under
-consideration, and more).
+for direction (PAL/JP support, controller-button rebinding, LAN multiplayer
+under consideration, and more).
 
 <p align="center">
   <img src="media/goldeneye-gh-preview.gif" width="70%"
@@ -190,34 +193,25 @@ catalogue: [Porting notes](porting-notes.md).
 
 ## Honest status
 
-- **Particle colours** can still drift through a rainbow palette
-  intermittently: one genuine cause is fixed this release, a second hasn't
-  been found yet (D252).
-- **Some muzzle flashes draw an extra erroneous long flash** straight up from
-  the gun, on top of the correct one. Cosmetic only (D303).
-- Water levels show a moving seam between two water patterns (D245);
-  occasional z-fighting on some geometry (D308); in-level security-camera
-  props can occasionally face backwards (D307). Minor and cosmetic.
-- **The front-end Nintendo logo renders as two white blobs** and the Rareware
-  logo's texture filtering looks off (D75).
-- Surface 1's 2D billboard trees render as a solid wall of tree texture
-  instead of discrete sprites; under active investigation (D236).
-- **Widescreen is stretched, not native**: 16:9 stretches the 4:3 frame to
-  fill the display; automatic FOV scaling keeps the framing comfortable and
-  gameplay is unaffected, but a distortion-free native widescreen render is
-  still on the roadmap. Distant geometry can also drop out on the biggest
-  open levels (D249).
-- **Gunshot SFX can sound off during sustained/rapid fire** (D240/D241).
-- **`All unlocked` is highly experimental** — don't enable it until you have
-  at least one save written, or it can break audio and mouse aim
-  (D257/D259/D281).
-- Bond's cutscene positioning is fixed and right the large majority of the
-  time now; on the rare occasion he's off it's a small drift — no more
-  floating or spin-glitching (D173/D292/D243).
-- No macOS/ARM support; no controller rebinding UI yet.
+- On Facility, if gas leaks during Ourumov's monologue he can pause for up to
+  ~10 s before resuming the scripted shootout — a latent race that exists in
+  the N64 original too (where it softlocks permanently); the port detects and
+  auto-recovers it. (D318)
+- With native widescreen on, the F10 options overlay stretches with the
+  window instead of pillarboxing like the front-end menus (legible; cosmetic;
+  the F10 *Native widescreen* toggle restores the old stretched frame
+  throughout). The world/HUD widescreen rendering itself is correct. (D335b)
+- The front-end Rareware logo shows a subtle texture-filtering artifact
+  (the Nintendo logo and legal page are clean). Cosmetic only. (D75)
+- **`All unlocked` is experimental**: the fresh-install corruption case is
+  fixed, but saves made while it is on are not guaranteed recoverable by
+  switching it off — complete a level normally first, and back up
+  `data/ge007.eep` before enabling it. (D387)
+- No macOS or ARM support. Keyboard/mouse rebinding shipped in v0.4.0;
+  controller-button rebinding is not supported yet.
 
 The full list, with root causes and fix status: the
-[README's Status section](https://github.com/jkdansereau/goldeneye-pc-port#status)
+[release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases)
 and the [finding log](https://github.com/jkdansereau/goldeneye-pc-port/tree/main/docs/dev).
 
 ## Documentation
@@ -227,9 +221,3 @@ and the [finding log](https://github.com/jkdansereau/goldeneye-pc-port/tree/main
 - [Internals](internals.md): architecture, the software RSP-emulation approach, GoldenEye-vs-Perfect-Dark engine differences, the phased plan.
 - [Porting notes](porting-notes.md): the recurring Nintendo 64 → PC bug classes hit during the port, with fixes.
 - [Building](building.md): full build and asset-extraction guide.
-
----
-
-<small>Non-commercial fan preservation/research project. No ROM or game assets
-are distributed; you supply a ROM you already own. Not affiliated with or
-endorsed by Nintendo, Rare, Microsoft, MGM, Danjaq, or EON Productions.</small>
