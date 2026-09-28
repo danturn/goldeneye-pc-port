@@ -192,3 +192,6 @@ build-pyinst/
 # from repo root / scratch on 2026-09-18; never commit.
 /local/
 build-pc-cmd.bat
+
+# v0.4.0 modern-options wave: per-landing sweep capture dirs (capture.sh output)
+tools_pc/sweep-captures/capture-*/

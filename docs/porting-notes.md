@@ -107,6 +107,15 @@ for hardcoded indices into any `padding[]`/`u8[]` union arm.
   through the correctly-typed sibling field (`ObjectRecord.model`)
   instead, `#ifdef PORT`, N64 line/cast kept verbatim under `#else`.
   §F **D255** (M-140).
+- **D392** (the firing-guard pose variant): `chrlvUpdateAimendbackShoulders`
+  reads `((f32*)arg1)[12/13/16/17]` into a
+  `weapon_firing_animation_table` whose *first* member is a union of a
+  `s32` and a `ModelAnimation *`. N64's 4-byte union places those slots at
+  `max_up/max_down/free_arm_frac_up/free_arm_frac_down`; on PC the 8-byte
+  union shifts the floats, so the raw indices read `aim_end_frame/max_up/
+  max_right/free_arm_frac_up`. The wrong aim clamp bends the torso ~49° and
+  pushes the hands through it. Under `#ifdef PORT`, use the four named
+  fields; retain the raw indices for N64. §F D392.
 
 **Lesson.** When a value reads as a clean constant (0, 1, NULL) rather
 than garbage, a pointer byte is a prime suspect; the high bytes of a
@@ -588,6 +597,14 @@ through a converter or a runtime bswap fixup reads scrambled.
   (exact for hold-to-aim; a toggle scheme needs `g_CurrentPlayer->
   insightaimmode`). GE's native pitch is **inverted** (C-up → look down);
   hide it so mouse-down looks down; `MouseInvertY` flips (D118, M-24).
+- **N64 A/B bit names are not modern pad A/B semantics (D393).** GE's
+  gameplay `GE_CONT_A` cycles weapons and `GE_CONT_B` contextually uses or
+  reloads. Assigning Xbox A/X both to native A and B/Y both to independent
+  crouch leaves *no* use button. For modern controls, map A to a dedicated
+  use edge, X to a dedicated reload edge, B to crouch, Y to a weapon-cycle
+  edge; preserve native accept/cancel bits in front menus/watch/tank. Track
+  held buttons across UI transitions so closing F10 does not trigger an
+  unexpected use/reload/cycle.
 - `osContGetReadData(pad)` must fill **one OSContPad per channel**
   (`MAXCONTROLLERS`-long array), not just controller 0; joy.c passes the
   whole `samples[i].pads` array (D118).

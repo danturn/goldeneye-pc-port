@@ -128,10 +128,13 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
 - Gunshot SFX can sound off during sustained/rapid fire: cadence can drift
   from the N64 original's rate, and PP7/AK47 fire can occasionally go silent
   under heavy automatic fire near another looping sound (D240/D241).
-- **`All unlocked` is highly experimental — don't enable it until you have
-  at least one save written** (complete a level normally first, e.g. Dam on
-  Agent). Enabling it on a brand-new install with no prior save can still
-  cause silent audio and odd right-mouse-aim behavior (D257/D259/D281).
+- **`All unlocked` is experimental: back up `data/ge007.eep` before enabling
+  it.** Any save while ON, even a profile-settings change, can permanently
+  write artificial cheat unlocks and completion times into the EEPROM;
+  switching OFF does not undo them (D387). In the v0.3.0 release, turning it
+  on before a real save exists can also cause silent audio and missing
+  aim/HUD settings (D257/D259/D281). Do not use it on a save whose original
+  progression you need to preserve.
 - Assorted further cosmetic defects are tracked in
   [`docs/dev/GRAPHICS-BACKLOG.md`](docs/dev/GRAPHICS-BACKLOG.md).
 - No macOS or ARM support; no controller rebinding UI.
@@ -318,18 +321,30 @@ lives in `ge007.eep`. Launch with `-fresh` to wipe both before starting
 |---------------------|--------------------------|---------------|
 | Move / strafe       | `W` `A` `S` `D` / arrows  | Left stick (or D-pad) |
 | Aim / look          | Mouse                    | Right stick   |
-| Fire (Z)            | Left mouse / `LCtrl`     | Right trigger |
-| Aim mode (R)        | Right mouse / `LShift`   | Left trigger  |
-| Use / accept (A)    | `Space` / `E` / `X`      | A / X         |
-| Reload / cancel (B) | `R` / `F`                | B / Y         |
-| Next weapon         | Mouse wheel up           | RB            |
-| Previous weapon     | Mouse wheel down         | LB            |
+| Fire                | Left mouse               | Right trigger |
+| Aim mode            | Right mouse / `LShift`   | Left trigger / LB |
+| Use / interact      | `E`                       | A             |
+| Reload              | `R`                       | X             |
+| Crouch              | `LCtrl`                   | Left or right stick click |
+| Cycle owned gadgets | Watch inventory          | B             |
+| Next weapon         | Mouse wheel down / `Q`   | Y             |
+| Previous weapon     | Mouse wheel up           | —             |
 | Start               | `Enter` / `Tab`          | Start         |
-| Options overlay     | `F10`                    | Select (D-pad/stick + A/B navigate, Start closes) |
+| Options overlay     | `F10`                    | Back (A selects/toggles; B backs; D-pad/stick left/right adjusts sliders; Start closes) |
 
-The controller layout follows the modern dual-stick scheme used by the
-console re-releases (left stick move, right stick look, triggers fire/aim,
-shoulders cycle weapons).
+Gameplay follows the Xbox **1.1 Jinx** button roles in the user-provided
+[StrategyWiki control table](https://strategywiki.org/wiki/GoldenEye_007/Controls):
+A use, X reload, B gadget cycle, Y weapon cycle, either stick click crouch,
+LB/LT aim and RT fire. The PC gadget cycle selects the next owned gadget in
+the N64 inventory; the user has confirmed the gameplay buttons on a physical
+pad, but exact gadget-category parity remains unaudited. In menus A
+accepts and B cancels. RB's *updated graphics* toggle cannot be provided by
+the original N64 port (no remastered assets); it is reserved. Back opens PC
+options rather than Xbox's *view scores*; exact menu parity is not claimed.
+The other Xbox schemes (1.2 Christmas, 1.3 Frost, 1.4 Elektra) are planned,
+not yet selectable. Input → Bindings → Movement/Actions edits **keyboard/mouse
+only**; a controller can navigate those pages and use B to go back, but
+controller-button rebinding is not supported yet.
 
 Mouse sensitivity, Y-inversion and the aim/turn split are tunable in the
 `[Input]` section of `ge007.ini`.
