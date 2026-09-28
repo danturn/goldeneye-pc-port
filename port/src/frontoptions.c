@@ -96,8 +96,8 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 #define MAX_PROWS  15            /* D346b: 12 -> 15 for the merged Video section (see ROW_DY) */
 /* D406: content rows per page. The 440x330 paper ends at y=330; content row k
  * sits at y = ROW_Y0 + (k+2)*ROW_DY (the D356 profile row takes slot 1), so a
- * page fits while ROW_Y0 + (CAP+1)*ROW_DY + ~10px of text stays <= 330:
- * CAP = 13 at ROW_DY 18. D346b's 18px pitch was sized for 15 rows with no
+ * page fits while ROW_Y0 + (CAP+2)*ROW_DY + ~10px of text stays <= 330 (the
+ * bottom line is reserved for the page hint): CAP = 11 at ROW_DY 18. D346b's 18px pitch was sized for 15 rows with no
  * profile row; D356's profile row plus the v0.4.0 Wave-A INPUT rows (17)
  * pushed the 14th row to y=335 -- off the bottom of the paper -- and rows
  * 15-17 (Crouch mode, Reset to defaults, Bindings...) were dropped by the
@@ -105,7 +105,7 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
  * outgrow one page now page: the vertical stepper crosses page boundaries
  * and the title carries a (p/N) marker. The F10 overlay is unaffected
  * (it scrolls its own window, D345-D347). */
-#define ROWS_PER_PAGE 13
+#define ROWS_PER_PAGE 11
 
 static const char kLabel[]   = "PC Options";  /* ASCII only: issue #87 / D295 */
 static const char kLabelNL[] = "PC Options\n"; /* height measure only, D400 */
@@ -725,15 +725,15 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
                      optionsBindingCaptureActive()
                          ? "Press key/mouse  B/ESC cancel  DEL clear\n"
                          : "Keys/mouse only  Enter: bind  B: back\n", INK_DIM);
-        } else if (s_rowTotal > ROWS_PER_PAGE && s_rowN <= ROWS_PER_PAGE - 2) {
-            /* D406b: bottom hint on pages with room below (a full 13-row
-             * page has none -- the top-right Page marker covers it). */
+        } else if (s_rowTotal > ROWS_PER_PAGE) {
+            /* D406b: bottom hint on every page of a multi-page section (11
+             * rows per page leaves the last line of the paper for it). */
             int last = s_pageno * ROWS_PER_PAGE + s_rowN >= s_rowTotal;
             int first = s_pageno == 0;
             DL = ink(DL, ROW_X, rowY(s_rowN + 2),
-                     first ? "Down: more rows >\n"
-                     : last ? "Up: previous page <\n"
-                            : "Up: previous page <   Down: next page >\n",
+                     first ? "Down: next page\n"
+                     : last ? "Up: previous page\n"
+                            : "Up: previous page   Down: next page\n",
                      INK_DIM);
         }
     }
