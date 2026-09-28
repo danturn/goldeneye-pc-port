@@ -101,14 +101,14 @@
   pool hardening plus an optional `GE_D322=1` telemetry probe if it ever
   recurs, and the silenced-PPK "slap" plus the broader real-time mixer
   corruption behind it are fixed (D202).
-- The **particle "rainbow" effect is fixed** (D252): the intermittently
-  recoloured explosion/spark particles from v0.3.0 no longer occur.
 
 **Graphics fixes from the final playtest wave**
 - **Water is fixed** (D245): the `IsWater` shimmer/cross-fade (Dam,
   Frigate, Surface 2, …) now matches the N64 original — the moving seam and
   the pattern "resetting" as you moved are gone, verified against an
   era-correct 1994 reference.
+- The **particle "rainbow" effect is fixed** (D252): the intermittently
+  recoloured explosion/spark particles from v0.3.0 no longer occur.
 - Surface 1/2: the tree backdrop that rendered as a solid wall of texture
   now renders as proper camera-facing tree cards (D236).
 - Frigate (and the rare "model briefly out of place" quirk): both were the
@@ -160,10 +160,9 @@
   to ~10 s before resuming the scripted shootout — a latent race that exists
   in the N64 original too (where it softlocks permanently); the port detects
   and auto-recovers it (D318).
-- **Native widescreen is new in v0.4.0**: the world renders undistorted at
-  your display's aspect and the HUD keeps its shape; front-end menus are
-  shown 4:3 with side bars. The F10 *Native widescreen* toggle restores the
-  old stretched frame.
+- With *Native widescreen* on, the F10 options overlay stretches with the
+  window instead of pillarboxing like the front-end menus (legible; cosmetic
+  only). The front-end menus themselves are pillarboxed correctly (D335b).
 - The front-end Rareware logo shows a subtle texture-filtering artifact
   (Nintendo logo and legal page are clean). Cosmetic only (D75).
 - This release ships NTSC (US) assets; PAL/JP ROMs are not supported in this
