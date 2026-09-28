@@ -214,6 +214,7 @@ All settings available in v0.4.0, in both options screens (front-end
 | `Invert look (mouse)` / `Invert look (controller)` / `Southpaw` | Input | Off |
 | `X / Y axis look sensitivity (controller)` | Input | 100% (native) |
 | `Look smoothing (controller)` | Input | 0 |
+| `Tank aim speed` | Input | 100% (`Input.TankAimScale`) |
 | `Deadzone (left/right stick)` | Input | 70% |
 | `Trigger threshold` | Input | 23% |
 | `Vibration` | Input | 50% |
