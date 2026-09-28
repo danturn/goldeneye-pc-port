@@ -273,7 +273,7 @@ D393,FIXED,Controller B/Y both crouch; no in-game use button —,FIXED + user li
 D394,PARTIAL,Xbox 1.1 Jinx controller parity —,PARTIAL (port 1.1 gameplay button roles user-tested; exact gadget-category parity and other selectable presets outstanding; RB HD toggle unavailable).
 D395,PARTIAL,Controller trapped in keyboard/mouse-only binding capture —,"PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; NTSC build linked, controller-only retest owed)."
 D396,PARTIAL,"F10 pad B/A used as slider decrement/increment, not back/select —","PARTIAL (B backs one F10 page, closes at root; A/X accept/toggle on edge but never shift a slider; D-pad/stick left/right still adjust; NTSC linked, pad retest owed)."
-D397,OPEN,SELECT FILE background + intro gun-barrel show an interlaced/comb look —,"OPEN, re-scoped + root-causing (no fix yet):"
+D397,RESOLVED,SELECT FILE background + intro gun-barrel show an interlaced/comb look —,RESOLVED (2026-09-28):
 D398,FIXED,PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).,"SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 textMeasure arg-swap bug was found and fixed there)."
 D399,PARTIAL,File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).,"LANDED (port-only, D343 class):"
 D400,PARTIAL,"File-select ""PC Options"" label:","LANDED (port-only, frontoptions.c):"

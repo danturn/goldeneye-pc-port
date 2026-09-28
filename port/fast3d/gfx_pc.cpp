@@ -550,24 +550,6 @@ static void gfx_generate_cc(struct ColorCombiner* comb, const ColorCombinerKey& 
     comb->used_textures[1] = used_textures[1];
     // comb->prg = gfx_lookup_or_create_shader_program(shader_id0, shader_id1);
     memcpy(comb->shader_input_mapping, shader_input_mapping, sizeof(shader_input_mapping));
-#ifdef PORT
-    /* D397 TEMP probe (env-gated, remove before merge): dump which runtime
-     * G_CCMUX inputs this combine feeds as vInput1..N so the file-select
-     * LERP factor source can be settled against the measured census. */
-    if (getenv("GE_D397SH")) {
-        fprintf(stderr,
-                "D397SHM: id0=%016llx cmode=0x%016llx map0=[%u %u %u %u %u %u %u] map1=[%u %u %u %u %u %u %u]\n",
-                (unsigned long long)comb->shader_id0, (unsigned long long)key.combine_mode,
-                (unsigned)comb->shader_input_mapping[0][0], (unsigned)comb->shader_input_mapping[0][1],
-                (unsigned)comb->shader_input_mapping[0][2], (unsigned)comb->shader_input_mapping[0][3],
-                (unsigned)comb->shader_input_mapping[0][4], (unsigned)comb->shader_input_mapping[0][5],
-                (unsigned)comb->shader_input_mapping[0][6],
-                (unsigned)comb->shader_input_mapping[1][0], (unsigned)comb->shader_input_mapping[1][1],
-                (unsigned)comb->shader_input_mapping[1][2], (unsigned)comb->shader_input_mapping[1][3],
-                (unsigned)comb->shader_input_mapping[1][4], (unsigned)comb->shader_input_mapping[1][5],
-                (unsigned)comb->shader_input_mapping[1][6]);
-    }
-#endif
 }
 
 static struct ColorCombiner* gfx_lookup_or_create_color_combiner(const ColorCombinerKey& key) {
@@ -3470,6 +3452,28 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     lrx += rdp.subpixel_ofs_x;
     uly += rdp.subpixel_ofs_y;
     lry += rdp.subpixel_ofs_y;
+
+    // D397: the N64 RDP floors the U10.2 top/bottom edges of a texture rect to
+    // whole scanlines before its per-scanline coverage test, so a rect covers
+    // scanlines [floor(uly/4), floor((lry-1)/4]]. A rect whose height is not a
+    // whole number of native pixels therefore rasterizes to a whole number of
+    // scanlines on hardware at every window scale. The gun-barrel / file-select
+    // gradient is built from 0.75px-tall row strips (title2.c: uly=(i+12)<<2,
+    // lry=((i+13)<<2)-1 -> 0.75px tall at 1px pitch); on the RDP each strip is
+    // exactly one scanline. The continuous-NDC conversion below instead passes
+    // the fractional bottom edge straight to the GPU, whose coverage test
+    // aliases the 0.75px pitch into a visible "comb" (H2: period fixed in
+    // native rows, ~3 = the 0.75px-at-1px-pitch beat, window period = 3*scale).
+    // Snap the top/bottom edges to the RDP scanline range so a sub-pixel strip
+    // rasterizes to exactly the scanline it targets. No-op for whole-pixel
+    // rects (edges already multiples of 4) and for the copy-mode +1<<2 edge
+    // (already a whole scanline), so normal fills are unchanged.
+    if (lry > uly) {
+        const int32_t top_scan = uly >> 2;
+        const int32_t bot_scan = (lry - 1) >> 2;
+        uly = top_scan << 2;
+        lry = (bot_scan + 1) << 2;
+    }
 
     // U10.2 coordinates
     float ulxf = ulx;

@@ -1295,6 +1295,57 @@ GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphfram
 - **Repro correctly:** force the granularity with `GE_D318B_CLK=N` (TEMP probe, lockstep N ticks/frame) and A/B N=1 vs N=2. Wall-clock runs on a slow host (WSLg renders ~5 fps → mixed clk 1–6) and `GE_DETERM=1` (advances per VI-retrace request, also mixed clk) both give uncalibrated results.
 - **Where else to look:** any `for/while (numticks)` accumulator followed by a single threshold/floor consumer; D193 (AI locomotion rate) and D243 (cutscene `numticks` bursts) touched the same axis from the other side.
 
+## D15. A texture-rectangle idiom that is sub-1-native-pixel tall relies on the RDP's floor-based fixed-point scanline stepping — now replicated in `gfx_draw_rectangle` (D397, RESOLVED 2026-09-28)
+
+GE's front-end vertical-gradient trick (`titleRenderFolderMenuBackgroundLines`,
+`src/game/title2.c`) draws a tall image as 299 separate 1-scanline-tall
+`gSPTextureRectangle`s, one per source row, each tinted by a per-row
+interpolated `gDPSetPrimColor`. The lower-right Y coordinate uses the
+universal N64 idiom `((y+1)<<2)-1`, which in U10.2 units is **3, not 4** — a
+0.75-native-pixel-tall rect, not 1.0. This is correct *on real hardware*
+specifically because the RDP's scan converter steps by truncating
+(flooring) the fixed-point Y to an integer scanline before testing coverage,
+so `y*4+3` still falls in scanline `y` and nothing else — the "-1" is a
+hardware-truncation idiom, not a literal float height.
+
+`gfx_pc.cpp`'s `gfx_draw_rectangle` does not replicate that truncation: it
+converts the U10.2 corners straight to continuous NDC floats
+(`ulyf/lryf = ±(y / (4·HALF_SCREEN_HEIGHT)) + 1`) and hands them to the GPU's
+own continuous rasterizer, which uses pixel-center/coverage rules, not
+floor-stepped scanlines. A rect that is 0.75 (native) pixels tall, stacked
+299 times with each row offset by exactly 1.0 native pixel from the last,
+does not reliably rasterize as "exactly the one scanline the N64 idiom
+intended" under a continuous rasterizer — whether a given row rounds to 0 or
+1 device pixel depends on where its fractional edges land relative to the
+device pixel grid, and that phase drifts row-to-row (worse under any
+non-integer native→window viewport scale, `gfx_adjust_viewport_or_scissor`'s
+`ratioX`/`ratioY`). Stacked over ~300 rows filling the screen, sporadic
+per-row rounding reads as a periodic horizontal comb/interlace — this is the
+leading mechanism for D397's "interlaced" file-select background and intro
+gun-barrel, and is a **first-render, not re-entry-triggered** artifact
+(unlike D182), because it is a rasterization property of the geometry itself,
+not stale state.
+
+**Tell:** any GE front-end/menu draw that fakes a large image or gradient by
+stacking many independent 1-scanline (or otherwise sub-1-native-pixel-tall)
+`gSPTextureRectangle`s rather than one multi-row texture — the `(<<2)-1`
+lower-right idiom is the signature to grep for. A single such rect is
+invisible (sub-pixel rounding on one edge); many stacked ones make the
+rounding pattern visible as banding.
+
+**Fix (landed 2026-09-28, RESOLVED):** `gfx_draw_rectangle` (`gfx_pc.cpp`) now replicates the RDP truncation. After the sub-pixel offset is applied, it floors the U10.2 top edge to its scanline and the bottom edge to the *last covered* scanline — the RDP scanline range `[top_scan, bot_scan+1]` — before converting to NDC: `top_scan = uly>>2`, `bot_scan = (lry-1)>>2`, then `uly = top_scan<<2`, `lry = (bot_scan+1)<<2`. This is a **no-op for whole-pixel rects** (their edges are already `4k`/`4k−1`, and the `(<<2)−1` bottom idiom already yields `bot_scan` = the intended last row), so only sub-pixel-tall strips change. **Confirmed by a falsifiable 3-scale PCDUMP test:** the comb period is fixed at ≈3 *native* rows across 640/1024/1280 (window-period = 3×scale) — the beat of 0.75-px strips at a 1.0-px pitch — exactly the fixed-point-flooring signature, ruling out the scale-invariant LERP/CC factor. Verified by playtest: gun-barrel + file-select gradient render clean, comb gone.
+
+**Not the cause (checked and ruled out for D397):** the CC/LERP scaling of
+`ENV_ALPHA` as `value/255.0f` (`gfx_pc.cpp` around the `G_CCMUX_ENV_ALPHA`
+case) is byte-identical to the Perfect Dark PC port's (`gfx_pc.cpp` in the
+local `pd_port` checkout) — same formula, no special-cased "5-bit RDP
+coefficient" scaling in either port. The real RDP color combiner's A/B/C/D
+inputs are 8-bit values (PRIM/ENV alpha come from an 8-bit `gDPSetEnvColor`
+field); there is no coarser-precision quirk to correct here. A uniform
+darkening from a nonzero `ENV_ALPHA` LERP factor is very likely faithful
+(possibly authored/original-dev-intentional tinting), not a bug — do not
+"fix" it without an N64/1964-GEPD reference screenshot proving otherwise.
+
 ## E. Process / method notes
 
 - **Never `exit()` while another thread may be inside the GL driver (D344).**
