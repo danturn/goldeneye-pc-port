@@ -1,7 +1,9 @@
 # Controller & input options wave (port plan)
 
-Status: **PROPOSED (v0.5.0 candidate)** — the "low-hanging fruit" from the
-Nightdive *Turok* PC-port options menu that is cheap, well-scoped, and
+Status: **Wave A IMPLEMENTED** (code complete, clean Windows/MSYS2 build; pending
+user by-ear/by-eye feel-check + Deck tuning of item 5) — the "low-hanging
+fruit" from the Nightdive *Turok* PC-port options menu that is cheap, well-
+scoped, and
 **port-layer only** (zero `src/` / `src/game` edits → rule 2 and the ABI
 exception do not apply). Sequenced after v0.4.0 ships. This is the *input*
 wave; the sibling *video/audio/graphics* Tier-A items (borderless window,
@@ -186,3 +188,59 @@ user-adjustable without editing the ini. No `input.c` change — row only.
 3. **Wave B:** the sibling video/audio/graphics Tier-A items.
 4. Revisit Tier C only with explicit sign-off (rule-2 items need the
    `docs/dev-process.md` procedure).
+
+---
+
+## Implementation status (2026-09-28)
+
+Wave A code is complete and compiles clean (Windows/MSYS2 `ninja` incremental,
+exit 0, no new warnings — only the pre-existing `ramrom.c` / `gfx_pc.cpp` ones).
+Every edit is in `port/src/input.c` + `port/src/optionsoverlay.c`;
+`frontoptions.c` needed **no** change (both UIs read the shared `rows[]` via the
+`optionsRow*` API). Zero `src/` edits, no new files/symbols — only file-local
+statics + `configRegisterInt` calls — so the link is unchanged.
+
+Implemented (all off/neutral-by-default → byte-identical at defaults):
+- **1/2. `Input.PadLookSensX` / `Input.PadLookSensY`** (25–200 %, dflt 100):
+  right-stick look, applied in the natural-pitch branch of `inputComputePad()`
+  after `scaleAxis()`, re-clamped to `STICK_MAX`. Inert in digital mode (the
+  right stick is digitized there, no analog look to scale).
+- **3. `Input.PadSouthpaw`** (toggle, dflt 0): swaps the fire (`GE_CONT_G`)
+  and grenade (`GE_CONT_R`) trigger actions *after* the raw edges are captured,
+  so edge-detection stays consistent.
+- **4. `Input.PadDeadzoneL` / `Input.PadDeadzoneR`** (0–30000, dflt 7000):
+  `scaleAxis()` now takes a per-stick deadzone param; left-stick (movement)
+  calls pass `L`, right-stick (look) calls pass `R`. The legacy
+  `Input.PadDeadzone` key stays registered (no row) so old inis load; a
+  one-time migration in `inputInit()` seeds any unset L/R (C-init sentinel
+  `PAD_DZ_UNSET = -1`) from the legacy value, before any `configSave`. The
+  single "Stick deadzone" row is replaced by "Deadzone (left stick)" /
+  "(right stick)".
+- **5. `Input.PadLookSmooth`** (0–10, dflt 0 = off, shown "N/10"): per-pad EMA
+  low-pass on the natural-pitch look output (`padSmSX/padSmSY[MAX_PADS]`), reset
+  on hot-unplug (`inputRescanPads`) so a snapped-back stick can't lag from a
+  stale value; otherwise the EMA decays to 0 as the stick recentres. Turok has
+  this as on/off; GE ships a graduated 0-10 knob instead. Ships **default-off**
+  pending Deck feel-tuning.
+- **6. `Input.MouseYScale`** row (dflt 100): the pre-existing registered key
+  finally gets an INPUT slider row ("Mouse vertical sensitivity") — row only,
+  no `input.c` change.
+
+**Verbiage + display baseline (Turok PC, 2026-09-28):** row labels now match the
+Turok options menu verbatim where GE has an analogue — *Mouse horizontal /
+vertical sensitivity*, *X axis / Y axis look sensitivity*, *Look smoothing*,
+*Southpaw*, *Vibration* (was "Rumble strength"), *Deadzone (left/right stick)*.
+The display is baselined to Turok's scales: sensitivity + deadzone knobs read
+**0-100 with 50 = the default** (the existing `calibratedDefault` "N/100" path),
+and look smoothing reads **0-10** ("N/10"). (Turok's Mouse/Controller subsection
+split is not mirrored — GE keeps one flat INPUT section per D356, so the two
+invert rows retain their "(mouse)"/"(controller)" suffixes to stay unambiguous.)
+
+`kResetDefaults` covers all six so INPUT "Reset to defaults" is complete;
+`calibratedDefault()` gives the sensitivity + deadzone rows their 50/100 default
+midpoint, and `dispMax` renders the smoothing knob as "N/10".
+
+**Still owed (verification, not code):** user by-ear/by-eye feel-check of the
+new knobs on a real pad (esp. item 5 smoothing strength + item 1/2 sens range),
+the Deck cross-check, and confirming the per-stick deadzone migration on an
+old-ini user (L/R seed from `Input.PadDeadzone`).

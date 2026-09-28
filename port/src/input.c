@@ -520,10 +520,27 @@ static int naturalPitchMode = 1;    /* D194/D238: 1 = force GE's own 1.2/SOLITAR
                                       * 0 = legacy 1.1/HONEY + D166 digital pulse. */
 static Uint64 s_lastLookPollCounter = 0;  /* D194(b): monotonic clock, gameplay-look drain only */
 
-/* Gamepad tuning -- defaults reproduce the old hardcoded constants exactly. */
-static int padDeadzone    = STICK_DEADZONE;   /* left-stick deadzone, raw 0..32767 */
-static int padTriggerPct  = 23;               /* trigger press point, % of travel (~30*256) */
-static int padLookInvertY = 0;                /* 1 = invert right-stick (look) Y */
+/* Gamepad tuning -- defaults reproduce the old hardcoded constants exactly.
+ * Wave A (v0.5.0 controller/input wave, docs/dev/CONTROLLER-INPUT-PLAN.md):
+ * per-stick deadzone splits the single Input.PadDeadzone into a left (movement)
+ * and a right (look) value (padDeadzone stays registered so old inis load; the
+ * unset L/R values migrate from it once in inputInit). The look knobs
+ * (sens X/Y, smoothing) are feel-only and identity at their defaults. */
+#define PAD_DZ_UNSET (-1)   /* C init for padDeadzoneL/R: "not in ini -> migrate" */
+static int padDeadzoneL    = PAD_DZ_UNSET;    /* left (movement) stick deadzone, raw 0..32767 */
+static int padDeadzoneR    = PAD_DZ_UNSET;    /* right (look) stick deadzone, raw 0..32767 */
+static int padDeadzone     = STICK_DEADZONE;  /* legacy shared deadzone (Input.PadDeadzone) */
+static int padLookSensX    = 100;             /* right-stick look: horizontal sensitivity, % (100 = native) */
+static int padLookSensY    = 100;             /* right-stick look: vertical (pitch) sensitivity, % */
+static int padSouthpaw     = 0;               /* 1 = swap fire (G) / grenade (R) trigger actions */
+static int padLookSmooth   = 0;               /* right-stick look low-pass strength, 0-10 (0 = off, 10 = max) */
+static int padTriggerPct   = 23;              /* trigger press point, % of travel (~30*256) */
+static int padLookInvertY  = 0;               /* 1 = invert right-stick (look) Y */
+/* Per-pad look-smoothing EMA state (Wave A item 5), one X/Y pair per pad. Reset
+ * on hot-unplug (inputRescanPads) so a smoothed value can't stick after the
+ * stick snaps back; the low-pass otherwise recentres it toward 0 on its own. */
+static double padSmSX[MAX_PADS] = {0};
+static double padSmSY[MAX_PADS] = {0};
 
 /* Smoothed mouse delta carried between polls when mouseSmoothing > 0. */
 static double mouseSmDX = 0.0, mouseSmDY = 0.0;
@@ -848,6 +865,13 @@ int inputInit(void)
 
     inputMigrateBinds();  /* D380: materialise effective GEPD defaults once */
     inputRebuildBinds();   /* D214: parse [Bind] now that configLoad() has run */
+
+    /* Wave A: one-time per-stick deadzone migration. Old inis carry a single
+     * Input.PadDeadzone; if the player has not set the new per-stick keys, seed
+     * both from it (the C-init sentinel PAD_DZ_UNSET means "not in the ini").
+     * Runs before any configSave, so the saved L/R values are always valid. */
+    if (padDeadzoneL == PAD_DZ_UNSET) padDeadzoneL = padDeadzone;
+    if (padDeadzoneR == PAD_DZ_UNSET) padDeadzoneR = padDeadzone;
     if (getenv("GE_BINDPROBE")) inputBindingProbe();
 
     sysLogPrintf(LOG_INFO, "input: PC bindings, crouch mode %s",
@@ -912,9 +936,8 @@ void inputUpdate(void)
     mouseDY += dy;
 }
 
-static int scaleAxis(int v)
+static int scaleAxis(int v, int dz)
 {
-    int dz = padDeadzone;
     if (dz < 0) dz = 0;
     if (dz > 30000) dz = 30000;
     if (v > -dz && v < dz) {
@@ -1916,8 +1939,8 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                            current_menu != GE_MENU_INVALID);
 
         if (padMenuMode) {
-            int px = scaleAxis(lx);
-            int py = -scaleAxis(ly);       /* SDL up = negative -> N64 up = positive */
+            int px = scaleAxis(lx, padDeadzoneL);
+            int py = -scaleAxis(ly, padDeadzoneL);       /* SDL up = negative -> N64 up = positive */
             if (px) sx = px;
             if (py) sy = py;
         } else if (naturalPitchMode) {
@@ -1931,15 +1954,30 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             if (lx < -RSTICK_THRESHOLD) button |= GE_CONT_C;   /* strafe left        */
             if (lx >  RSTICK_THRESHOLD) button |= GE_CONT_F;   /* strafe right       */
 
-            int rxs = scaleAxis(rx);
-            if (rxs || scaleAxis(ry)) s_aimDevMouse = 0;   /* D337: pad aim active */
-            int rys = -scaleAxis(ry);   /* SDL up = negative -> N64 up = positive */
+            /* Wave A (v0.5.0): right-stick look -- per-stick deadzone (right),
+             * per-axis sensitivity (% of native, 100 = unchanged, re-clamped to
+             * STICK_MAX), and an optional low-pass. All feel-only, identity at
+             * their defaults (sens 100%, smoothing off). */
+            int rxs = scaleAxis(rx, padDeadzoneR);
+            int rys = -scaleAxis(ry, padDeadzoneR);   /* SDL up = negative -> N64 up = positive */
+            if (padLookSensX != 100 && rxs) rxs = rxs * padLookSensX / 100;
+            if (padLookSensY != 100 && rys) rys = rys * padLookSensY / 100;
+            if (rxs >  STICK_MAX) rxs =  STICK_MAX; else if (rxs < -STICK_MAX) rxs = -STICK_MAX;
+            if (rys >  STICK_MAX) rys =  STICK_MAX; else if (rys < -STICK_MAX) rys = -STICK_MAX;
+            if (rxs || rys) s_aimDevMouse = 0;   /* D337: pad aim active */
+            if (padLookSmooth > 0) {
+                double a = padLookSmooth * 0.09;   /* 10 -> 0.9 (heaviest); 0 = off */
+                padSmSX[idx] = padSmSX[idx] * a + (double)rxs * (1.0 - a);
+                padSmSY[idx] = padSmSY[idx] * a + (double)rys * (1.0 - a);
+                rxs = (int)lround(padSmSX[idx]);
+                rys = (int)lround(padSmSY[idx]);
+            }
             if (padLookInvertY) rys = -rys;
             if (rxs) sx = rxs;
             if (rys) sy = rys;
         } else {
-            int px = scaleAxis(lx);
-            int py = -scaleAxis(ly);       /* SDL up = negative -> N64 up = positive */
+            int px = scaleAxis(lx, padDeadzoneL);
+            int py = -scaleAxis(ly, padDeadzoneL);       /* SDL up = negative -> N64 up = positive */
             if (px) sx = px;
             if (py) sy = py;
             if (px || py) s_aimDevMouse = 0;   /* D337: pad aim active */
@@ -1956,6 +1994,14 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             button |= GE_CONT_G;
         if (SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > trigPt)
             button |= GE_CONT_R;
+        /* Wave A: southpaw swaps the fire (G) and grenade (R) trigger actions
+         * (right<->left trigger), after the raw edges above are captured. */
+        if (padSouthpaw) {
+            int t = button;
+            button = (t & ~(GE_CONT_G | GE_CONT_R))
+                   | ((t & GE_CONT_G) ? GE_CONT_R : 0)
+                   | ((t & GE_CONT_R) ? GE_CONT_G : 0);
+        }
 
         /* Xbox 1.1 Jinx-style gameplay: A=use, X=reload (handled by the
          * keyboard action gate), B=gadgets, Y=weapons, stick clicks=crouch,
@@ -2212,6 +2258,8 @@ void inputRescanPads(void)
             pads[i] = NULL;
         }
         padRumbleOn[i] = 0;   /* D401: re-detected by inputOpenPads below */
+        padSmSX[i] = 0.0;     /* Wave A: clear the look-smoothing EMA so a stick
+        padSmSY[i] = 0.0;     * snap-back after re-plug can't lag from a stale value */
     }
     inputOpenPads();
     sysLogPrintf(LOG_NOTE, "input: rescanned pads (mask=0x%x, %d controller(s))",
@@ -2569,7 +2617,13 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.MouseSensitivity", &mouseSensitivity, 1, 500);  /* D238 */
     configRegisterInt("Input.MouseAimCurve", &aimCurveGamma, 50, 400);  /* D194(a), x100 */
     configRegisterInt("Input.NaturalPitch", &naturalPitchMode, 0, 1);  /* D194/D238 */
-    configRegisterInt("Input.PadDeadzone", &padDeadzone, 0, 30000);
+    configRegisterInt("Input.PadDeadzone", &padDeadzone, 0, 30000);  /* legacy; Wave A migrates to L/R */
+    configRegisterInt("Input.PadDeadzoneL", &padDeadzoneL, 0, 30000);  /* Wave A: left (movement) stick */
+    configRegisterInt("Input.PadDeadzoneR", &padDeadzoneR, 0, 30000);  /* Wave A: right (look) stick */
+    configRegisterInt("Input.PadLookSensX", &padLookSensX, 25, 200);   /* Wave A: look horizontal sensitivity (%) */
+    configRegisterInt("Input.PadLookSensY", &padLookSensY, 25, 200);   /* Wave A: look vertical (pitch) sensitivity (%) */
+    configRegisterInt("Input.PadSouthpaw", &padSouthpaw, 0, 1);        /* Wave A: swap fire/grenade triggers */
+    configRegisterInt("Input.PadLookSmooth", &padLookSmooth, 0, 10);   /* Wave A: look low-pass strength, 0-10 (0 = off) */
     configRegisterInt("Input.PadTriggerPct", &padTriggerPct, 1, 99);
     configRegisterInt("Input.PadLookInvertY", &padLookInvertY, 0, 1);
     /* D401: global rumble scale (0 = silent .. 1 = full), applied to every

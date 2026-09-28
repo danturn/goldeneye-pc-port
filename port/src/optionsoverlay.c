@@ -167,6 +167,7 @@ struct Row {
      * (e.g. deadzone raw 0..30000 -> % of full stick). NULL/0 = plain int. */
     const char        *unit;
     int                dispDiv;
+    int                dispMax;  /* >0: show the int value as "N/dispMax" (e.g. 0-10 -> "5/10") */
 
     /* D356: 1 = this row's value lives in the selected save file (per-file
      * watch rows). Carries the dim "(per profile)" tag on the only section that
@@ -191,7 +192,12 @@ static struct Row rows[] = {
      * watchSettingsActiveFolder(). All rows use designated initializers
      * (D351 class). */
     { .key="__HdrInput", .label="INPUT", .kind=ROW_HEADER },
-    { .key="Input.MouseSensitivity", .label="Mouse sensitivity", .kind=ROW_SLIDER, .step=5 }, /* calibrated UI midpoint = raw 100 */
+    { .key="Input.MouseSensitivity", .label="Mouse horizontal sensitivity", .kind=ROW_SLIDER, .step=5 }, /* calibrated UI midpoint = raw 100 */
+    /* Wave A (v0.5.0, CONTROLLER-INPUT-PLAN item 6): the pre-existing
+     * Input.MouseYScale key (extra vertical/pitch sensitivity, %) finally gets
+     * a row so the asymmetric X/Y mouse aim is tunable without editing the ini.
+     * Row only -- input.c already applies it (mouseYScale). */
+    { .key="Input.MouseYScale", .label="Mouse vertical sensitivity", .kind=ROW_SLIDER, .step=5 },
     { .key="Input.MouseInvertY", .label="Invert look (mouse)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     /* Input.PdMouseAim (findings D332): the Perfect Dark port's mouse-aim
      * model. The port only accumulates the mouse; the game's own crosshair
@@ -210,7 +216,16 @@ static struct Row rows[] = {
      * style is CENTRED (PC), where the crosshair doesn't travel. */
     { .key="Input.AimRange", .label="Aim range", .kind=ROW_ENUM, .step=1, .names=kAimRange, .hiddenIfOn="Input.AimMode" },
     { .key="Input.PadLookInvertY", .label="Invert look (controller)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500 },
+    /* Wave A (v0.5.0, docs/dev/CONTROLLER-INPUT-PLAN.md): per-stick deadzone
+     * (left = movement, right = look) replaces the single "Stick deadzone" row;
+     * the look-sensitivity / look-smoothing / southpaw knobs are right-stick
+     * (natural-pitch) feel options, identity at their defaults. All port-layer. */
+    { .key="Input.PadDeadzoneL", .label="Deadzone (left stick)", .kind=ROW_SLIDER, .step=500 },
+    { .key="Input.PadDeadzoneR", .label="Deadzone (right stick)", .kind=ROW_SLIDER, .step=500 },
+    { .key="Input.PadLookSensX", .label="X axis look sensitivity", .kind=ROW_SLIDER, .step=5 },
+    { .key="Input.PadLookSensY", .label="Y axis look sensitivity", .kind=ROW_SLIDER, .step=5 },
+    { .key="Input.PadLookSmooth", .label="Look smoothing", .kind=ROW_SLIDER, .step=1, .dispMax=10 },
+    { .key="Input.PadSouthpaw", .label="Southpaw", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1 },
     /* D401 item 3 (docs/dev/RUMBLE-PLAN.md): Rumble Pak strength (D224
      * re-promotion). One global Input.RumbleScale for all pads (user call,
@@ -221,7 +236,7 @@ static struct Row rows[] = {
      * no-ops) when no rumble-capable pad is connected -- a generic
      * row-disabled state for that case is deferred with the per-pad tuning
      * row (QOL-INVENTORY). */
-    { .key="Input.RumbleScale", .label="Rumble strength", .kind=ROW_SLIDER, .step=0.05 },
+    { .key="Input.RumbleScale", .label="Vibration", .kind=ROW_SLIDER, .step=0.05 },
     /* v0.4.0 M3 (modern options wave, D371): the GEPD mouse-injector
      * key-layout preset (docs/dev/notes/GEPORT-REFERENCE-DEEPDIVE.md
      * section 7.1) + the crouch bind's fire mode. Turok standard: these are
@@ -1040,7 +1055,11 @@ static double rowHi(const struct Row *r)
 static double calibratedDefault(const struct Row *r)
 {
     if (!strcmp(r->key, "Input.MouseSensitivity")) return 100.0;
-    if (!strcmp(r->key, "Input.PadDeadzone")) return 7000.0;
+    if (!strcmp(r->key, "Input.MouseYScale")) return 100.0;     /* Wave A item 6: native */
+    if (!strcmp(r->key, "Input.PadDeadzoneL")) return 7000.0;   /* Wave A: = STICK_DEADZONE */
+    if (!strcmp(r->key, "Input.PadDeadzoneR")) return 7000.0;   /* Wave A: = STICK_DEADZONE */
+    if (!strcmp(r->key, "Input.PadLookSensX")) return 100.0;    /* Wave A: native */
+    if (!strcmp(r->key, "Input.PadLookSensY")) return 100.0;    /* Wave A: native */
     if (!strcmp(r->key, "Input.PadTriggerPct")) return 23.0;
     return -1.0;
 }
@@ -1264,11 +1283,17 @@ int optionsRowIsReset(int i)
 static const struct { const char *key; double def; } kResetDefaults[] = {
     /* INPUT (port/src/input.c initializers) */
     { "Input.MouseSensitivity", 100 },  /* static int mouseSensitivity = 100 */
+    { "Input.MouseYScale",      100 },  /* = 100 (native), Wave A item 6 */
     { "Input.MouseInvertY",      0 },   /* = 0 */
     { "Input.AimMode",           0 },   /* = AIMMODE_N64 (0) */
     { "Input.AimRange",          0 },   /* = 0 (PC) */
     { "Input.PadLookInvertY",    0 },   /* = 0 */
-    { "Input.PadDeadzone",       7000 },/* = STICK_DEADZONE (7000) */
+    { "Input.PadDeadzoneL",     7000 },/* = STICK_DEADZONE (7000), Wave A */
+    { "Input.PadDeadzoneR",     7000 },/* = STICK_DEADZONE (7000), Wave A */
+    { "Input.PadLookSensX",     100 },  /* = 100 (native), Wave A */
+    { "Input.PadLookSensY",     100 },  /* = 100 (native), Wave A */
+    { "Input.PadLookSmooth",      0 },  /* = 0 (off), Wave A */
+    { "Input.PadSouthpaw",        0 },  /* = 0 (off), Wave A */
     { "Input.PadTriggerPct",     23 },  /* = 23 */
     { "Input.RumbleScale", 0.5 },       /* = gRumbleScale (0.5f), D401 */
     { "Input.CrouchMode",        0 },   /* = 0 (hold) */
@@ -1872,6 +1897,11 @@ static void valueText(int i, char *out, int n)
     }
     if (calibratedDefault(r) >= 0.0) {
         snprintf(out, n, "%d/100", (int)lround(rowFractionAt(r, v) * 100.0));
+        return;
+    }
+    /* Wave A: integer "N/dispMax" knobs (e.g. look smoothing 0-10 -> "5/10"). */
+    if (r->dispMax > 0) {
+        snprintf(out, n, "%d/%d", (int)lround(v), r->dispMax);
         return;
     }
     /* Distance sliders are normalized to a 0..100 UI while retaining the
