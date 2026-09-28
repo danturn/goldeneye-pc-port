@@ -6,8 +6,10 @@ title: GoldenEye 007 PC Port
 # long version made a ~230-char title. It also renders as the masthead
 # tagline on every page. Per-page meta/og descriptions come from each page's
 # front matter `description:` (see index.md), not from here.
-description: N64 GoldenEye 007, decompiled for PC.
-theme: jekyll-theme-cayman
+description: GoldenEye 007 (Nintendo 64, 1997) on the PC - decompiled, ported, and playable.
+# No GitHub theme: the site uses a hand-rolled _layouts/default.html plus the
+# design in _includes/head-custom.html (charcoal/off-white/amber, square and
+# flat.)
 show_downloads: false
 
 # Canonical site location - used by jekyll-seo-tag (canonical URLs, og: tags)

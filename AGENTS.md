@@ -39,6 +39,59 @@ Needs CMake + SDL2 + zlib + OpenGL, and must run from the MSYS2 MINGW64 shell
 (see `build-pc.sh` header and `docs/building.md`). ROM goes in `./data/`
 (not distributed); assets must be extracted from it first (`docs/building.md`).
 
+**Windows build environment (three recurring failure modes — diagnose in this order):**
+
+1. **`Cannot create temporary file in C:\Windows\: Permission denied`** at the
+   link step. The PE toolchain (ninja → cmd → gcc/ld) needs a writable
+   TMP/TEMP; the msys→native env conversion drops it in non-login shells
+   (agent harnesses; the `C:/msys64` tree here was built for `D:/M/msys64`,
+   so its conversion is unreliable). `build-pc.sh` now **self-heals**: it
+   probes a native child's TMP (via a file — piped `cmd.exe` stdout is
+   unreliable under msys console emulation) and, if broken, re-runs
+   cmake+build under PowerShell with `TMP`/`TEMP` set natively (the
+   native→native boundary passes env through intact; only msys→native is
+   broken). If you run cmake/ninja *by hand* from a broken shell: run them
+   from cmd/PowerShell with `C:\msys64\mingw64\bin` on PATH.
+   **Guard revision (2026-09-28):** the re-exec writes a self-contained
+   `.ps1` to a temp file and runs `powershell -File` with plain path/word
+   args only (the msys→native argv conversion mangles `$`-bearing
+   `-Command` strings; a file write is conversion-free). Inside: PATH is
+   built explicitly (never trust the inherited value); TMP is chosen from
+   writable candidates (`%LocalAppData%\Temp` first —
+   `[System.IO.Path]::GetTempPath()` honours the inherited *broken* TMP,
+   observed as `C:\Windows\`); every native step self-logs to
+   `build-pc/ge007-native-reexec-{diag,cmake,build}.log`; a null
+   `$LASTEXITCODE` ("did not execute") is a distinct failure (exit 2/3) —
+   in PS 5.1 a piped native command errors out non-terminating and never
+   sets it, so an unguarded `if ($LASTEXITCODE -ne 0)` passes vacuously.
+   In `.ps1`, `-DROMID=$Var` is a literal (bare tokens don't expand) — it
+   must be `"-DROMID=$Var"`. Launch powershell plainly — `env -i` before it
+   breaks the nested cmake launch (verified 2026-09-28).
+   **OPEN (next session):** the guard still fails *inside* `build-pc.sh`
+   (cmake "did not execute": the `.ps1` runs, but `$LASTEXITCODE` stays
+   empty) while the *identical* standalone invocation succeeds (cmake runs
+   and the build completes — that is how the D401 builds were made). First
+   test: diff the heredoc-generated `.ps1` against a hand-extracted copy
+   (suspect: heredoc line-ending/whitespace corruption).
+   **Working workaround:** extract the heredoc `.ps1` and run
+   `powershell -NoProfile -ExecutionPolicy Bypass -File <ps1> "C:\msys64\usr\bin" "C:\msys64\mingw64\bin" C:/msys64 <repo-win-path> build-pc <romid>`.
+   Re-confirmed 2026-09-28: in-script re-exec fails again (cmake configure
+   dies inside the ps1; re-exec logs left stale) while the identical
+   standalone invocation reconfigured and built cleanly (extract with
+   `awk "/<<'PS1'\$/{f=1;next} /^PS1\$/{f=0} f" build-pc.sh > /tmp/ps1`
+   — mind the leading whitespace, and `export PATH` to include mingw/bin
+   first, failure mode 3).
+2. **`cannot open output file ge007.x86_64.exe: Permission denied`.** A
+   **running** `ge007.x86_64.exe` locks the output file (Windows rule; you
+   can't relink over a live PE). Check with `Get-Process | Where-Object {
+   $_.ProcessName -like '*ge007*' }` and close the game before rebuilding.
+   An agent must not kill the user's game process to make a link succeed.
+3. **`cc1.exe: ... libmpfr-6.dll: cannot open shared object file`.** The
+   calling PATH lacks `C:\msys64\mingw64\bin` (the gcc driver finds cc1 via
+   its own directory, but the child needs the mingw DLL dir on PATH). In an
+   msys shell: `export PATH="/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH"`
+   before building.
+
 ## Verification ritual (after any build-affecting change)
 
 1. **Undefined symbols.** Every symbol referenced by the compiled set (see `CMakeLists.txt`: `SRC_GAME`, `SRC_ENGINE`, `SRC_LIBAUDIO`, `SRC_LIBULTRARE_AUDIO`, `SRC_LIBULTRARE_DATA`, `SRC_GU`, `SRC_PORT*`) must be defined exactly once in the compiled set or in `port/`. Symbols that live in EXCLUDED files (`libultra/io/*`, `libultrare/io/*` except `vitbl.c`, `libultra/os/*`, `libultrare/os/*`, `sched.c`, `rmon.c`, `vi.c`, `src/*.s`) must be provided by `port/src/libultra.c`, `gesched.c`, `n64stubs.c`, `random.c`, or `ucode.c`.

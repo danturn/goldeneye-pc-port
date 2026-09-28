@@ -1095,12 +1095,54 @@ static void gfx_opengl_init(void) {
 static void gfx_opengl_on_resize(void) {
 }
 
+/* #92 perf probe (GE_PERFSTAT=1): GPU time per frame via GL_TIME_ELAPSED,
+ * double-buffered so reading never stalls the pipeline. Skipped when the
+ * driver lacks timer queries. Tells a low-end reporter's log whether frames
+ * are GPU-bound (render/MSAA/filtering cost) or CPU-bound. */
+static int s_gpuq_on = -1;
+static GLuint s_gpuq[2];
+static int s_gpuq_idx = 0, s_gpuq_valid[2] = { 0, 0 };
+static double s_gpuq_ms = 0.0;
+static int s_gpuq_n = 0, s_gpuq_frames = 0;
+
 static void gfx_opengl_start_frame(void) {
     frame_count++;
+    if (s_gpuq_on < 0) {
+        s_gpuq_on = getenv("GE_PERFSTAT") != NULL && glGenQueries != NULL &&
+                    glGetQueryObjectui64v != NULL && glBeginQuery != NULL;
+        if (s_gpuq_on) {
+            glGenQueries(2, s_gpuq);
+            fprintf(stderr, "PERFSTAT gpu timer on: %s | %s\n",
+                    (const char *)glGetString(GL_RENDERER), (const char *)glGetString(GL_VERSION));
+        }
+    }
+    if (s_gpuq_on == 1) {
+        if (s_gpuq_valid[s_gpuq_idx]) {
+            GLuint avail = 0;
+            glGetQueryObjectuiv(s_gpuq[s_gpuq_idx], GL_QUERY_RESULT_AVAILABLE, &avail);
+            if (avail) {
+                GLuint64 ns = 0;
+                glGetQueryObjectui64v(s_gpuq[s_gpuq_idx], GL_QUERY_RESULT, &ns);
+                s_gpuq_ms += (double)ns / 1.0e6;
+                s_gpuq_n++;
+            }
+        }
+        glBeginQuery(GL_TIME_ELAPSED, s_gpuq[s_gpuq_idx]);
+    }
 }
 
 static void gfx_opengl_end_frame(void) {
     glFlush();
+    if (s_gpuq_on == 1) {
+        glEndQuery(GL_TIME_ELAPSED);
+        s_gpuq_valid[s_gpuq_idx] = 1;
+        s_gpuq_idx ^= 1;
+        if (++s_gpuq_frames % 300 == 0 && s_gpuq_n > 0) {
+            fprintf(stderr, "PERFSTAT gpu=%.2fms/frame (avg over %d frames)\n", s_gpuq_ms / s_gpuq_n, s_gpuq_n);
+            s_gpuq_ms = 0.0;
+            s_gpuq_n = 0;
+        }
+    }
 }
 
 /* Frame capture (dev tool, env GE_PCDUMP) — see gfx_opengl.h. TEMP D70: read
@@ -1187,6 +1229,20 @@ static void gfx_opengl_update_framebuffer_parameters(int fb_id, uint32_t width, 
 
     width = max(width, 1U);
     height = max(height, 1U);
+
+    /* macOS GL 4.1 core: asking for more samples than GL_MAX_SAMPLES (e.g. 8x)
+     * makes the multisample renderbuffers incomplete and the screen goes dark
+     * (glReadPixels 0x506). Clamp to what the driver reports. */
+    if (msaa_level > 1) {
+        static GLint maxSamples = -1;
+        if (maxSamples < 0) {
+            glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
+            if (maxSamples < 1) maxSamples = 1;
+        }
+        if ((GLint)msaa_level > maxSamples) {
+            msaa_level = (uint32_t)maxSamples;
+        }
+    }
 
     if (gfx_framebuffers_enabled) {
         glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
@@ -1284,7 +1340,8 @@ void gfx_opengl_resolve_msaa_color_buffer(int fb_id_target, int fb_id_source) {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, fb_src.fbo);
     glBlitFramebuffer(0, 0, fb_src.width, fb_src.height, 0, 0, fb_dst.width, fb_dst.height, GL_COLOR_BUFFER_BIT,
                       GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer);
+    /* current_framebuffer is an INDEX into framebuffers[], not a GL name; fb 0 is the window's default framebuffer (name 0). */
+    glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer == 0 ? 0 : framebuffers[current_framebuffer].fbo);
     glEnable(GL_SCISSOR_TEST);
 }
 
@@ -1348,7 +1405,7 @@ void gfx_opengl_copy_framebuffer(int fb_dst, int fb_src, int left, int top, bool
 
     glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[current_framebuffer].fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer == 0 ? 0 : framebuffers[current_framebuffer].fbo);
 
     glReadBuffer(GL_BACK);
 

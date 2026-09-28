@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #endif
 #include "sky.h"
+#ifdef PORT
+#include "floatvtx.h" /* D245: G_FLOATVTX_EXT */
+#include "envflag.h"
+#endif
 #include "player.h"
 #include "unk_092E50.h"
 #include "bondview.h"
@@ -16,6 +20,9 @@
 #include "image_bank.h"
 #ifdef PORT
 #include "dyn.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 #endif
 
 #define SKYABS(val) (val >= 0.0f ? (val) : -(val))
@@ -343,7 +350,7 @@ Gfx *skyRender(Gfx *gdl)
     env = fogGetCurrentEnvironmentp();
 
 #ifdef PORT
-    if (getenv("GE_D176")) {
+    if (GE_ENVFLAG("GE_D176")) {
         static int n = 0;
         if (n++ < 4)
             fprintf(stderr, "D176 sky: Clouds=%d RGB=%d,%d,%d SkyImageId=%d CloudRGB=%.1f,%.1f,%.1f "
@@ -404,7 +411,7 @@ Gfx *skyRender(Gfx *gdl)
     sp52c = skyIsScreenCornerInSky(&sp680, &sp620, &sp580);
 
 #ifdef PORT
-    if (getenv("GE_D176")) {
+    if (GE_ENVFLAG("GE_D176")) {
         static int m = 0;
         if (m++ < 3) {
             coord3d *eye = bondviewGetCurrentPlayersPosition();
@@ -943,7 +950,7 @@ Gfx *skyRender(Gfx *gdl)
              * comment. Off by default (unset env => identical to the current
              * allowShift=TRUE behaviour this row is still reopened against). */
             {
-                const char *fs = getenv("GE_D245_FIXEDSHIFT");
+                const char *fs = GE_ENVSTR("GE_D245_FIXEDSHIFT");
                 if (fs) {
                     s32 kFixed = atoi(fs);
                     if (kFixed < 0) kFixed = 0;
@@ -959,7 +966,7 @@ Gfx *skyRender(Gfx *gdl)
              * still-open question after allowShift=TRUE didn't fix the live
              * symptom. Recomputed locally rather than reading skyPortBeginFan's
              * statics (defined later in this TU, not forward-declared). */
-            if (getenv("GE_D245V")) {
+            if (GE_ENVFLAG("GE_D245V")) {
                 static int callN = 0;
                 f32 minS = sp274[0].unk20, maxS = sp274[0].unk20;
                 f32 minT = sp274[0].unk24, maxT = sp274[0].unk24;
@@ -1993,6 +2000,53 @@ static Gfx *skyPortRenderPoly(Gfx *gdl, SkyRelated38 **v, s32 nverts)
         wScale = (maxAbsW > 30000.0f) ? (maxAbsW / 30000.0f) : 1.0f;
     }
 
+    /* D245 (M-201): full-precision path. Hand fast3d the clip-space position
+     * (ndcX*w, ndcY*w, 0, w) and the folded S/T as floats (G_FLOATVTX_EXT,
+     * port/include/floatvtx.h) instead of squeezing them through s16 Vtx
+     * ob/tc: no wScale position quantisation, no 2^k tc shift. The fold is
+     * still applied (a multiple of the repeat period, exact under wrapping)
+     * to keep the float magnitudes small. GE_D245_OLDVTX=1 restores the old
+     * s16 route for A/B. */
+    if (!GE_ENVFLAG("GE_D245_OLDVTX"))
+    {
+        PortFloatVtx *fv = (PortFloatVtx *) dynAllocateVertices(2 * (nverts < 3 ? 3 : nverts));
+
+        for (i = 0; i < nverts; i++)
+        {
+            f32 screenX = v[i]->unk28 * 0.25f;
+            f32 screenY = v[i]->unk2c * 0.25f;
+            f32 ndcX = 2.0f * ((screenX - l) / (r - l)) - 1.0f;
+            f32 ndcY = 1.0f - 2.0f * ((screenY - t) / (b - t));
+            f32 w = v[i]->unk0c;
+
+            fv[i].x = ndcX * w;
+            fv[i].y = ndcY * w;
+            fv[i].z = 0.0f;
+            fv[i].w = w;
+            fv[i].s = v[i]->unk20 - foldS;
+            fv[i].t = v[i]->unk24 - foldT;
+            fv[i].r = (u8) v[i]->r;
+            fv[i].g = (u8) v[i]->g;
+            fv[i].b = (u8) v[i]->b;
+            fv[i].a = (u8) v[i]->a;
+        }
+
+        gSPClearGeometryMode(gdl++, G_LIGHTING | G_CULL_BOTH | G_FOG);
+        gSPSetGeometryMode(gdl++, G_SHADE | G_SHADING_SMOOTH);
+        gSPFloatVertexExt(gdl++, fv, nverts, 0);
+
+        if (nverts >= 4)
+        {
+            gSP2Triangles(gdl++, 0, 1, 3, 0, 3, 2, 0, 0);
+        }
+        else
+        {
+            gSP1Triangle(gdl++, 0, 1, 2, 0);
+        }
+
+        return gdl;
+    }
+
     guMtxIdentF(projf.m);
     /* row = input axis (matches this codebase's row-vector * M convention,
      * e.g. sub_GAME_7F097388 / gfx_pc.cpp's own MP_matrix use):
@@ -2039,7 +2093,7 @@ static Gfx *skyPortRenderPoly(Gfx *gdl, SkyRelated38 **v, s32 nverts)
          * one sky quad spans ~30,000 texels in S and T, but tc is S10.5, so
          * (S - foldS) * 32 only holds +/-1024 texels. Same env-gate style as
          * the GE_D176 probes above. */
-        if (getenv("GE_D227V")) {
+        if (GE_ENVFLAG("GE_D227V")) {
             static int n = 0;
             if (n++ < 200)
                 fprintf(stderr, "D227V poly nv=%d i=%d w=%.1f 1/w=%.6g sx=%.1f sy=%.1f S=%.1f T=%.1f "

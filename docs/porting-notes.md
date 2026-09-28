@@ -28,6 +28,8 @@ good that you are looking at one of these.
 - [D3. GCC/mingw makes an all-non-negative `enum` UNSIGNED](#d3-gccmingw-makes-an-all-non-negative-enum-unsigned)
 - [D4. N64 "interrupts off" must be a real lock on PC](#d4-n64-interrupts-off-is-not-free-on-pc--it-must-be-a-real-lock)
 - [D5. Loop bounds that assume linker adjacency of two globals](#d5-loop-bounds-that-assume-linker-adjacency-of-two-file-scope-globals)
+- [D12. Collapsing an LOD binding to tile 0 breaks a DETAIL binding](#d12-collapse-an-lod-binding-to-tile-0-is-wrong-for-a-two-texture-detail-binding-d236)
+- [D13. Per-render accumulation is not associative (1 vs 2–3 ticks/frame)](#d13-per-render-accumulation-is-not-associative-the-ports-1-tickframe-can-reach-states-the-n64s-23-ticksframe-never-did-d329)
 - [E. Process / method notes](#e-process--method-notes)
 
 ## A. Pointer-width struct growth (32→64): the dominant class
@@ -105,6 +107,15 @@ for hardcoded indices into any `padding[]`/`u8[]` union arm.
   through the correctly-typed sibling field (`ObjectRecord.model`)
   instead, `#ifdef PORT`, N64 line/cast kept verbatim under `#else`.
   §F **D255** (M-140).
+- **D392** (the firing-guard pose variant): `chrlvUpdateAimendbackShoulders`
+  reads `((f32*)arg1)[12/13/16/17]` into a
+  `weapon_firing_animation_table` whose *first* member is a union of a
+  `s32` and a `ModelAnimation *`. N64's 4-byte union places those slots at
+  `max_up/max_down/free_arm_frac_up/free_arm_frac_down`; on PC the 8-byte
+  union shifts the floats, so the raw indices read `aim_end_frame/max_up/
+  max_right/free_arm_frac_up`. The wrong aim clamp bends the torso ~49° and
+  pushes the hands through it. Under `#ifdef PORT`, use the four named
+  fields; retain the raw indices for N64. §F D392.
 
 **Lesson.** When a value reads as a clean constant (0, 1, NULL) rather
 than garbage, a pointer byte is a prime suspect; the high bytes of a
@@ -248,6 +259,36 @@ framing — it never looked like game logic to begin with.
   (`client[1].next`), never hand-roll the byte math; it's the direct
   decompilation of what the write side already does, `#ifdef PORT` with the
   N64 hand-rolled offset kept verbatim under `#else`. §F **D248**.
+
+- **One layout bug often has sibling call sites.** D264 fixed a
+  cross-global `ModelRenderData` template read in the watch item preview;
+  the identical read in `watchRenderController` (`D_80035D04 + 0x3c`) stayed
+  broken until D290. When fixing a raw-offset global read, grep for every
+  other read of the same globals (`D_80035D00`/`D_80035D04` here) before closing.
+
+- **When a split N64 struct is made inline on PC, its placeholder fields
+  become dead, and any code still reading them reads uninitialised memory.**
+  D100 turned `player.model` into a real inline `struct Model`, but the
+  decomp's `field_59C..field_650` placeholders (raw N64 offsets into that
+  model) stayed as separate fields. `bheadAdjustAnimation` kept reading
+  `field_5C0` (= N64 `model.animframe1`) and `animFlipFlag` (= `model.gunhand`),
+  which nothing ever wrote (D336: garbage anim frames, Frigate scene wrecked,
+  sensitive to memory layout). After inlining a split struct, grep every
+  placeholder in the old range and remap each read to the real field.
+  Diagnostic tell: a hardware watchpoint on the "poisoned" field sees *no
+  writes at all*.
+
+### A-dup. Renaming an IDO duplicate member re-points every read of it (D307)
+
+IDO accepts a struct that redeclares an inherited member name (`inherits ObjectRecord;` then its own `pad`); GCC rejects it, so the port renames one. **The rename changes which field existing code reads**: on N64 the later declaration shadows the inherited one, so `rec->pad` meant the derived record's own field. After renaming it (`lookpad`), unchanged game code silently binds to the inherited field instead. D307: `setupCctv` read the mount pad as the look-at pad and every security camera faced its wall. When a port rename resolves a duplicate, grep every `->name` on that struct type and decide per site which field N64 meant (PD's named-field sources are the tie-breaker).
+
+### A-cnt. A record's "count" field may not count what the converter copies (D303)
+
+The offline model converter sizes each record's trailing arrays from its count field. Check what the *runtime consumer* does with that count before trusting its name: GE's op-22 `DisplayListPrimaryRecord.numVertices` is really the number of star-flash ARMS, and `dorottex()` reads `count*4` vertices (PD names it `stargunfire.unk00` and reads `unk00*4`). Sizing by the field name dropped 3/4 of every muzzle star; the missing vertices came from neighbouring sidecar bytes and drew as spikes. For every record type, derive the copied extent from the reading loop, and cross-check PD's typed struct.
+
+### A-buf. Growing one region of a shared buffer must move every hard-coded offset after it (D342)
+
+When a PC-larger asset gets a bigger reservation inside a shared scratch buffer (D45: the wallet model 0xA000 -> 0x17000 in `ptr_logo_and_walletbond_DL`), grep for every other user of that buffer that computes a fixed offset (`base + 4096*10`). Those still point into the old boundary and silently overwrite the enlarged asset; the corruption only shows when the asset is not reloaded.
 
 ## B. 16-byte PC `Gfx` / `Vtx` vs 8-byte N64
 
@@ -556,12 +597,42 @@ through a converter or a runtime bswap fixup reads scrambled.
   (exact for hold-to-aim; a toggle scheme needs `g_CurrentPlayer->
   insightaimmode`). GE's native pitch is **inverted** (C-up → look down);
   hide it so mouse-down looks down; `MouseInvertY` flips (D118, M-24).
+- **N64 A/B bit names are not modern pad A/B semantics (D393).** GE's
+  gameplay `GE_CONT_A` cycles weapons and `GE_CONT_B` contextually uses or
+  reloads. Assigning Xbox A/X both to native A and B/Y both to independent
+  crouch leaves *no* use button. For modern controls, map A to a dedicated
+  use edge, X to a dedicated reload edge, B to crouch, Y to a weapon-cycle
+  edge; preserve native accept/cancel bits in front menus/watch/tank. Track
+  held buttons across UI transitions so closing F10 does not trigger an
+  unexpected use/reload/cycle.
 - `osContGetReadData(pad)` must fill **one OSContPad per channel**
   (`MAXCONTROLLERS`-long array), not just controller 0; joy.c passes the
   whole `samples[i].pads` array (D118).
 - Controller state has one source: `port/src/input.c`. `libultra.c`'s SI
   section marshals `inputComputePad()` into `g_contPad[]`; it is driven by
   `osContStartReadData` (per logic tick), no separate `video.c` frame hook.
+- **The in-level watch/pause is not a "menu" to `input.c`** (`current_menu`
+  stays `RUN_STAGE`), but it reads the stick as **discrete** input: ±0x2E
+  on X picks an option value or flips a page, and Y scrolls rows. Any path
+  that turns a continuous device (the mouse) into stick deflection must be
+  gated off there (`!outside_watch_menu || pause_state`), or small hand
+  motion becomes phantom menu choices. D330/#103: mouse → legacy stick
+  fallback silently reset Auto-Aim/Look-Ahead to OFF. The direct-write
+  look paths already gate on this; the fallbacks must too.
+
+- **A port-side shadow of game data must be re-synced every time the game
+  re-derives the original, not just the first time.** D252: `texReset()`
+  re-resolves the global image DLs' texture pointers on *every* stage load;
+  the compiled shadow copies (`gimgSyncCompiledGlobalDLs`, D68) only accepted
+  a write while a slot still held its unresolved marker, so every stage after
+  the title kept pointers into freed memory. It looked fine until the new
+  stage overwrote that region (rainbow explosions mid-level). Key a sync on
+  *which slots* are synced (learned once), never on "still unresolved".
+  Headless `-level_XX` boots hide this class (the first stage is the level
+  itself): repro through a real boot → title → level sequence.
+
+- **A texture re-declared in another format must be normalised with the geometry it was IMPORTED with (D245).** GE's sky water loads a CI8 image and draws it through an RGBA16 tile; fast3d imports it as CI8 (D229) but its triangle path computed the UV divisor from the RGBA16 tile (half the width) and the whole mip-chain height (43 rows, not the 32-row mask period). Anything that changes the importer's format/extent must change the tri-path `tex_width/tex_height` with it, and wrap must equal the N64 mask period.
+- **CPU-built RDP triangles need float vertices, not `Vtx` (D245).** Where GE builds RDP edge/texture coefficients on the CPU (sky/water), 32-bit S/T and positions are normal; squeezing them through s16 `tc`/`ob` costs visible precision on horizon-scale geometry. Use `G_FLOATVTX_EXT` (`port/include/floatvtx.h`).
 
 ## D. N64 hardware idioms fast3d does not emulate
 
@@ -865,6 +936,52 @@ through a converter or a runtime bswap fixup reads scrambled.
   (ginit.s is missing from this repo; the expansion lives there), not UV,
   shade, or the combiner.
 
+## D14. LOD tile selection is a 2-cycle-only RDP feature; stale `G_TL_LOD` must not affect 1-cycle texture rectangles (D341)
+
+`G_TL_LOD` is sticky other-mode state. Game code that draws a 1-cycle texture rectangle after an LOD-textured draw never clears it, because on the RDP it is irrelevant outside 2-cycle mode. fast3d's LOD/detail tile folding (D107/D236) must therefore not run for 1-cycle texrects, or they sample a neighbouring tile's stale declaration. Related: textures the CPU rewrites in place at recurring addresses (dyn pool) need a content-hashed cache key, and remember game code reaches them through the 0x80000000 KSEG0 mirror.
+
+## D12. "Collapse an LOD binding to tile 0" is wrong for a two-texture DETAIL binding (D236)
+
+**M-198 (finding D236 pass 26).** GE's `texLoadFromGdl` resolves a room DL's
+`G_NOOP` texture reference through one of three handlers, chosen by
+`in->words.w0 & 7` (`src/game/tex.c`):
+
+| type | handler | TMEM layout |
+|---|---|---|
+| 0 `TEXTURETYPE_LOD` | `texHandleType0` | ONE load block at TMEM 0; tiles 0..n are LOD levels **of that one image** |
+| 1 `TEXTURETYPE_DETAIL` | `texHandleType1` | TWO load blocks: the **detail** texture at TMEM 0, the **base** image at TMEM `texGetSizeInBytes(detail,0)` on tiles 1.. |
+| 2 `TEXTURETYPE_MIPMAP` | `texHandleType2` | as type 0 |
+
+fast3d's `gfx_lod_tile_offset` (`port/fast3d/gfx_pc.cpp`) folded **every**
+`G_TL_LOD` draw to tile 0, on the reasoning (D107) that "GE loads the whole mip
+chain at TMEM 0". That is true for types 0 and 2 and **false for type 1**,
+where TMEM 0 holds the detail texture and the image you actually want is on
+tile 1. The port therefore drew the detail texture in place of the base image —
+and never even *imported* the base image, so every probe looking for it came
+back empty.
+
+On Surface 1 this was the whole of D236: all four treeline cards
+(`tex1198`–`tex1201`, RGBA5551 64×17 cut-outs) are type-1 bindings sharing one
+detail texture, `tex2465` — an opaque 32×32 IA8 noise tile. Result: an opaque
+tiled noise wall where the treeline belongs, for 20+ investigation passes.
+
+**Tells.** (a) A texture the game demonstrably decodes into the pool is never
+imported by the renderer — that is a *binding* bug, not a decode, alpha, mip or
+geometry bug, and no amount of work on the texture's contents will move it.
+(b) The wrong thing drawn is itself a real, correctly-decoded texture from the
+same draw — look for a second texture bound by the same command.
+
+**Discriminating the two layouts at draw time.** Prefer an invariant that a mip
+chain can never satisfy. Tiles 1.. of a type-0/2 binding are LOD levels of tile
+0's image, so they necessarily carry the **same `fmt`/`siz`**; a type-1 pair is
+two unrelated textures and generally does not. Deliberately choose the
+asymmetric test — a mip chain can never trip it, and a detail pair that happens
+to share a format merely keeps the old behaviour. Two weaker discriminators
+were tried live and both misfire: "tile 1 sits at a different TMEM address"
+matches ordinary mip chains (their levels are at different TMEM offsets too),
+and "tile 1's TMEM slot has a registered load" matches them as well, because
+`rdp.loaded_texture[]` is persistent state that is never cleared between binds.
+
 ## D2. The HUD/model "X-mirror" (D114/D116): RESOLVED, it was an upside-down capture
 
 **M-33 (finding D168).** There was no mirror. `gfx_opengl_dump_bound_fbo`
@@ -1019,6 +1136,12 @@ silently disappears.
   upstream. This class isn't limited to display-list cursors; audit any
   `-O2`-only "quietly broken but not crashing" symptom for the same shape.
   Fix: `return` under `#ifdef AVOID_UB` (`#else` keeps the N64 body).
+- Instances (latent, 2026-09-25 Q7 warning audit): `constructor_menu07_missionsel()` and
+  `constructor_menu0D_missioncomplete()` (`src/game/front.c`), both `DL = f(DL)` at the
+  caller. Currently harmless: old/new objects disassemble identically at `-O2` (GCC
+  keeps `frontDrawCursor()`'s result in `rax`), but a clang/arm64 build is not bound
+  by that. `return DL;` under `#ifdef AVOID_UB`. A `-Wreturn-type` sweep lists the
+  remaining candidates; the other 7 current hits have callers that ignore the value.
 - The one flagged in-source with an explicit comment is
   `grep -rn "missing a \"return\"" src/` (`gunfire.c`). Others (like D77's)
   exist without the banner; suspect this class whenever an `-O2` build
@@ -1158,8 +1281,98 @@ produce the same visual symptom but need opposite fixes.
 
 **Update 2 (same investigation, immediately after): freezing a *value* and freezing a *pointer target* are different operations — treating them the same crashed twice.** Extending the same freeze technique to `render_pos` (a `Model*` field, unlike `field_488.pos` a plain value) by skipping the call that reassigns it (`subcalcmatrices`) seemed equivalent to M-167's "skip the write" but wasn't: `render_pos` is a pointer into a per-tick dynamically-reallocated arena, and skipping its reassignment only works if the pointer it's left holding is still valid — which depends on model lifecycle, not just on this tick's logic. Two fixes in a row tried to detect "is it safe to skip" by inspecting either the pointer's *value* (a sentinel check, `!= NULL && != -1`) or a *cached identity* (comparing the pointer against a remembered "already validated" pointer) — both crashed, because **the allocator reuses model-pointer addresses across genuinely different logical model instances**: a freshly-`CREATE`d model can land at the exact address a previously-removed model occupied, so both the sentinel check and the identity check wrongly conclude "this is already valid" for an instance whose `render_pos` is still an uninitialized tombstone. This is the same "don't guess validity from a value that can coincidentally look right" trap as the paragraph above, encountered a second time from a different angle (a *pointer's* target identity, not a *field's* content). **The robust fix:** never skip the call that establishes the pointer's validity — let it always run — and apply the freeze as a *contents* copy afterward, on top of a buffer that's now unconditionally guaranteed valid. If you must "hold something steady" and that something is reached through a pointer that some other code reassigns, freeze the *pointee's bytes*, not the *act of assignment* — the assignment is usually also the thing keeping the pointer sane.
 
+## D12. Depth precision: the port matches N64 exactly — z-fighting seen on PC is probably faithful (D306/D308)
+
+When a user reports z-fighting, do NOT assume the software renderer has less depth precision than the RDP. Verified for GE: the RSP's vertex transform (`rsp/graphics/gmain.s`) writes post-transform x/y/z/w back to the vertex buffer as **full 32-bit 16.16 fixed-point** (`sdv` stores), not s16 8.8 — the RDP interpolates from full-precision NDC and quantizes once, into its 24-bit z-image. The port keeps floats through `gfx_sp_vertex` and writes a `GL_DEPTH24_STENCIL8` buffer: same or better precision at every stage, same near/far. So coincident geometry authored into the level fights on both platforms; a PC-only explanation needs positive evidence (an N64 reference of the same spot), not just the existence of the symptom. A mitigation like switching to 32-bit float depth would *reduce* fighting but diverge from N64 behavior — that's a rule-2-style decision, not a silent fix.
+
+**Probe technique that worked (vs. three variants that didn't):** detecting z-fighting from emitted triangles requires filtering out (a) tessellation gradients — adjacent tris of one surface have near-equal depths by construction — and (b) camera-motion coincidences — as the camera moves, unrelated world points pass through the same screen cell and their depths happen to sit close. What survives both: a coarse screen-cell grid keeping a short per-cell depth history, flagging only **non-monotonic** (a-b-a) oscillation within a small tolerance that **recurs many times at the same cell**. Monotonic drift = gradient; one-off close pairs = motion artifact; sustained recurrence = a real fight. `GE_ZF` in `port/fast3d/gfx_pc.cpp` implements this (`GE_ZFTOL` tolerance, `GE_ZFBOX` region filter). **Caveat (M-201):** `GE_ZF` actually quantises NDC z to ±255, not 24 bits, so at its default tolerance it flags unrelated nearby surfaces; treat a hit as a lead, not proof. Before calling anything "z-fighting", check the separation against the near plane: at close range 24-bit depth resolves far finer than any non-coplanar model parts, so "whole surfaces in the wrong order" there is depth *state* or geometry, not precision. Use `GE_D306C` (per-triangle depth-state census) for that; D306 turned out to be authored geometry seen from an unusual camera.
+
+## D13. Per-render accumulation is not associative: the port's 1 tick/frame can reach states the N64's 2–3 ticks/frame never did (D329)
+
+GE on N64 renders gameplay at ~20–30 fps, so `g_ClockTimer` (= `speedgraphframes`, 60 Hz ticks per rendered frame) is normally 2–3. The port at 60 fps gives 1. Code that folds `numticks` ticks into **one** downstream call is not equivalent at different granularities. `modelTickAnim` sums `playspeed*speed` over the ticks, then makes one `modelSetAnimFrame2WithChrStuff` call, which only moves `framea`/`frameb` when `floor(frame)` crosses an integer. At speed < 1 and 1 tick/frame a clamped (`framea == frameb`) non-looping anim never crosses, so it stays pinned even after its endframe is raised. At 2+ ticks it crosses on the next frame. Result: permanent guard freezes on PC (D318/D320) that the console could not sustain.
+
+- **Tell:** a state that holds forever at 60 fps, is frame-exact (integer frame, `fa == fb`), and has a per-tick step < 1.0 unit.
+- **Repro correctly:** force the granularity with `GE_D318B_CLK=N` (TEMP probe, lockstep N ticks/frame) and A/B N=1 vs N=2. Wall-clock runs on a slow host (WSLg renders ~5 fps → mixed clk 1–6) and `GE_DETERM=1` (advances per VI-retrace request, also mixed clk) both give uncalibrated results.
+- **Where else to look:** any `for/while (numticks)` accumulator followed by a single threshold/floor consumer; D193 (AI locomotion rate) and D243 (cutscene `numticks` bursts) touched the same axis from the other side.
+
+## D15. A texture-rectangle idiom that is sub-1-native-pixel tall relies on the RDP's floor-based fixed-point scanline stepping — now replicated in `gfx_draw_rectangle` (D397, RESOLVED 2026-09-28)
+
+GE's front-end vertical-gradient trick (`titleRenderFolderMenuBackgroundLines`,
+`src/game/title2.c`) draws a tall image as 299 separate 1-scanline-tall
+`gSPTextureRectangle`s, one per source row, each tinted by a per-row
+interpolated `gDPSetPrimColor`. The lower-right Y coordinate uses the
+universal N64 idiom `((y+1)<<2)-1`, which in U10.2 units is **3, not 4** — a
+0.75-native-pixel-tall rect, not 1.0. This is correct *on real hardware*
+specifically because the RDP's scan converter steps by truncating
+(flooring) the fixed-point Y to an integer scanline before testing coverage,
+so `y*4+3` still falls in scanline `y` and nothing else — the "-1" is a
+hardware-truncation idiom, not a literal float height.
+
+`gfx_pc.cpp`'s `gfx_draw_rectangle` does not replicate that truncation: it
+converts the U10.2 corners straight to continuous NDC floats
+(`ulyf/lryf = ±(y / (4·HALF_SCREEN_HEIGHT)) + 1`) and hands them to the GPU's
+own continuous rasterizer, which uses pixel-center/coverage rules, not
+floor-stepped scanlines. A rect that is 0.75 (native) pixels tall, stacked
+299 times with each row offset by exactly 1.0 native pixel from the last,
+does not reliably rasterize as "exactly the one scanline the N64 idiom
+intended" under a continuous rasterizer — whether a given row rounds to 0 or
+1 device pixel depends on where its fractional edges land relative to the
+device pixel grid, and that phase drifts row-to-row (worse under any
+non-integer native→window viewport scale, `gfx_adjust_viewport_or_scissor`'s
+`ratioX`/`ratioY`). Stacked over ~300 rows filling the screen, sporadic
+per-row rounding reads as a periodic horizontal comb/interlace — this is the
+leading mechanism for D397's "interlaced" file-select background and intro
+gun-barrel, and is a **first-render, not re-entry-triggered** artifact
+(unlike D182), because it is a rasterization property of the geometry itself,
+not stale state.
+
+**Tell:** any GE front-end/menu draw that fakes a large image or gradient by
+stacking many independent 1-scanline (or otherwise sub-1-native-pixel-tall)
+`gSPTextureRectangle`s rather than one multi-row texture — the `(<<2)-1`
+lower-right idiom is the signature to grep for. A single such rect is
+invisible (sub-pixel rounding on one edge); many stacked ones make the
+rounding pattern visible as banding.
+
+**Fix (landed 2026-09-28, RESOLVED):** `gfx_draw_rectangle` (`gfx_pc.cpp`) now replicates the RDP truncation. After the sub-pixel offset is applied, it floors the U10.2 top edge to its scanline and the bottom edge to the *last covered* scanline — the RDP scanline range `[top_scan, bot_scan+1]` — before converting to NDC: `top_scan = uly>>2`, `bot_scan = (lry-1)>>2`, then `uly = top_scan<<2`, `lry = (bot_scan+1)<<2`. This is a **no-op for whole-pixel rects** (their edges are already `4k`/`4k−1`, and the `(<<2)−1` bottom idiom already yields `bot_scan` = the intended last row), so only sub-pixel-tall strips change. **Confirmed by a falsifiable 3-scale PCDUMP test:** the comb period is fixed at ≈3 *native* rows across 640/1024/1280 (window-period = 3×scale) — the beat of 0.75-px strips at a 1.0-px pitch — exactly the fixed-point-flooring signature, ruling out the scale-invariant LERP/CC factor. Verified by playtest: gun-barrel + file-select gradient render clean, comb gone.
+
+**Not the cause (checked and ruled out for D397):** the CC/LERP scaling of
+`ENV_ALPHA` as `value/255.0f` (`gfx_pc.cpp` around the `G_CCMUX_ENV_ALPHA`
+case) is byte-identical to the Perfect Dark PC port's (`gfx_pc.cpp` in the
+local `pd_port` checkout) — same formula, no special-cased "5-bit RDP
+coefficient" scaling in either port. The real RDP color combiner's A/B/C/D
+inputs are 8-bit values (PRIM/ENV alpha come from an 8-bit `gDPSetEnvColor`
+field); there is no coarser-precision quirk to correct here. A uniform
+darkening from a nonzero `ENV_ALPHA` LERP factor is very likely faithful
+(possibly authored/original-dev-intentional tinting), not a bug — do not
+"fix" it without an N64/1964-GEPD reference screenshot proving otherwise.
+
 ## E. Process / method notes
 
+- **Never `exit()` while another thread may be inside the GL driver (D344).**
+  The GL context lives on the render (scheduler) thread; quit events arrive on
+  other threads. Request the quit (`videoRequestQuit`), let the render thread
+  `glFinish` + unbind at a frame boundary and park, then exit from the host.
+  An unclean GL teardown bugchecked the maintainer's PC (0x119, HAGS on).
+  Harness runs should end with `GE_QUITFRAME=<n>`, not a `timeout` kill.
+- **Headless front-end scripts: turn the mouse off (D343).** In menus the
+  pointer follows the real OS mouse (WI-2 absolute tracking), so the desktop
+  mouse moves the in-game cursor mid-`GE_INPUTSCRIPT`. Put
+  `[Input] MouseEnabled = 0` in the pinned test ini. Script "frames" were
+  about one per rendered frame on the file select screen; calibrate with a
+  log, not by assumption.
+- **`textMeasure` height is 0 without a trailing newline (D343).** It only
+  counts completed lines. Measure `"text\n"` when you need a height (front.c's
+  folder text does this); the width is unaffected.
+- **Periodic audio glitches: measure the host audio device before touching
+  the pipeline (D322).** A clock-regular overflow/garble pattern (~5 min period,
+  ~45 s bursts, independent of level and load) looked like a port timing beat
+  and cost several game runs to chase. `tools_pc/sdl_drain_monitor.c` opens SDL
+  exactly like `port/src/audio.c` with no game and no window; on the
+  maintainer's Focusrite USB interface it showed the same ~312 s drain dips
+  (to 88 %) outright, and running it on several SDL backends at once showed the
+  culprit was SDL2's WASAPI path, not the device (DirectSound was clean; the
+  port now prefers it on Windows). Run it first on any "audio gets garbled"
+  report, and compare backends with `SDL_AUDIODRIVER` before blaming the hardware.
 - Investigation loop is: reproduce → env-gated capped probe → root-cause
   → narrow `#ifdef PORT` fix → visual verify (`GE_PCDUMP` +
   `tools_pc/pixcount.py` vs `docs/reference/n64-footage-*`).
@@ -1169,6 +1382,43 @@ produce the same visual symptom but need opposite fixes.
   writing anything new; same Rare engine family.
 - Don't re-investigate a closed §F finding or re-derive a format spec
   that already has a converter.
+- **When re-implementing a ROM bitstream/codec offline, PORT the derivation
+  from the decomp; never reconstruct it from the comment.** A half-right
+  bitstream parser in this codebase does not fail loudly — it returns
+  confident, plausible, wrong output. Three hits in four D236 passes:
+  (1) a texture-header parse that omitted the leading control byte
+  (`image.c:2568`) still produced sensible-looking formats and dimensions,
+  and was only caught by counting implausible entries (1020/2699 vs 1/2699
+  when correct) and noticing the format nibble only ever took values
+  0/4/8/12 — the tell that a field was straddling a boundary;
+  (2) omitting the per-image byte-align at the end of each LOD
+  (`image.c:1096`: discard the partial byte, and skip a whole byte when
+  already aligned) silently desynchronised every LOD after the first;
+  (3) `texInflateRle`'s run-length `fudge` was *guessed* from the doc comment
+  instead of ported from the loop at `image.c:1605`, and still decoded
+  images — just with the wrong alpha coverage (66.7% vs the correct 43.1%).
+  Practical rules: copy the arithmetic statement-for-statement even when it
+  looks like it could be closed-formed; build a cheap global plausibility
+  counter into the tool and print it every run; and cross-check one decoded
+  artifact against an independent expectation (here, that a LOD chain's
+  dimensions halve exactly and its alpha coverage stays roughly constant)
+  before trusting any number the tool emits.
+
+- **A negative result from a diagnostic is worthless until the diagnostic has
+  been shown capable of producing the positive.** Two independent hits: D219's
+  "verify diagnostic caps exempt the real target signature before trusting
+  'clean'", and D236 pass 21, where a static setup scanner located GE's `PROP`
+  enum with `startswith("typedef enum PROP")` — which matches
+  `typedef enum PROPFLAG` hundreds of lines earlier, yielding an enum with **no
+  `PROP_*` members at all**. Every prop id then resolved to `?` and every
+  "foliage props placed" count came back 0, which is exactly what a clean,
+  meaningful negative looks like. Build the positive control **into** the probe:
+  have it print what it is capable of matching (`foliage props recognised (9):
+  …`) and fail loudly when that set is empty, so the failure mode cannot be
+  read as a finding. Applies equally to grep-based audits over generated C,
+  where near-miss identifier prefixes (`PROP` / `PROPFLAG` / `PROPDEF_TYPE`) are
+  the norm.
+
 - **`docs/dev/findings-index.csv` is generator-derived** (`tools_pc/gen_findings_index.py`): the status cell is normalised from the `## Dxx` entry's §F summary-table row in `findings.md`, so hand-editing the CSV is silently reverted on the next regen (hit live in the D219/D252 M-158 session). Update the table row, then run the generator.
 - **Every game launch rewrites `data/ge007.eep`** (the eeprom shim stores on
   every write; validation resets, cheat patches and normal saves all write).

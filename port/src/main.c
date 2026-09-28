@@ -121,7 +121,7 @@ int main(int argc, char **argv)
     }
 
     /* 1. Platform + config + filesystem. Steam Deck / SteamOS: seed the
-     * first-run preset (native 1280x800 fullscreen, MSAA 4, longer draw/LOD
+     * first-run preset (native 1280x800 fullscreen, MSAA 2, midpoint draw/LOD
      * distances) before the load so a missing ini saves these values; an
      * existing ini always wins. */
     if (getenv("STEAMOS")) {

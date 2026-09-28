@@ -48,6 +48,12 @@
 #include "stan.h"
 #include "stanintersection.h"
 #include "textrelated.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#ifdef PORT
+#include "hudaspect.h"   /* D335 HUD alignment under native widescreen */
+#endif
+#endif
 
 #ifdef VERSION_EU
 
@@ -1689,7 +1695,7 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
              * M-141/M-142 -- the pad-orbit branch below was ruled out with
              * zero hits, so the Dam cutscene must be reaching this branch
              * or the gBondViewCutscene branch further down instead). */
-            if (getenv("GE_D243CAM")) {
+            if (GE_ENVFLAG("GE_D243CAM")) {
                 osSyncPrintf("D243CAM lookatpad: pos=%.2f,%.2f,%.2f pos2=%.2f,%.2f,%.2f\n",
                              (double) pos->f[0], (double) pos->f[1], (double) pos->f[2],
                              (double) pos2->f[0], (double) pos2->f[1], (double) pos2->f[2]);
@@ -1742,7 +1748,7 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
              * zero hits in M-141/M-142). theta/verta are the spherical
              * angles driving pos2's look-at offset from pos; a jump/jitter
              * in either between calls would show up as the reported shake. */
-            if (getenv("GE_D243CAM")) {
+            if (GE_ENVFLAG("GE_D243CAM")) {
                 osSyncPrintf("D243CAM cutscene: pos=%.2f,%.2f,%.2f pos2=%.2f,%.2f,%.2f theta=%.4f verta=%.4f\n",
                              (double) pos->f[0], (double) pos->f[1], (double) pos->f[2],
                              (double) pos2->f[0], (double) pos2->f[1], (double) pos2->f[2],
@@ -1789,7 +1795,7 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
          * wall-clock sim-tick count, normally clamped to <=6 but not
          * necessarily steady at 1) is jittering frame-to-frame in a way that
          * would show up as this exact judder. */
-        if (getenv("GE_D243CAM")) {
+        if (GE_ENVFLAG("GE_D243CAM")) {
             osSyncPrintf("D243CAM: dt=%.4f angle=%.4f pos=%.2f,%.2f,%.2f pad=%d\n",
                          (double) g_GlobalTimerDelta, (double) flt_CODE_bss_80079A00,
                          (double) pos->f[0], (double) pos->f[1], (double) pos->f[2],
@@ -8213,6 +8219,14 @@ void bondviewMovePlayerUpdateViewport(s8 stick_x, s8 stick_y, u16 buttons)
     }
 
 #ifdef VERSION_EU
+#ifdef PORT
+    extern f32 portNativeAspect(void);   /* D334, see the NTSC branch below */
+    if (portNativeAspect() > 0.0f)
+    {
+        faspect = ((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * portNativeAspect();
+    }
+    else
+#endif
     if (get_screen_ratio() == SCREEN_RATIO_16_9)
     {
         faspect = ((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * WIDESCREEN_ASPECT;
@@ -8232,6 +8246,19 @@ void bondviewMovePlayerUpdateViewport(s8 stick_x, s8 stick_y, u16 buttons)
 
 #else
 
+#ifdef PORT
+    /* D334 (native widescreen, Rule-2 approved 2026-09-23): the N64 16:9 mode
+     * below with WIDESCREEN_ASPECT replaced by the real window aspect -- see
+     * portNativeAspect() (port/src/video.c). The in-game "Ratio 16:9" option
+     * is ignored while this is on (the window is the ratio). */
+    extern f32 portNativeAspect(void);
+    if (portNativeAspect() > 0.0f)
+    {
+        set_cur_player_aspect(((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * portNativeAspect());
+        viSetAspect(((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * portNativeAspect());
+    }
+    else
+#endif
     if (get_screen_ratio() == SCREEN_RATIO_16_9)
     {
         set_cur_player_aspect(((f32) bondviewGetCurrentPlayerViewportWidth() / (f32) bondviewGetCurrentPlayerViewportHeight()) * 0.75f * WIDESCREEN_ASPECT);
@@ -9233,6 +9260,63 @@ Gfx *bondviewRenderCredits(Gfx *gdl)
 }
 
 
+#ifdef PORT
+/* D226: the top dialogue's line breaks are authored into the text (no runtime
+ * wrap), so an unconditional HUD scale pushes long lines off-screen. Scale it
+ * as far as the widest line still fits between the text origin (view left +
+ * 0x1e, msg.x) and the same margin on the right. */
+static s32 portDialogueHudScalePercent(void)
+{
+    s32 hp = portHudScalePercent();
+    s32 th = 0, tw = 0;
+    s32 avail;
+    char *text;
+
+    if (hp <= 100) {
+        return hp;
+    }
+#if defined(LEFTOVERDEBUG)
+    text = stringbuffer_top[upper_text_buffer_index];
+#else
+    text = dword_CODE_bss_80079DC8[upper_text_buffer_index];
+#endif
+    if (text == NULL || text[0] == '\0') {
+        return hp;
+    }
+    textMeasure(&th, &tw, text, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+    avail = viGetViewWidth() - 2 * 0x1e;
+    if (tw > 0 && tw * hp > avail * 100) {
+        hp = (avail * 100) / tw;
+        if (hp < 100) hp = 100;
+    }
+    return hp;
+}
+#endif
+
+#ifdef PORT
+/* D226: same width cap for the lower-left pickup / status message (and the
+ * level title card), measured with the fonts the bottom renderer uses. */
+static s32 portBottomHudScalePercent(void)
+{
+    s32 hp = portHudScalePercent();
+    s32 th = 0, tw = 0;
+    s32 avail;
+    char *text = stringbuffer_lowerleft[status_bar_text_buffer_index];
+
+    if (hp <= 100 || text[0] == 0) {
+        return hp;
+    }
+    textMeasure(&th, &tw, text, BONDVIEW_2ND_FONTTABLE(status_bar_text_buffer_index),
+                BONDVIEW_1ST_FONTTABLE(status_bar_text_buffer_index), 0);
+    avail = viGetViewWidth() - 2 * 0x1e;
+    if (tw > 0 && tw * hp > avail * 100) {
+        hp = (avail * 100) / tw;
+        if (hp < 100) hp = 100;
+    }
+    return hp;
+}
+#endif
+
 Gfx *maybe_mp_interface(Gfx *gdl)
 {
     s32 ulx;
@@ -9249,18 +9333,62 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     if (g_CurrentPlayer->cameramode == 1)
     {
         bondviewIntroCameraTextTick();
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
+#ifdef PORT
+        PORT_HUD_SCALE_PCT(gdl, portBottomHudScalePercent(), viGetViewLeft(), viGetViewTop() + viGetViewHeight());   /* D226: bottom messages, width-capped */
+#endif
         gdl = hudmsgBottomRender(gdl);
+#ifdef PORT
+        PORT_HUD_SCALE_END(gdl);
+#endif
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
         bondviewUpperTextWindowTimerTick();
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
+#ifdef PORT
+        PORT_HUD_SCALE_PCT(gdl, portDialogueHudScalePercent(), viGetViewLeft() + 0x1e, viGetViewTop());   /* D226: dialogue, width-capped */
+#endif
         gdl = sub_GAME_7F08AAE8(gdl);
+#ifdef PORT
+        PORT_HUD_SCALE_END(gdl);
+#endif
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = countdownTimerRender(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
         gdl = currentPlayerDrawFade(gdl);
+#ifdef PORT
+        /* D335: end credits are centred 4:3 text -> keep their shape. */
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+        gdl = bondviewRenderCredits(gdl);
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+        return gdl;
+#else
         return bondviewRenderCredits(gdl);
+#endif
     }
 
     gunUpdateAndFireBothHands();
     gunRenderCasings(&gdl);
     gunRenderFirstPersonGunModels(&gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
     gdl = bondviewRenderWatch(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
 
     if (g_CurrentPlayer->mpmenuon != 0)
     {
@@ -9275,11 +9403,23 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     if (bondviewGetIfCurrentPlayerHealthShowTime() &&
         (g_CurrentPlayer->watch_animation_state == 0))
     {
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = bondviewRenderGaugeBars(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     }
     else if (mpwatchShouldDisplayGauges())
     {
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
         gdl = bondviewRenderGaugeBars(gdl);
+#ifdef PORT
+        PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
         if (g_CurrentPlayer->healthdisplaytime > 0)
         {
             g_CurrentPlayer->healthdisplaytime -= g_ClockTimer;
@@ -9388,12 +9528,42 @@ Gfx *maybe_mp_interface(Gfx *gdl)
     }
 
     bondviewIntroCameraTextTick();
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
+#ifdef PORT
+    PORT_HUD_SCALE_PCT(gdl, portBottomHudScalePercent(), viGetViewLeft(), viGetViewTop() + viGetViewHeight());   /* D226: bottom messages, width-capped */
+#endif
     gdl = hudmsgBottomRender(gdl);
+#ifdef PORT
+    PORT_HUD_SCALE_END(gdl);
+#endif
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     bondviewUpperTextWindowTimerTick();
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
+#ifdef PORT
+    PORT_HUD_SCALE_PCT(gdl, portDialogueHudScalePercent(), viGetViewLeft() + 0x1e, viGetViewTop());   /* D226: dialogue, width-capped */
+#endif
     gdl = sub_GAME_7F08AAE8(gdl);
+#ifdef PORT
+    PORT_HUD_SCALE_END(gdl);
+#endif
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     gunDrawSight(&gdl);
     gdl = generate_ammo_total_microcode(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_CENTER);
+#endif
     gdl = countdownTimerRender(gdl);
+#ifdef PORT
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     gdl = display_red_blue_on_radar(gdl);
     return currentPlayerDrawFade(gdl);
 }

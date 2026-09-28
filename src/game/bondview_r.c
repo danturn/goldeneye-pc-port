@@ -372,6 +372,19 @@ void bondviewLoadSetupIntroSection(void)
     {
         ptr_random06cam_entry = g_CurrentSetupIntroCamera;
         rand_camera_index = (s32)(randomGetNext() % (u32) g_SetupIntroCameraCount);
+#ifdef PORT
+        /* TEMP D306 (M-201): test-only override of the first intro camera,
+         * GE_INTROCAM=<n> (n < count). The PRNG draw above still happens, so
+         * the rest of the random sequence is unchanged. Inert unset. */
+        {
+            extern char *getenv(const char *name);
+            extern int atoi(const char *s);
+            const char *ic = getenv("GE_INTROCAM");
+            if (ic || getenv("GE_D306C")) osSyncPrintf("D306: intro camera index %d of %d%s\n", (int)rand_camera_index,
+                         (int)g_SetupIntroCameraCount, ic ? " (GE_INTROCAM override)" : "");
+            if (ic) rand_camera_index = (s32)((u32)atoi(ic) % (u32)g_SetupIntroCameraCount);
+        }
+#endif
         while (rand_camera_index > 0)
         {
             rand_camera_index--;
@@ -384,6 +397,25 @@ void bondviewLoadSetupIntroSection(void)
     }
 
     bondinvAddInvItem(ITEM_FIST);
+#ifdef PORT
+    /* TEMP D303 (M-201): test-only start weapon, GE_STARTWEAPON=<ITEM_IDS>,
+     * so headless repros can hold a specific gun (pair with GE_D320R
+     * cheat=3 for ammo). Inert unset. */
+    {
+        extern char *getenv(const char *name);
+        extern int atoi(const char *s);
+        const char *sw = getenv("GE_STARTWEAPON");
+        if (sw) {
+            bondinvAddInvItem(atoi(sw));
+            {
+                extern void add_ammo_to_weapon(ITEM_IDS weapon, s32 ammo);
+                add_ammo_to_weapon(atoi(sw), 400);
+            }
+            starting_weapon[GUNRIGHT] = atoi(sw);
+            set_starting_weapon = 1;
+        }
+    }
+#endif
 
     if (set_starting_weapon == 0)
     {

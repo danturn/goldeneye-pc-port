@@ -1,3 +1,9 @@
+---
+title: Security & fidelity status
+description: What a release actually installs (no networking, no telemetry, no ROM or assets)
+and how faithfully the port tracks the original N64 game's logic.
+---
+
 # Security & fidelity status
 
 This page answers two questions plainly: *what does installing this put on

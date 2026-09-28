@@ -12,6 +12,7 @@
  */
 
 #include <PR/ultratypes.h>
+#include <SDL.h>   /* API types (SDL_GameControllerButton/Axis); cf. video.h */
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,8 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y);
  * also suspends mouse-aim reads until re-grabbed. No-op if the mouse is
  * disabled in config. */
 void inputSetMouseGrab(int on);
+/* D287: apply queued mouse-mode/cursor changes; host (window) thread only. */
+void inputApplyMouseRequests(void);
 
 /* WI-1 click-to-lock cursor capture. The host event pump calls
  * inputNotifyClick() when a mouse button goes down inside the game window
@@ -65,8 +68,36 @@ short inputPadAxis(int idx, SDL_GameControllerAxis a);
  * ignored -- GE only cycles forward on a bare A edge. */
 void inputPostWheel(int notches);
 
+/* v0.4.0 M3: re-derive the keyboard binds after an F10 change to
+ * Input.CrouchMode or a future binding capture (optionsoverlay hook).
+ * Also drops the latched-crouch state. Scheduler thread only. */
+void inputBindingsApply(void);
+/* D384/D385: Primary/Secondary each accept a key or Mouse 1..5.
+ * Legacy extra ini tokens remain on disk but are ignored until action edit. */
+#define INPUT_BIND_SLOTS 2
+#define INPUT_BIND_MOUSE(button) (SDL_NUM_SCANCODES + (button))
+const char *inputBindingSlot(const char *key, int slot);
+int inputBindingSetSlot(const char *key, int slot, int code);
+int inputBindingResetKey(const char *key);
+
+/* D345(b): 1 while the 1:1 menu pointer owns cursor_h/v_pos (in a menu,
+ * abs pointer available, mouse used within the re-assert window). Port
+ * screens that teleport the crosshair should skip their snap when set. */
+int  inputMenuPointerLive(void);
+
 /* Re-enumerate gamepads after a hotplug (SDL_CONTROLLERDEVICEADDED/REMOVED). */
 void inputRescanPads(void);
+
+/* D401: Rumble Pak -> real gamepad haptics. The osMotor* shims in
+ * libultra.c (game's src/joy.c rumble state machine) route here.
+ * idx is the N64 controller channel (0..3; out-of-range is a no-op).
+ * strength is 0..1, time seconds; 0/0 stops an active rumble. The scale
+ * is the single global Input.RumbleScale config value (0 = silent),
+ * applied to every pad. */
+int  inputRumbleSupported(int idx);
+void inputRumble(int idx, f32 strength, f32 time);
+f32  inputRumbleGetScale(void);
+void inputRumbleSetScale(f32 v);
 
 #ifdef __cplusplus
 }

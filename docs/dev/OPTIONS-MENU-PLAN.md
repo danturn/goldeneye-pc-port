@@ -1,6 +1,11 @@
 # In-game PC options menu — design + resume point
 
 Status: **config-system foundation landed (M-35); menu surface not built.**
+(Updated 2026-09-27: the menu surface *has* since been built and iterated
+as D346 -> D356; the current layout and per-section reset live in
+`docs/dev/D356-SETTINGS-REGROUP-PLAN.md` + `docs/dev/WATCH-SETTINGS-PLAN.md`
+and `docs/dev/findings.md` D346–D356. This doc remains the historical
+M3-scope record.)
 Pattern follows `docs/dev/AUDIO-PLAN.md` — a plan doc that a later session
 executes.
 
@@ -84,6 +89,12 @@ or are flagged "restart".
 `configSave()` on overlay close.
 
 ## 4. Alternative if an in-fiction surface is required later
+
+> **2026-09-27: route B chosen (v0.4.0 intake).** The entry point is on the
+> file select screen, not a main options menu (GE's front end has none). M1
+> landed as D343: an "Options" label that opens the F10 overlay, via one
+> Rule-2 `#ifdef PORT` draw hook. M2 (a GE-styled screen that reuses the
+> overlay's rows) follows.
 
 Route (B): a new front-end screen `constructor_menuXX_pcoptions` +
 `menuXX_pcoptions_navigation` in `front.c` under `#ifdef PORT`, reached from

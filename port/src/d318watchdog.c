@@ -38,9 +38,12 @@
  *          TRUE only for ACT_STAND/ACT_ANIM/ACT_PATROL) can never pass
  *          while c78 is in ACT_ATTACK -> PERMANENT SOFTLOCK.
  *
- * The N64 has the identical race and the identical softlock; this watchdog
- * is a deliberate port-layer accommodation (same pattern as the D202 M-66b
- * port-side expiration). It detects the exact unrecoverable signature and,
+ * N64 manifestation unverified (findings D318, 2026-09-22 correction): the
+ * user's empirical prior is that no such freeze occurs on real hardware;
+ * whether the derail window ever opens organically on N64 is open (an
+ * unthrottled-emulator deliberate-timing A/B is the discriminating test).
+ * This watchdog is a deliberate port-layer accommodation either way (same
+ * pattern as the D202 M-66b port-side expiration). It detects the exact unrecoverable signature and,
  * after a long margin, re-initializes c78's attack via sub_GAME_7F025560 --
  * the same entry point the game itself uses for a fresh attack (chrlvTickAttack
  * type_of_motion==2 calls it with (attacktype, entityid)). That runs
@@ -74,6 +77,42 @@
  * session (AllUnlocked) is still covered. Logs its detection and
  * intervention for playtest audit.
  *
+ * D320 generalization (2026-09-22, findings D320): the identical pin was
+ * force-reproduced headless on two more lists, and the watchdog is now
+ * table-driven over all confirmed signatures:
+ *
+ *   - 0x0417 ai_22 [321,333) ent=67 c67-alive : D318 Facility execution
+ *   - 0x0414 ai_19 [480,548) any-ent          : D320 Facility scientist/
+ *                                               pad kneel-aim hold (label
+ *                                               0x34 stop-check loop; pin
+ *                                               observed at off=483)
+ *   - 0x040a ai_9  [60,86)   any-ent          : D320 Control chr-0xFC aim
+ *                                               hold (label 0x0b stop-check
+ *                                               loop; pin observed at
+ *                                               off=69, ~2/3 of variants)
+ *
+ * Any chr (not just c78) sitting in a listed loop range in ACT_ATTACK with
+ * a LIVE-FIRE attacktype (no TARGET_AIM_ONLY bit) for D318_DEADLOCK_TICKS
+ * consecutive ticks gets the same sub_GAME_7F025560 re-seed. Depot ai_12
+ * (0x040d) tested clean 3/3 under forced repro and is deliberately NOT
+ * covered. In every non-deadlocked state each entry is inert: the escape
+ * path leaves the loop range in < 2 s (60x under the threshold), and a
+ * re-holding guard's anim frame moves between cycles.
+ *
+ * Repeat rescues: for the D320 entries a successful re-seed plays out the
+ * attack, the stop check passes, and the beat RE-ROLLS (re-aim -> wait ->
+ * update) -- which can pin AGAIN immediately (verified: in the forced-repro
+ * contexts every re-roll re-pinned ~240 ticks after each rescue; whether a
+ * given roll pins depends on the random aim-variant and is context/RNG-
+ * stream dependent, sometimes ~100%). So there is NO fire cap: while the
+ * signature persists, the watchdog re-fires every D318W_REFIRE_TICKS (6 s,
+ * > the ~240-tick re-roll cycle; a non-pinned guard leaves the loop range
+ * well inside that). This keeps the beat alive -- the guard fires in
+ * periodic bursts instead of freezing -- until an escape roll lands, the
+ * target dies (the beats progress on their dying/dead checks), or player
+ * action breaks the state. Full re-arm only when the signature has been
+ * absent for D318_REARM_TICKS.
+ *
  * Opt out (research only): GE_D318W=0
  */
 #include <stdlib.h>
@@ -93,18 +132,21 @@
 /* chrai.c defines these but chrai.h does not declare them. */
 extern s32 chraiGetAIListID(AIRecord *AIList, bool *isGlobalAIList);
 
+/* src/bondaicommands.h:467 -- kept local so this port file doesn't pull in
+ * the AI-command header just for one bit constant. */
+#define D320_TARGET_AIM_ONLY 0x0020 /* "Aim at target instead of firing"   */
+
 /* chraction.c internal (not in chraction.h): the fresh-attack entry point.
  * Signature from the definition; call form mirrors chrlvTickAttack's own
  * re-init at chraction.c:7401. */
 extern void sub_GAME_7F025560(ChrRecord *self, s32 attack_type, s32 arg2);
 
 #define D318_LIST_AI22       0x0417 /* Ourumov's execution list (ai_22)      */
-#define D318_OFF_LOOP_MIN    321    /* label 0x01: sleep/stop-check loop     */
-#define D318_OFF_LOOP_MAX    333    /* exclusive: the headshot command       */
 #define D318_OURUMOV_CHR     78
 #define D318_TREVELYAN_CHR   67
 #define D318_DEADLOCK_TICKS  600    /* 10 s at 60 Hz; escape takes < 2 s     */
 #define D318_REARM_TICKS     600    /* signature-absent ticks before re-arm  */
+#define D318W_REFIRE_TICKS   360    /* > the ~240-tick re-roll cycle         */
 
 static ChrRecord *d318wFindChr(s16 chrnum)
 {
@@ -127,73 +169,165 @@ static ChrRecord *d318wFindChr(s16 chrnum)
     return NULL;
 }
 
+/* Table-driven pin signatures (D318 + D320). off_max is exclusive. */
+typedef struct
+{
+    u32         listid;
+    s32         off_min, off_max;
+    s32         ent;              /* required act_attack.entityid, -1 = any  */
+    s32         target_alive_chr; /* must exist w/ prop and be alive, -1 n/a */
+    const char *tag;              /* log tag                                 */
+} D318WEntry;
+
+#define D318W_NENTRIES 3
+static const D318WEntry s_wEntries[D318W_NENTRIES] = {
+    { 0x0417, 321, 333, D318_TREVELYAN_CHR, D318_TREVELYAN_CHR, "D318 Facility ai_22" },
+    { 0x0414, 480, 548, -1,               -1,                 "D320 Facility ai_19" },
+    { 0x040a, 60,  86,  -1,               -1,                 "D320 Control ai_9"   },
+};
+
+static bool d318wChrAlive(s32 chrnum)
+{
+    ChrRecord *c = d318wFindChr((s16)chrnum);
+
+    return c && c->prop && !chrIsDead(c);
+}
+
+/* Does this chr match the entry's pin signature? */
+static bool d318wMatches(const D318WEntry *en, ChrRecord *c)
+{
+    bool g = FALSE;
+
+    if (!c->ailist)
+    {
+        return FALSE;
+    }
+    if (chraiGetAIListID(c->ailist, &g) != (s32)en->listid)
+    {
+        return FALSE;
+    }
+    if (c->aioffset < en->off_min || c->aioffset >= en->off_max)
+    {
+        return FALSE;
+    }
+    if (c->actiontype != ACT_ATTACK)
+    {
+        return FALSE;
+    }
+    /* live-fire only: an AIM_ONLY pre-aim holding its pose is not a pin */
+    if ((s32)c->act_attack.attacktype & D320_TARGET_AIM_ONLY)
+    {
+        return FALSE;
+    }
+    if (en->ent >= 0 && (s32)c->act_attack.entityid != en->ent)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
 void d318WatchdogTick(void)
 {
-    static int  s_enabled   = -1; /* -1 uncached, 0 off (GE_D318W=0), 1 on   */
-    static s32  s_run       = 0;  /* consecutive ticks the signature has held */
-    static s32  s_absent    = 0;  /* consecutive ticks signature absent       */
-    static bool s_fired     = FALSE;
-    ChrRecord  *c78;
-    ChrRecord  *c67;
-    bool        g = FALSE;
-    bool        sig;
+    static int   s_enabled = -1; /* -1 uncached, 0 off (GE_D318W=0), 1 on    */
+    static s32   s_run[D318W_NENTRIES];   /* sig-held ticks per entry         */
+    static s32   s_absent[D318W_NENTRIES];/* sig-absent ticks per entry       */
+    static s32   s_cool[D318W_NENTRIES];  /* ticks since last fire (sig up)   */
+    static s32   s_fires[D318W_NENTRIES]; /* rescues this occurrence          */
+    static bool  s_fired[D318W_NENTRIES];
+    s32 e, i;
 
     if (s_enabled < 0)
     {
-        const char *e = getenv("GE_D318W");
+        const char *ev = getenv("GE_D318W");
 
-        s_enabled = (e && e[0] == '0') ? 0 : 1;
+        s_enabled = (ev && ev[0] == '0') ? 0 : 1;
     }
     if (!s_enabled)
     {
         return;
     }
 
-    c78 = d318wFindChr(D318_OURUMOV_CHR);
-    c67 = d318wFindChr(D318_TREVELYAN_CHR);
-
-    sig = (c78 && c78->ailist
-        && chraiGetAIListID(c78->ailist, &g) == D318_LIST_AI22
-        && c78->aioffset >= D318_OFF_LOOP_MIN && c78->aioffset < D318_OFF_LOOP_MAX
-        && c78->actiontype == ACT_ATTACK
-        && (s32)c78->act_attack.entityid == D318_TREVELYAN_CHR
-        && c67 && c67->prop && !chrIsDead(c67));
-
-    if (sig)
+    for (e = 0; e < D318W_NENTRIES; e++)
     {
-        s_absent = 0;
-        if (!s_fired)
+        const D318WEntry *en  = &s_wEntries[e];
+        ChrRecord        *hit = NULL;
+        bool              sig = FALSE;
+
+        for (i = 0; i < g_NumChrSlots && !hit; i++)
         {
-            if (s_run == 1)
+            if (d318wMatches(en, &g_ChrSlots[i]))
             {
-                osSyncPrintf("D318W: t=%d deadlock signature detected (c78 ai_22 off=%d "
-                             "ACT_ATTACK ent=67, c67 alive) -- starting %d-tick confirmation window\n",
-                             (int)g_GlobalTimer, (int)c78->aioffset, D318_DEADLOCK_TICKS);
-            }
-            s_run++;
-            if (s_run >= D318_DEADLOCK_TICKS)
-            {
-                osSyncPrintf("D318W: t=%d D318 execution deadlock confirmed -- re-initializing "
-                             "c78's attack (sub_GAME_7F025560 atk=0x%x ent=%d) to break the anim pin\n",
-                             (int)g_GlobalTimer, (unsigned)c78->act_attack.attacktype,
-                             (int)c78->act_attack.entityid);
-                sub_GAME_7F025560(c78, (s32)c78->act_attack.attacktype, (s32)c78->act_attack.entityid);
-                s_fired = TRUE;
+                hit = &g_ChrSlots[i];
             }
         }
-    }
-    else
-    {
-        s_run = 0;
-        /* One-shot per occurrence: once the deadlock signature has been
-         * clear for a while after a fire, re-arm so a later replay of
-         * Facility in the same process (AllUnlocked) is still covered. */
-        if (s_fired && ++s_absent >= D318_REARM_TICKS)
+        for (i = 0; i < g_ActiveChrsCount && !hit; i++)
         {
-            s_fired = FALSE;
-            s_absent = 0;
-            osSyncPrintf("D318W: t=%d signature clear for %d ticks -- watchdog re-armed\n",
-                         (int)g_GlobalTimer, D318_REARM_TICKS);
+            if (d318wMatches(en, &g_ActiveChrs[i]))
+            {
+                hit = &g_ActiveChrs[i];
+            }
+        }
+
+        sig = hit && (en->target_alive_chr < 0 || d318wChrAlive(en->target_alive_chr));
+
+        if (sig)
+        {
+            s_absent[e] = 0;
+            if (!s_fired[e])
+            {
+                if (s_run[e] == 1)
+                {
+                    osSyncPrintf("D318W: t=%d [%s] pin signature detected (c%d off=%d "
+                                 "ACT_ATTACK atk=0x%x ent=%d) -- starting %d-tick confirmation window\n",
+                                 (int)g_GlobalTimer, en->tag, (int)hit->chrnum,
+                                 (int)hit->aioffset, (unsigned)hit->act_attack.attacktype,
+                                 (int)hit->act_attack.entityid, D318_DEADLOCK_TICKS);
+                }
+                s_run[e]++;
+                if (s_run[e] >= D318_DEADLOCK_TICKS)
+                {
+                    osSyncPrintf("D318W: t=%d [%s] anim pin confirmed -- re-initializing "
+                                 "c%d's attack (sub_GAME_7F025560 atk=0x%x ent=%d) to break it\n",
+                                 (int)g_GlobalTimer, en->tag, (int)hit->chrnum,
+                                 (unsigned)hit->act_attack.attacktype,
+                                 (int)hit->act_attack.entityid);
+                    sub_GAME_7F025560(hit, (s32)hit->act_attack.attacktype,
+                                      (s32)hit->act_attack.entityid);
+                    s_fired[e] = TRUE;
+                    s_fires[e] = 1;
+                    s_cool[e]  = 0;
+                }
+            }
+            else if (++s_cool[e] >= D318W_REFIRE_TICKS)
+            {
+                /* The beat re-rolled and re-pinned (see header). No cap: */
+                s_cool[e] = 0;
+                osSyncPrintf("D318W: t=%d [%s] re-pin rescued (%d) -- c%d off=%d "
+                             "atk=0x%x ent=%d\n",
+                             (int)g_GlobalTimer, en->tag, s_fires[e] + 1,
+                             (int)hit->chrnum, (int)hit->aioffset,
+                             (unsigned)hit->act_attack.attacktype,
+                             (int)hit->act_attack.entityid);
+                sub_GAME_7F025560(hit, (s32)hit->act_attack.attacktype,
+                                  (s32)hit->act_attack.entityid);
+                s_fires[e]++;
+            }
+        }
+        else
+        {
+            s_run[e]  = 0;
+            s_cool[e] = 0;
+            /* Once the signature has been clear for a while after a fire,
+             * re-arm so a later replay of the level in the same process
+             * (AllUnlocked) is still covered. */
+            if (s_fired[e] && ++s_absent[e] >= D318_REARM_TICKS)
+            {
+                s_fired[e] = FALSE;
+                s_absent[e] = 0;
+                s_fires[e]  = 0;
+                osSyncPrintf("D318W: t=%d [%s] signature clear for %d ticks -- watchdog re-armed\n",
+                             (int)g_GlobalTimer, en->tag, D318_REARM_TICKS);
+            }
         }
     }
 }
@@ -297,6 +431,29 @@ void d318TimelineTick(void)
     if (!s_on)
     {
         return;
+    }
+
+    /* Unified chr view: real guards live in g_ChrSlots[0..g_NumChrSlots) with
+     * model != NULL; the background script entities (chrnum 0xFE, list IDs
+     * >= 0x1000) live in g_ActiveChrs. Both are ticked by chrlvAllChrTick,
+     * so both must be scanned for pins / fingerprints. (D320, 2026-09-22:
+     * the detector originally walked g_ActiveChrs only and was blind to
+     * every real guard.) */
+    static ChrRecord *s_all[96];
+    static int        s_nall = 0;
+    s32               i;
+
+    s_nall = 0;
+    for (i = 0; i < g_NumChrSlots && s_nall < 96; i++)
+    {
+        if (g_ChrSlots[i].model != NULL)
+        {
+            s_all[s_nall++] = &g_ChrSlots[i];
+        }
+    }
+    for (i = 0; i < g_ActiveChrsCount && s_nall < 96; i++)
+    {
+        s_all[s_nall++] = &g_ActiveChrs[i];
     }
 
     c78 = d318wFindChr(D318_OURUMOV_CHR);
@@ -409,12 +566,11 @@ void d318TimelineTick(void)
     if (++s_det >= 60)
     {
         s32 h = 0x811C9DC5;
-        s32 i;
 
         s_det = 0;
-        for (i = 0; i < g_ActiveChrsCount; i++)
+        for (i = 0; i < s_nall; i++)
         {
-            ChrRecord *c = &g_ActiveChrs[i];
+            ChrRecord *c = s_all[i];
             union { f32 f; u32 u; } xf, yf, zf, df;
 
             xf.f = c->prop ? c->prop->pos.x : 0.0f;
@@ -432,7 +588,126 @@ void d318TimelineTick(void)
         osSyncPrintf("D318T: DET t=%d seed=%08x%08x obj=0x%08x h=%08x nchrs=%d\n",
                      (int)g_GlobalTimer,
                      (unsigned)(u32)(g_randomSeed >> 32), (unsigned)(u32)g_randomSeed,
-                     (unsigned)objectiveregisters1, (unsigned)h, (int)g_ActiveChrsCount);
+                     (unsigned)objectiveregisters1, (unsigned)h, s_nall);
+    }
+
+    /* D320: generic D318-class pin DETECTION for the sweep's flagged lists
+     * (Facility ai_19, Control ai_9, Depot ai_12 -- see findings D320).
+     * Detection only: it logs, it never intervenes; the recovery watchdog
+     * above stays hardcoded to ai_22 by design until a second list actually
+     * freezes in play (D320's explicit instruction).
+     *
+     * Signature: a chr in ACT_ATTACK whose attacktype is LIVE FIRE (no
+     * TARGET_AIM_ONLY bit -- it is supposed to be shooting) and whose
+     * modelGetAnimFrame is byte-stable for 600 consecutive ticks (10 s). A
+     * guard that should be firing but whose animation never advances is the
+     * exact D318 frozen shape on any list. The two legitimate long-stable
+     * states are excluded or self-clearing: monologue pre-aims keep the
+     * AIM_ONLY bit (excluded), and a working fire cycle re-inits through
+     * chrlvTickAttackCommon's "endframe <= frame" block, so its frame does
+     * not stay byte-stable for 10 s. One line at first detection, then one
+     * per further 600 stable ticks while it persists; a frozen run keeps
+     * printing, an escaped run stops after the single line (or none). */
+    {
+        typedef struct { s16 chrnum; u32 framebits; s32 stable; s32 nextlog; }
+                D320Pin;
+        static D320Pin s_pins[8];
+        static int     s_npins = 0;
+        s32 i, j;
+
+        for (i = 0; i < s_nall; i++)
+        {
+            ChrRecord *c = s_all[i];
+            union { f32 f; u32 u; } fr;
+            D320Pin   *p = NULL;
+
+            if (c->actiontype != ACT_ATTACK || c->model == NULL)
+            {
+                continue;
+            }
+            if ((s32)c->act_attack.attacktype & D320_TARGET_AIM_ONLY)
+            {
+                continue; /* legitimate hold pose (monologue pre-aim) */
+            }
+
+            fr.f = modelGetAnimFrame(c->model);
+            for (j = 0; j < s_npins; j++)
+            {
+                if (s_pins[j].chrnum == c->chrnum)
+                {
+                    p = &s_pins[j];
+                    break;
+                }
+            }
+            if (!p)
+            {
+                if (s_npins < 8)
+                {
+                    p = &s_pins[s_npins++];
+                }
+                else
+                {
+                    continue; /* table full: drop the newest, keep tracking */
+                }
+                p->chrnum    = c->chrnum;
+                p->framebits = fr.u;
+                p->stable    = 0;
+                p->nextlog   = 600;
+            }
+
+            if (p->framebits == fr.u)
+            {
+                p->stable++;
+            }
+            else
+            {
+                p->framebits = fr.u;
+                p->stable    = 0;
+                p->nextlog   = 600;
+            }
+
+            if (p->stable >= p->nextlog)
+            {
+                bool g = FALSE;
+                s32 aid = c->ailist ? chraiGetAIListID(c->ailist, &g) : -1;
+
+                osSyncPrintf("D320T: t=%d PIN? c%d aiid=0x%04x%s off=%d atk=0x%x ent=%d "
+                             "mot=%d unk54=%u frame=%.2f stable=%d ticks (D318-class pin candidate)\n",
+                             (int)g_GlobalTimer, (int)c->chrnum,
+                             (unsigned)aid, g ? "G" : "", (int)c->aioffset,
+                             (unsigned)c->act_attack.attacktype,
+                             (int)c->act_attack.entityid,
+                             (s32)c->act_attack.type_of_motion,
+                             (unsigned)c->act_attack.unk54,
+                             (double)fr.f, p->stable);
+                p->nextlog = p->stable + 600;
+            }
+        }
+
+        /* Drop entries for chrs that left the tracked state so a later
+         * re-entry starts a fresh confirmation window. */
+        for (i = 0; i < s_npins; i++)
+        {
+            bool alive = FALSE;
+
+            for (j = 0; j < s_nall; j++)
+            {
+                ChrRecord *c = s_all[j];
+
+                if (c->chrnum == s_pins[i].chrnum && c->actiontype == ACT_ATTACK
+                    && c->model != NULL
+                    && !((s32)c->act_attack.attacktype & D320_TARGET_AIM_ONLY))
+                {
+                    alive = TRUE;
+                    break;
+                }
+            }
+            if (!alive)
+            {
+                s_pins[i] = s_pins[--s_npins];
+                i--;
+            }
+        }
     }
 }
 

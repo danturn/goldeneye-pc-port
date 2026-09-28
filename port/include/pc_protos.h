@@ -71,6 +71,11 @@ void alloc_false_GUARDdata_to_exec_global_action();
 void alloc_init_GUARDdata_entries();
 void alloc_load_expand_ani_table();
 void assert();
+/* D324: GE's <stdlib.h> stub (#if 0'd body) declares neither; an implicit
+ * `int f()` declaration reads the xmm0 double return from eax -> garbage.
+ * port/src TUs that include <stdlib.h> get these from port/shim/stdlib.h. */
+double atof();
+double strtod();
 char * bgDebPrintROOMID();
 void bgFindRoomsAlongSegment();
 s32 bgGetConnectedRooms();

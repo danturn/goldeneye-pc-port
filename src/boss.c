@@ -146,6 +146,9 @@ struct memallocstring memallocstringtable[] = {
 };
 
 s32 g_MainStageNum = LEVELID_NONE;
+#ifdef PORT
+static s32 g_d235ReloadStage = -1, g_d235ReloadWait = 0;   /* TEMP D235 verification */
+#endif
 s32 g_BossIsDebugMenuOpen = FALSE;
 
 OSScMsg g_bossGfxDoneMsg = { OS_SC_DONE_MSG };
@@ -466,9 +469,92 @@ void bossMainloop(void)
         {
             g_CurentMaMallocValue = (s32) (strtol(tokenFind(1, "-ma"), NULL, 0) * 1024);
         }
+#ifdef PORT
+        /* D294: PC visibility settings (Video.FovScale / WidescreenAuto /
+         * DrawDistance / LodDistance) keep more rooms on screen at once than
+         * the N64's fixed view, so the authored `-ma` room pool can exhaust;
+         * memaAlloc() then fails and undrawn rooms render as solid black.
+         * Scale the pool by portRoomPoolScale() (1.0 at all-N64-faithful
+         * settings, capped 2.0x) and never let it eat more than the STAGE
+         * bank minus 128 KB headroom for zbuf/object resources. */
+        {
+            extern f32 portRoomPoolScale(void);
+            f32 scale = portRoomPoolScale();
+            s32 avail;
+            u32 scaled;
 
+            if (scale < 0.9999f || scale > 1.0001f) {
+                scaled = (u32)(((s64)g_CurentMaMallocValue * (s64)(scale * 4.0f) + 3) / 4);
+                avail = mempGetBankSizeLeft(MEMPOOL_STAGE) - 0x20000;
+                if ((s32)scaled > avail && avail >= (s32)g_CurentMaMallocValue) {
+                    scaled = (u32)avail;
+                }
+                g_CurentMaMallocValue = scaled;
+            }
+        }
+#endif
+
+#ifdef PORT
+        if (getenv("GE_D294")) { osSyncPrintf("D294 stage=%d ma=%d\n", (s32)g_StageNum, (s32)g_CurentMaMallocValue); }
+#endif
         memaReset(mempAllocBytesInBank(g_CurentMaMallocValue, MEMPOOL_STAGE), g_CurentMaMallocValue);
         reset_play_data_ptrs();
+#ifdef PORT
+        /* D235 (wrong textures after dying/restarting a level): the port-side
+         * GL texture cache (port/fast3d/gfx_pc.cpp TextureCacheMap) is keyed by
+         * (source address, palette addrs, fmt, siz, size_bytes, palette_hash)
+         * with NO content check. The MEMPOOL_STAGE arena those stage-texture
+         * source addresses live in was just reset above, so every entry
+         * pointing into it is stale. On a death/restart the texpool can place
+         * a DIFFERENT image at an address that held another one during the
+         * previous run of this level -> cache hit returns the old image =
+         * "wrong textures" that only ever appear on the reload path, never on
+         * a cold boot. The N64 has no such cache (the RSP re-reads DRAM every
+         * frame), so clearing it here is a port-only correctness fix; the
+         * re-uploads are pixel-identical and cost one-time during the loading
+         * screen. videoResetTextureCache() existed for exactly this and had
+         * zero callers -- this is the wiring. GE_D235=1 logs how many stale
+         * entries each transition actually purged (evidence for the finding;
+         * a cold boot into a level should log 0, a death/restart >0). */
+        {
+            static int ge_d235 = -1;
+            if (ge_d235 < 0) ge_d235 = getenv("GE_D235") != NULL;
+            extern void videoResetTextureCache(void);
+            extern int gfx_texture_cache_count(void);
+            if (ge_d235)
+                osSyncPrintf("D235: stage=%d texcache entries purged at load=%d\n",
+                             (s32)g_StageNum, gfx_texture_cache_count());
+            if (!getenv("GE_D235_OFF"))   /* TEMP: A/B switch for verification */
+                videoResetTextureCache();
+
+            /* TEMP (D235 verification, remove with the probe):
+             * GE_D235_RELOAD=<frames> re-enters the first level once, <frames>
+             * retraces after the title stage loads following it (e.g. after a
+             * watch Abort) -- so the front end has rendered its own textures
+             * into the reset stage arena first, like a real death/restart --
+             * via the same bossSetLoadedStage() call the front end's mission
+             * start makes (front.c). Inert when unset. */
+            {
+                static int s_reload = -2, s_firstLevel = -1;
+                if (s_reload == -2) {
+                    const char *e = getenv("GE_D235_RELOAD");
+                    s_reload = e ? atoi(e) : -1;
+                }
+                if (s_reload >= 0) {
+                    if (g_StageNum != LEVELID_TITLE && s_firstLevel < 0)
+                        s_firstLevel = g_StageNum;
+                    else if (g_StageNum == LEVELID_TITLE && s_firstLevel >= 0 &&
+                             g_d235ReloadStage < 0 && g_d235ReloadWait == 0) {
+                        /* GE_D235_NEXT=<stage id>: load a DIFFERENT stage
+                         * instead (level A -> title -> level B leaks). */
+                        const char *nx = getenv("GE_D235_NEXT");
+                        g_d235ReloadStage = (nx && *nx) ? (s32)strtol(nx, NULL, 0) : s_firstLevel;
+                        g_d235ReloadWait = s_reload + 1;
+                    }
+                }
+            }
+        }
+#endif
 
         localSelectedNumPlayers = 0;
         if (g_StageNum != LEVELID_TITLE)
@@ -502,7 +588,27 @@ void bossMainloop(void)
 
         while (g_MainStageNum < 0 || pendingGfx != 0)
         {
+#ifdef PORT
+            /* #92 perf probe (GE_PERFSTAT=1): game-thread busy time between
+             * waking for a message and blocking again (logic + DL build). */
+            {
+                static int pon = -1; static u32 tw = 0; static f64 busy = 0; static s32 n = 0;
+                if (pon < 0) pon = getenv("GE_PERFSTAT") != NULL;
+                if (pon) {
+                    u32 now = osGetCount();
+                    if (tw) { busy += (f64)(u32)(now - tw); n++; }
+                    if (n == 600) {
+                        fprintf(stderr, "PERFSTAT game-thread busy=%.2fms/msg (avg over 600 msgs)\n",
+                                busy / (f64)n / (f64)(OS_CPU_COUNTER / 1000));
+                        busy = 0; n = 0;
+                    }
+                }
+                osRecvMesg(&gfxFrameMsgQ, (OSMesg *)&localGfxFrameMsg, OS_MESG_BLOCK);
+                if (pon) tw = osGetCount();
+            }
+#else
             osRecvMesg(&gfxFrameMsgQ, (OSMesg *)&localGfxFrameMsg, OS_MESG_BLOCK);
+#endif
 
             switch (localGfxFrameMsg->gen.type)
             {
@@ -524,6 +630,13 @@ void bossMainloop(void)
                     {
                         if (g_MainStageNum < 0 && pendingGfx < 2U)
                         {
+#ifdef PORT
+                            /* TEMP D235 verification (see GE_D235_RELOAD above) */
+                            if (g_d235ReloadWait > 0 && --g_d235ReloadWait == 0) {
+                                osSyncPrintf("D235: RELOAD re-entering stage %d\n", g_d235ReloadStage);
+                                bossSetLoadedStage(g_d235ReloadStage);
+                            }
+#endif
                             if (get_is_ramrom_flag())
                             {
                                 iterate_ramrom_entries_handle_camera_out();

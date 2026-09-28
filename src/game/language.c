@@ -8,6 +8,9 @@
 /* D50: language banks carry a big-endian offset table; decode it in place
  * after each load (see romdataFixupLangBank). */
 #include "romdata.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 extern resource_lookup_data_entry resource_lookup_data_array[]; /* ob.c */
 
 static void langFixupLoadedBank(char *name, void *p)
@@ -428,7 +431,7 @@ u8 * langGet(s32 slotID)
 #endif
 #ifdef PORT
     /* TEMP D65: log NULL-bank derefs (cast screen langGet crash). */
-    if (getenv("GE_D63")) {
+    if (GE_ENVFLAG("GE_D63")) {
         static int d65first = 1;
         if (d65first) {
             d65first = 0;

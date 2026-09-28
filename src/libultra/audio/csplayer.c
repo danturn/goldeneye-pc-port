@@ -47,6 +47,9 @@
 #include "seqp.h"
 #include "cseqp.h"
 #include "cseq.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 
 static ALMicroTime      __CSPVoiceHandler(void *node);
@@ -461,7 +464,7 @@ static void __CSPHandleMIDIMsg(ALCSPlayer *seqp, ALEvent *event)
                 
                 alSynAllocVoice(seqp->drvr, voice, &config);
 #ifdef PORT
-                if (getenv("GE_AUDIOTRACE"))
+                if (GE_ENVFLAG("GE_AUDIOTRACE"))
                     geTracePrintf("audiotrace.log", "[MUSICNOTE] csp=%p key=%d vel=%d\n",
                                   (void *)seqp, (int)key, (int)vel);
 #endif

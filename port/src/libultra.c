@@ -50,6 +50,7 @@
 #include "input.h"
 #include "fs.h"
 #include "romdata.h"
+#include "watchsettings.h"
 #include "crash.h"
 
 #if defined(PLATFORM_WINDOWS)
@@ -706,6 +707,10 @@ s32 osRecvMesg(OSMesgQueue *mq, OSMesg *msg, s32 flag)
     d60logRecv(mq, m); /* TEMP D60 */
     pthread_cond_signal(&pq->cond);
     pthread_mutex_unlock(&pq->lock);
+    /* gfxFrameMsgQ is consumed only by boss.c's game thread. Apply queued
+     * F10 watch edits there, after releasing the OS queue lock; the SDL
+     * input/scheduler and render threads never touch GE watch/save state. */
+    if (mq == &gfxFrameMsgQ) watchSettingsGameTick();
     return 0;
 }
 
@@ -1094,7 +1099,10 @@ static void contSnapshotFromKeyboard(void)
         u16 button = connected ? (u16)inputComputePad(i, &sx, &sy) : 0;
 
         g_contStatus[i].type   = connected ? CONT_TYPE_NORMAL : 0;
-        g_contStatus[i].status = 0;
+        /* D401: present a Rumble Pak (CONT_CARD_ON) whenever the connected
+         * pad can actually rumble. joyRumblePakInit (src/joy.c:184) gates
+         * the whole rumble-pak path on this bit. */
+        g_contStatus[i].status = (connected && inputRumbleSupported(i)) ? CONT_CARD_ON : 0;
         g_contStatus[i].errno  = connected ? 0 : CONT_NO_RESPONSE_ERROR;
 
         g_contPad[i].button  = button;
@@ -1279,26 +1287,55 @@ static void geEepromPatchAllCheats(u8 *buf)
     memset(&slots[5], 0, sizeof(ge_save_slot));
 
     int changed = 0;
-    for (int i = 0; i < 5; i++) {
-        /* D259: a fresh ge007.eep is zero-filled, so every slot reads as
-         * all-zero. Normally such a slot fails fileValidateSaves' CRC and is
-         * reset to BLANKSAVEDATA (music_vol/sfx_vol = 0xFF); but this patch
-         * gives the slot a valid CRC below, so it survives with volume 0
-         * -> silence. Emulate fileResetSave: seed max volume on all-zero
-         * slots only -- real saves (incl. a deliberately muted one) keep
-         * their bytes. */
-        {
+
+    /* D259 + D281: a fresh ge007.eep is zero-filled, so every slot reads as
+     * all-zero. Without this patch such a slot fails fileValidateSaves' CRC
+     * and becomes a free BLANKSAVEDATA slot (fileResetSave), after which
+     * fileBuildWriteNewSave fills the first free slot for each folder with
+     * no save, in folder order. This patch gives every slot a valid CRC
+     * below, so an all-zero slot would instead SURVIVE as-is: five slots all
+     * claiming folder 1 with volume 0 (D259: silence) and options 0 (D281:
+     * sight-on-screen, auto-aim, look-ahead and ammo display all off, which
+     * reads as "RMB aim broken"). D259 seeded only the volumes. Reproduce
+     * the game's full result instead: all-zero slots take the folders that
+     * no real slot holds, in order, built exactly as fileBuildWriteNewSave
+     * builds them (BLANKSAVEDATA + folder + not-free + bond); any left over
+     * become free BLANKSAVEDATA slots. Real saves keep their bytes. */
+    {
+        extern void fileSetSaveFoldernum(void *save, u32 folder);
+        extern void fileSetSaveFlagDoReset(void *save, s32 enable);
+        extern void fileSetSelectedBond(void *save, s32 bond);
+        static const ge_save_slot blank = {
+            0, 0, 0x80 /* SAVEFLAGS_SET(0,0,BOND_BROSNAN,1): free */, 0x00,
+            0xFF, 0xFF, 0x3A /* DEFAULT_OPTIONS */, 0, 0, 0, 0, {0}
+        };
+        int allzero[5], present[4] = {0, 0, 0, 0};
+        for (int i = 0; i < 5; i++) {
             const u8 *raw = (const u8 *)&slots[i];
-            int allzero = 1;
+            allzero[i] = 1;
             for (int b = 0; b < (int)sizeof(ge_save_slot); b++)
-                if (raw[b]) { allzero = 0; break; }
-            if (allzero && (slots[i].music_vol != 0xFF ||
-                            slots[i].sfx_vol   != 0xFF)) {
-                slots[i].music_vol = 0xFF;
-                slots[i].sfx_vol   = 0xFF;
-                changed = 1;
+                if (raw[b]) { allzero[i] = 0; break; }
+            if (!allzero[i] && !(slots[i].completion_bitflags & 0x80 /* DORESET */)) {
+                int f = slots[i].completion_bitflags & 0x7;   /* SAVEFLAG_FOLDER */
+                if (f < 4) present[f] = 1;                    /* MAX_FOLDER_COUNT */
             }
         }
+        int folder = 0;
+        for (int i = 0; i < 5; i++) {
+            if (!allzero[i]) continue;
+            slots[i] = blank;
+            while (folder < 4 && present[folder]) folder++;
+            if (folder < 4) {
+                fileSetSaveFoldernum(&slots[i], (u32)folder);
+                fileSetSaveFlagDoReset(&slots[i], 0);
+                fileSetSelectedBond(&slots[i], folder);
+                present[folder] = 1;
+            }
+            changed = 1;
+        }
+    }
+
+    for (int i = 0; i < 5; i++) {
         /* Cheat ids are level ids 0..19 (CHEAT_INPUT_BUFFER_SIZE == 20):
          * bits 0-7 in _1, 8-15 in _2, 16-19 in the low nibble of _3. */
         if (slots[i].unlocked_cheats_1 != 0xFF ||
@@ -1375,15 +1412,62 @@ s32 osEepromLongRead(OSMesgQueue *mq, u8 addr, u8 *buf, int nbytes)
 s32 osEepromLongWrite(OSMesgQueue *mq, u8 addr, u8 *buf, int nbytes)
 { (void)mq; return geEepromRW(addr, buf, nbytes, 1); }
 
-/* Memory Pak (PFS) + Rumble Pak (motor): no accessories on the PC. */
+/* Memory Pak (PFS) + Rumble Pak (motor): no Memory Pak on the PC (saves are
+ * file-backed EEPROM), but the Rumble Pak path is routed to real gamepad
+ * haptics (D401): a pad that can rumble presents itself as a "card is on"
+ * accessory, and the motor calls become SDL_GameControllerRumble via
+ * inputRumble (port/src/input.c). */
 s32 osPfsInit(OSMesgQueue *queue, OSPfs *pfs, int channel)
-{ (void)queue; (void)pfs; (void)channel; return PFS_ERR_NOPACK; }
+{
+    (void)queue; (void)pfs;
+    /* PFS_ERR_DEVICE ("wrong device type") = a Rumble Pak is present, not a
+     * Memory Pak: exactly what joyRumblePakInit (src/joy.c:186-190) needs
+     * to proceed to osMotorInit. PD's osPfsInitPak does the same. */
+    return inputRumbleSupported(channel) ? PFS_ERR_DEVICE : PFS_ERR_NOPACK;
+}
 s32 osPfsIsPlug(OSMesgQueue *queue, u8 *pattern)
-{ (void)queue; if (pattern) *pattern = 0; return 0; }
+{
+    (void)queue;
+    if (pattern) {
+        *pattern = 0;
+        /* JPN: MAXCONTROLLERS can be 6 > MAX_PADS; inputRumbleSupported()
+         * bounds-checks, so the extra channels just never light up. */
+        for (int i = 0; i < MAXCONTROLLERS; ++i)
+            if (inputRumbleSupported(i)) *pattern |= (u8)(1 << i);
+    }
+    return 0;
+}
 s32 osMotorInit(OSMesgQueue *mq, OSPfs *pfs, int channel)
-{ (void)mq; (void)pfs; (void)channel; return -1; }
-s32 osMotorStart(OSPfs *pfs) { (void)pfs; return -1; }
-s32 osMotorStop(OSPfs *pfs)  { (void)pfs; return -1; }
+{
+    if (pfs && inputRumbleSupported(channel)) {
+        pfs->queue = mq;
+        pfs->channel = channel;
+        pfs->activebank = 0xff;
+        /* NOTE: PFS_MOTOR_INITIALIZED is not defined in GE's headers and
+         * joy.c never reads pfs->status -- it only tests osMotorInit()==0
+         * (src/joy.c:190) to mark the pad RUMBLEPAKINITSTATE_READY, so no
+         * status store is needed (PD's osMotorProbe writes one). */
+        return 0;
+    }
+    (void)mq; (void)channel;
+    return PFS_ERR_NOPACK;
+}
+s32 osMotorStart(OSPfs *pfs)
+{
+    if (!pfs) return PFS_ERR_NOPACK;
+    /* The N64 motor has no duration; the game's joyRumblePakTimer60 (src/joy.c)
+     * arms a per-event countdown and turns the motor off via osMotorStop.
+     * Issue one generous 5 s window, PD-style ("hope the timer stops it");
+     * inputRumble no-ops internally for non-rumble pads. */
+    inputRumble(pfs->channel, 1.0f, 5.0f);
+    return 0;
+}
+s32 osMotorStop(OSPfs *pfs)
+{
+    if (!pfs) return PFS_ERR_NOPACK;
+    inputRumble(pfs->channel, 0.0f, 0.0f);   /* zero strength/duration = stop */
+    return 0;
+}
 
 /* ------------------------------------------------------------------------ */
 /* SP (RSP) — runs the software RSP inline, then posts the done messages    */

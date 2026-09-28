@@ -37,9 +37,17 @@ void videoEndFrame(void);
  * loop from main(). Exits the process on QUIT/ESC/close. */
 void videoPumpEvents(void);
 
+/* D344: orderly quit. Any thread may request it; the render thread parks at
+ * the next frame boundary (glFinish + context released) and the host thread
+ * then exits. Never call exit() directly for a normal quit: the render thread
+ * could be inside the GL driver (the 0x119 bugchecks). */
+void videoRequestQuit(const char *why);
+int  videoQuitRequested(void);
+
 /* The game's native video mode (NTSC 640x480, PAL 640x400). fast3d scales
  * N64 screen coordinates into window pixels using this. */
 void videoUpdateNativeResolution(s32 w, s32 h);
+u32  videoGetFrameCount(void);
 s32  videoGetNativeWidth(void);
 s32  videoGetNativeHeight(void);
 
@@ -51,9 +59,9 @@ void videoResetTextureCache(void);
 /* Current FPS (measured). */
 float videoGetFPS(void);
 
-/* Re-apply the live-tunable [Video] knobs (VSync / FpsCap / TextureFilter) on
- * the next frame start. Called by the F10 options overlay after an edit. */
-void videoRequestLiveConfig(void);
+/* Apply only the GL/SDL setting named by a changed options row at the next
+ * frame start. Sprite/HUD and direct-read settings need no reconfiguration. */
+void videoRequestLiveConfigForKey(const char *key);
 
 /* F10 options overlay -> window/fullscreen changes. The overlay input handler
  * runs on the scheduler thread; SDL window ops must run on the thread that

@@ -591,6 +591,52 @@ s32 bgGet2dBboxByRoomId(s32 room_id, struct bbox2d *result)
  */
 Gfx *sub_GAME_7F0B3C8C(Gfx *gdl)
 {
+#if defined(PORT)
+    /* TEMP D104/D294: once per frame (this function builds the whole bg DL),
+     * log the drawn-room list with load state + scissor boxes. */
+    {
+        static s32 d104f = 0;
+        static int d104on = -1; /* D302-class cache: once per frame */
+#ifdef PORT
+        /* TEMP D294-BANK: dump memp bank state to find the STAGE overflow. */
+        static int d294b_on = -1;
+        static s32 d294b_lastma = -1;
+        extern s32 g_CurentMaMallocValue;
+        if (d294b_on < 0) d294b_on = getenv("GE_D294BANK") != NULL;
+        if (d294b_on && g_CurentMaMallocValue != d294b_lastma) {
+            d294b_lastma = g_CurentMaMallocValue;
+            d104f = 0; /* restart window on stage change */
+        }
+        if (d294b_on && d104f < 6) {
+            extern MemoryPool g_mempPools[];
+            extern s32 needmemallocation;
+            osSyncPrintf("D294B f=%d STAGE[%p..%p] pos=%p left=%d PERM[%p..%p] pos=%p left=%d needmm=%d\n",
+                d104f, (void*)g_mempPools[MEMPOOL_STAGE].start, (void*)g_mempPools[MEMPOOL_STAGE].end,
+                (void*)g_mempPools[MEMPOOL_STAGE].pos, (s32)(g_mempPools[MEMPOOL_STAGE].end - g_mempPools[MEMPOOL_STAGE].pos),
+                (void*)g_mempPools[MEMPOOL_PERMANENT].start, (void*)g_mempPools[MEMPOOL_PERMANENT].end,
+                (void*)g_mempPools[MEMPOOL_PERMANENT].pos, (s32)(g_mempPools[MEMPOOL_PERMANENT].end - g_mempPools[MEMPOOL_PERMANENT].pos),
+                (int)needmemallocation);
+        }
+#endif
+        if (d104on < 0) d104on = getenv("GE_D104") != NULL;
+        if (d104on && (d104f++ % 30) == 0 && d104f < 240000) {
+            s32 rr;
+            osSyncPrintf("D104 f=%d curRoom=%d roomsDrawn=%d budget=%d :",
+                d104f, (s32)g_CurrentPlayer->curRoomIndex,
+                (s32)g_BgNumberOfRoomsDrawn, (s32)g_RoomLoadBudget);
+            for (rr = 0; rr < g_BgNumberOfRoomsDrawn && rr < 40; rr++) {
+                s32 rid = dword_CODE_bss_8007FFA0[rr].roomid;
+                osSyncPrintf(" r%d(ld=%d %d,%d-%d,%d)", rid,
+                    (s32)g_BgRoomInfo[rid].model_bin_loaded,
+                    (s32)dword_CODE_bss_8007FFA0[rr].bbox.min.x,
+                    (s32)dword_CODE_bss_8007FFA0[rr].bbox.min.y,
+                    (s32)dword_CODE_bss_8007FFA0[rr].bbox.max.x,
+                    (s32)dword_CODE_bss_8007FFA0[rr].bbox.max.y);
+            }
+            osSyncPrintf("\n");
+        }
+    }
+#endif
 #ifdef VERSION_EU
     s16 i;
 #else
@@ -647,28 +693,6 @@ Gfx *sub_GAME_7F0B3C8C(Gfx *gdl)
                 }
  
                 gSPMatrix(gdl++, osVirtualToPhysical((void*)get_BONDdata_field_10E0()), (G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION));
-#ifdef PORT
-                /* TEMP D104: room render-pass geometry-visibility probe. */
-                {
-                    static s32 d104c = 0;
-                    if (getenv("GE_D104") && (d104c++ % 600) == 0 && d104c < 12000) {
-                        s32 rr;
-                        osSyncPrintf("D104 tick=%d curRoom=%d roomsDrawn=%d budget=%d :",
-                            d104c, (s32)g_CurrentPlayer->curRoomIndex,
-                            (s32)g_BgNumberOfRoomsDrawn, (s32)g_RoomLoadBudget);
-                        for (rr = 0; rr < g_BgNumberOfRoomsDrawn && rr < 24; rr++) {
-                            s32 rid = dword_CODE_bss_8007FFA0[rr].roomid;
-                            osSyncPrintf(" r%d(ld=%d %d,%d-%d,%d)", rid,
-                                (s32)g_BgRoomInfo[rid].model_bin_loaded,
-                                (s32)dword_CODE_bss_8007FFA0[rr].bbox.min.x,
-                                (s32)dword_CODE_bss_8007FFA0[rr].bbox.min.y,
-                                (s32)dword_CODE_bss_8007FFA0[rr].bbox.max.x,
-                                (s32)dword_CODE_bss_8007FFA0[rr].bbox.max.y);
-                        }
-                        osSyncPrintf("\n");
-                    }
-                }
-#endif
                 gdl = fogSetRenderFogColor(
                     bgScissorCurrentPlayerViewF(
                         gdl++,
@@ -2413,48 +2437,6 @@ s32 bgLoadRoomVtxData(s32 roomnum, u8 *dst, s32 len)
 #ifdef PORT
     /* D85: byte-swap the raw N64 Vtx table (16-byte struct, no widening). */
     bgSwapRoomVtx((Vtx *)dst, result);
-
-    /* D236 pass 16 (TEMP): pass 15's live GE_D236ALPHA capture found the
-     * Surface1 tree-card render class's vertex alpha capped at <=36/255
-     * (<=14% opacity) across a full far->close walk to the tree line, and
-     * confirmed (via the combine_mode decode) that this vertex alpha
-     * directly multiplies the texture's own alpha in the blend equation --
-     * so a capped-low vertex alpha caps every tree pixel's final opacity
-     * outright. bgSwapRoomVtx (just above) explicitly leaves colour bytes
-     * untouched, so whatever is in cn[] here is exactly what bgDecompress
-     * produced -- this is the earliest point after decompression the raw
-     * per-room vertex colour data can be inspected, independent of which
-     * camera path a live player happens to walk. Unlike GE_D236ALPHA (which
-     * only sees whatever triangles are actually drawn from wherever the
-     * player is standing), this dumps a histogram of EVERY vertex's alpha
-     * byte (cn[3]) for the WHOLE room's table the moment it loads --
-     * settling whether the low ceiling pass 15 measured is a sampling
-     * artifact (the walked path just never reached a vertex with a high
-     * baked alpha) or a genuine property of this room's authored data (no
-     * vertex in the whole table goes above the low ceiling, regardless of
-     * where the camera is). Zero cost unset. Remove once D236 pass 16
-     * concludes. */
-    if (getenv("GE_D236RAW")) {
-        s32 vtxCount = result / (s32)sizeof(Vtx);
-        s32 vi;
-        u32 buckets[5] = {0, 0, 0, 0, 0}; /* 0 / 1-36 / 37-100 / 101-200 / 201-255 */
-        u8 amin = 255, amax = 0;
-        Vtx *vtxArr = (Vtx *)dst;
-        for (vi = 0; vi < vtxCount; vi++) {
-            u8 a = vtxArr[vi].v.cn[3];
-            if (a < amin) amin = a;
-            if (a > amax) amax = a;
-            if (a == 0) buckets[0]++;
-            else if (a <= 36) buckets[1]++;
-            else if (a <= 100) buckets[2]++;
-            else if (a <= 200) buckets[3]++;
-            else buckets[4]++;
-        }
-        osSyncPrintf(
-                "D236RAW room=%d n=%d amin=%u amax=%u buckets[0,1-36,37-100,101-200,201-255]=%u,%u,%u,%u,%u\n",
-                (int)roomnum, (int)vtxCount, amin, amax,
-                buckets[0], buckets[1], buckets[2], buckets[3], buckets[4]);
-    }
 #endif
 
     room->vertices = (Vtx *)dst;
@@ -2704,11 +2686,20 @@ void bgLoadRoomModelData(s32 roomID)
 
     used = 0;
 
+#if defined(PORT)
+    static int d104ld_on = -1; /* D302-class cache */
+    static s32 d104ld_n = 0;
+    if (d104ld_on < 0) d104ld_on = getenv("GE_D104") != NULL;
+#define D104LD(...) do { if (d104ld_on && d104ld_n++ < 4000) osSyncPrintf(__VA_ARGS__); } while (0)
+#else
+#define D104LD(...) do {} while (0)
+#endif
+
     // Room ID is out of range?
-    if (roomID >= g_MaxNumRooms) goto end;
+    if (roomID >= g_MaxNumRooms) { D104LD("D104 LOAD room=%d FAIL oob\n", roomID); goto end; }
 
     // Room is already loaded?
-    if (g_BgRoomInfo[roomID].model_bin_loaded) goto end;
+    if (g_BgRoomInfo[roomID].model_bin_loaded) { D104LD("D104 LOAD room=%d skip ld=%d\n", roomID, (s32)g_BgRoomInfo[roomID].model_bin_loaded); goto end; }
 
     // Get the cached file size. Is zero when the size is not yet known.
     allocsize = g_BgRoomInfo[roomID].cur_room_totalsize;
@@ -2732,7 +2723,7 @@ void bgLoadRoomModelData(s32 roomID)
     */
     data = memaAlloc(allocsize);
 
-    if (data == NULL) goto end;
+    if (data == NULL) { D104LD("D104 LOAD room=%d FAIL alloc size=%d\n", roomID, allocsize); goto end; }
 
     if (g_BgRoomInfo[roomID].csize_point_index_binary)
     {
@@ -2782,6 +2773,10 @@ void bgLoadRoomModelData(s32 roomID)
 
     g_BgRoomInfo[roomID].cur_room_totalsize = ((used + 0x20) & ~0xf);
     g_BgRoomInfo[roomID].model_bin_loaded = 1;
+    D104LD("D104 LOAD room=%d OK used=%d vtx=%d prim=%d sec=%d\n", roomID, used,
+        (s32)g_BgRoomInfo[roomID].usize_point_index_binary,
+        (s32)g_BgRoomInfo[roomID].usize_primary_DL_binary,
+        (s32)g_BgRoomInfo[roomID].usize_secondary_DL_binary);
 
     // If wasted space is detected, shrink allocated memory block.
     if (allocsize != ((used + 0x20) & ~0xf))
@@ -2944,6 +2939,18 @@ Gfx *bgRenderRoomPrimary(Gfx *gdl, s32 room_index)
 
         if (g_BgRoomInfo[room_index].model_bin_loaded == 0)
         {
+#if defined(PORT)
+            /* TEMP D104/D294: room is on the drawn list but not rendered this
+             * frame (no load budget / load failed) -- its scissor region shows
+             * whatever was behind it. Log every occurrence, capped. */
+            static int d104skip_on = -1;
+            static s32 d104skip_n = 0;
+            if (d104skip_on < 0) d104skip_on = getenv("GE_D104") != NULL;
+            if (d104skip_on && d104skip_n++ < 4000) {
+                osSyncPrintf("D104 SKIP room=%d budget=%d\n",
+                    room_index, (s32)g_RoomLoadBudget);
+            }
+#endif
             return gdl;
         }
         else
@@ -2952,7 +2959,9 @@ Gfx *bgRenderRoomPrimary(Gfx *gdl, s32 room_index)
 
 #if defined(PORT)
             /* TEMP D63: log primary GDL at render time (env GE_D63=1) */
-            if (getenv("GE_D63")) {
+            static int d63on_p = -1; /* D302-class cache: per room, per frame */
+            if (d63on_p < 0) d63on_p = getenv("GE_D63") != NULL;
+            if (d63on_p) {
                 u32 *w = (u32 *)g_BgRoomInfo[room_index].ptr_expanded_mapping_info;
                 osSyncPrintf("D63 bgRenderRoomPrimary room=%d ptr=%p usize=%d w0..3=(%08x,%08x,%08x,%08x)\n",
                              room_index, (void *)g_BgRoomInfo[room_index].ptr_expanded_mapping_info,
@@ -2997,7 +3006,9 @@ Gfx *bgRenderRoomSecondary(Gfx *gdl, s32 room_index)
 
 #if defined(PORT)
             /* TEMP D63: log secondary GDL at render time (env GE_D63=1) */
-            if (getenv("GE_D63")) {
+            static int d63on_s = -1; /* D302-class cache: per room, per frame */
+            if (d63on_s < 0) d63on_s = getenv("GE_D63") != NULL;
+            if (d63on_s) {
                 u32 *w = (u32 *)g_BgRoomInfo[room_index].ptr_secondary_expanded_mapping_info;
                 osSyncPrintf("D63 bgRenderRoomSecondary room=%d ptr=%p usize=%d w0..3=(%08x,%08x,%08x,%08x)\n",
                              room_index, (void *)g_BgRoomInfo[room_index].ptr_secondary_expanded_mapping_info,
@@ -3509,7 +3520,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                 idx[2] = (((u8 *) gdl)[7] / 10) - vtxoff;
 #endif
 #ifdef PORT
-                if (getenv("GE_D154"))
+                static int d154on = -1; /* D302-class cache: inner GDL walk, fires per bullet hit */
+                if (d154on < 0) d154on = getenv("GE_D154") != NULL;
+                if (d154on)
                     osSyncPrintf("D154   TRI1 w1=%08x idx=%d,%d,%d\n",
                                  (unsigned)(u32)gdl->words.w1, (int)idx[0], (int)idx[1], (int)idx[2]);
 #endif
@@ -3694,7 +3707,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                         }
 #endif
 #ifdef PORT
-                        if (getenv("GE_D154"))
+                        static int d154on4 = -1; /* D302-class cache: inner GDL walk, fires per bullet hit */
+                        if (d154on4 < 0) d154on4 = getenv("GE_D154") != NULL;
+                        if (d154on4)
                             osSyncPrintf("D154   TRI4 s2=%d w0=%08x w1=%08x idx2=%d,%d,%d\n",
                                          (int)s2, (unsigned)(u32)gdl->words.w0, (unsigned)(u32)gdl->words.w1,
                                          (int)idx2[0], (int)idx2[1], (int)idx2[2]);

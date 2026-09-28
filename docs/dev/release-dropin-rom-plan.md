@@ -303,3 +303,32 @@ offer to create it).
 2. Interim frozen `ge007-convert.exe` wired to first-run — days, optional.
 3. Part B C port of `d43`/`d69` + embedded metadata + output diffing — weeks.
 4. Drop the interim binary; single-binary drop-in experience complete.
+
+## Part B follow-up backlog (was GitHub issue #85, folded here 2026-09-25)
+
+Follow-up to #6, which shipped in v0.2.0 as an NTSC-U-only drop-in (PR #84). The issue was closed on GitHub and its scope is tracked here now. It has three independent workstreams.
+
+### 1. PAL/JP asset pipeline repair (data + build)
+
+`scripts/filelist.e.csv` and `filelist.j.csv` contain naming defects that make PAL/JP conversion impossible from this tree (D258: no PAL/JP PC build has ever been producible). The repair path has been verified but not applied:
+
+- **PAL:** rename 31 model rows to the exact `file_resource_table.inc.c` symbols. Examples: `Pbridge_console` ×6 → `Pbridge_console1aZ…3bZ`, and `Pchrgrenadelauncher` → `PchrgrenadelaunchZ`. Greedy sequence alignment proves the mapping: 512×512 exact 1:1, offsets non-decreasing, and zero size anomalies against US.
+- **JP:** rename the mislabeled font row @3044276 from `fontZurichBold_fontchartable.bin` to `fontBankGothic_fontchartable.bin`. The contiguity invariant confirms it: the Gothic kerning table @3043600+676 ends exactly at this row, and the size matches the US Gothic chartable.
+- **Then:**
+  - `gen_romassets.py e/j` must run clean without a ROM.
+  - Commit `romassets_e.s` and `romassets_j.s`.
+  - Replace the hardcoded `filelist.u.csv` in the d43/d69/d88 emitters with a region→suffix map.
+  - Remove the NTSC-U-only gate in `prepare-assets.py`.
+- **Needs a PAL and/or JP ROM** for final byte-level verification of at least one region. Only NTSC is available locally.
+
+### 2. Multi-region release layout
+
+- Give each region its own OUTPUT_NAME (`ge007-ntsc-final` / `-pal-final` / `-jpn-final`) plus a default alias.
+- Add a region re-exec guard in `romdata.c` (~50 lines): if the country byte at 0x3E doesn't match the build, re-exec the sibling exe.
+- CI builds all 3 regions sequentially, and the bundle scripts package all 3 exes.
+
+### 3. C port of the emitters (optional, removes PyInstaller)
+
+Port the d43/d69/d88 emit logic to C. That removes the frozen-converter dependency entirely, because the converter becomes part of the engine binary. It's a 2–4 week task, and PD's `filemodel.c` is the closest analogue. It isn't required for PAL/JP: the frozen Python path works for all three regions once #1 lands.
+
+**Acceptance:** a user with a PAL or JP ROM gets the same one-step drop-in experience as NTSC does today.

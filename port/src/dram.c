@@ -71,7 +71,7 @@ void *dramReserve(void)
     sa.bInheritHandle = FALSE;
 
     HANDLE hSec = CreateFileMappingW(INVALID_HANDLE_VALUE, &sa, PAGE_READWRITE,
-                                     (DWORD)(DRAM_SIZE >> 32),
+                                     (DWORD)((unsigned long long)DRAM_SIZE >> 32),
                                      (DWORD)(DRAM_SIZE & 0xFFFFFFFF), NULL);
     if (!hSec) {
         sysFatalError("dram: CreateFileMapping failed (%lu)", GetLastError());

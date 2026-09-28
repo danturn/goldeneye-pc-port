@@ -6212,6 +6212,33 @@ void chrlvUpdateAimendbackShoulders(ChrRecord *self, void *arg1, s32 same, s32 s
     next_aimendback = 0.0f;
     next_lshoulder = next;
 
+#ifdef PORT
+    /* The leading anim union in weapon_firing_animation_table grows from
+     * four to eight bytes on PC. N64's float slots [12,13,16,17] are now
+     * different fields; read the intended limits/arm fractions by name. */
+    if (arg1 != NULL)
+    {
+        struct weapon_firing_animation_table *config = arg1;
+        if (config->max_up < next)
+        {
+            next_aimendback = next - config->max_up;
+            next_lshoulder = config->max_up;
+        }
+        else if (next < config->max_down)
+        {
+            next_aimendback = next - config->max_down;
+            next_lshoulder = config->max_down;
+        }
+        if (next_lshoulder > 0.0f)
+        {
+            next_rshoulder = config->free_arm_frac_up * next_lshoulder;
+        }
+        else
+        {
+            next_rshoulder = config->free_arm_frac_down * next_lshoulder;
+        }
+    }
+#else
     if (arg1 != NULL)
     {
         if (((f32*)arg1)[12] < next)
@@ -6235,6 +6262,7 @@ void chrlvUpdateAimendbackShoulders(ChrRecord *self, void *arg1, s32 same, s32 s
             next_rshoulder = ((f32*)arg1)[17] * next_lshoulder;
         }
     }
+#endif
 
     if (swap != 0)
     {
@@ -9994,35 +10022,6 @@ bool chrHasFlags2ById(ChrRecord *self, s32 chrNum, u8 flags2)
 */
 void chrSetStageFlags(ChrRecord *self, s32 arg1)
 {
-#ifdef PORT
-    /* D318-followup (diagnosis only, GE_OBJT=1): attribute writes to the LOW
-     * bits of objectiveregisters1 (the Facility execution derail triggers:
-     * 0x04 gas/combat, 0x20 surrender/monologue, 0x40 flee -- none of which
-     * the level setup script ever sets; only character-action scripts do).
-     * Logs the writing chr + its AI position so the writer's script state is
-     * correlatable against a simultaneous D318T capture. Read-only, capped,
-     * no behavior change; N64 build unaffected. */
-    extern char *getenv(const char *);
-    extern s32 chraiGetAIListID(AIRecord *AIList, bool *isGlobalAIList); /* chrai.c */
-    static int s_objt = -1;
-    static int s_objtn = 0;
-    int objtlog;
-    s32 aid;
-    bool aig;
-
-    if (s_objt < 0) { s_objt = getenv("GE_OBJT") != NULL; }
-    objtlog = s_objt && (arg1 & 0x0000FFFF) && (s_objtn < 500);
-    if (objtlog)
-    {
-        aid = self->ailist ? chraiGetAIListID(self->ailist, &aig) : -1;
-        osSyncPrintf("OBJT: t=%d SET mask=0x%08x by chr %d (act=%d off=%d aiid=0x%04x%s ailist=%p) reg=0x%08x\n",
-                     (int)g_GlobalTimer, (unsigned)arg1, (int)self->chrnum,
-                     (int)self->actiontype, (int)self->aioffset, (unsigned)aid,
-                     aig ? "G" : "", (void *)self->ailist,
-                     (unsigned)objectiveregisters1);
-        s_objtn++;
-    }
-#endif
     objectiveregisters1 |= arg1;
 }
 
@@ -10032,28 +10031,6 @@ void chrSetStageFlags(ChrRecord *self, s32 arg1)
 */
 void chrUnsetStageFlags(ChrRecord *self, u32 flags)
 {
-#ifdef PORT
-    extern char *getenv(const char *);
-    extern s32 chraiGetAIListID(AIRecord *AIList, bool *isGlobalAIList); /* chrai.c */
-    static int s_objtu = -1;
-    static int s_objtun = 0;
-    int objtulog;
-    s32 aid;
-    bool aig;
-
-    if (s_objtu < 0) { s_objtu = getenv("GE_OBJT") != NULL; }
-    objtulog = s_objtu && (flags & 0x0000FFFF) && (s_objtun < 500);
-    if (objtulog)
-    {
-        aid = self->ailist ? chraiGetAIListID(self->ailist, &aig) : -1;
-        osSyncPrintf("OBJT: t=%d UNS mask=0x%08x by chr %d (act=%d off=%d aiid=0x%04x%s ailist=%p) reg=0x%08x\n",
-                     (int)g_GlobalTimer, (unsigned)flags, (int)self->chrnum,
-                     (int)self->actiontype, (int)self->aioffset, (unsigned)aid,
-                     aig ? "G" : "", (void *)self->ailist,
-                     (unsigned)objectiveregisters1);
-        s_objtun++;
-    }
-#endif
     objectiveregisters1 = ~flags & objectiveregisters1; //shorthand does not match
 }
 

@@ -1,42 +1,69 @@
 ---
 title: GoldenEye 007 PC Port
-# v0.3.0: status bumped from v0.2.1; Honest-status bullets synced with the
-# README's v0.3.0 known issues (D255/D282/F10-dup/overscan items removed as
-# fixed). Description kept at 133 chars (Bing's 160 limit).
+# v0.4.0: status bumped from v0.3.0; Honest status replaced by the v0.4.0
+# release-notes known issues (rainbow/water/z-fight/cameras/trees/muzzle/
+# stretched-widescreen/gunshot items all fixed; D335b F10-overlay stretch is
+# the new widescreen residual). Description kept short (Bing's 160 limit).
 description: >-
-  A native PC port of the 1997 N64 classic, built from decompiled source with
-  a software RSP. v0.3.0 for Windows, Linux and Steam Deck.
+  A native PC port of GoldenEye 007 (Nintendo 64, 1997), built from
+  decompiled source with a software RSP. v0.4.0 for Windows, Linux and
+  Steam Deck.
 ---
 
-<!-- v0.2.1 (Bing SEO): the "# GoldenEye 007 PC Port" h1 was removed here --
-the Cayman masthead already renders the site title as an <h1>, so the page
-was emitting two h1 tags. -->
+A native PC port of _GoldenEye 007_ (Rare, 1997, Nintendo 64), compiled from
+the [GoldenEye 007 decompilation](https://github.com/n64decomp/007): the
+original N64 game running from reconstructed source, not the Xbox 360
+remaster. The N64's graphics coprocessor (RSP) is emulated in software; every
+other hardware surface (video, audio, input, timers, save storage) is shimmed
+in a dedicated `port/` layer, following the architecture of the
+[Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the same
+Rare "Indy" engine family, one hardware generation apart.
 
-A native PC port of the original 1997 Nintendo 64 _GoldenEye 007_, compiled
-from the game's [decompiled source](https://github.com/n64decomp/007) with the
-N64's graphics coprocessor (RSP) running in software, the same architecture
-as the [Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the
-same Rare "Indy" engine family, one hardware generation apart.
+[Download](#download) · [News](#news) · [See it running](#see-it-running) · [Honest status](#honest-status) · [Documentation](#documentation)
 
-**Status: v0.3.0.** The full single-player campaign runs at a steady 60 fps
-and is completable end to end (all 20 missions playtested); all 20 missions
-load and run clean on Windows, Linux and Steam Deck, and audio (music + SFX)
-plays throughout. The known rough edges — mostly cosmetic rendering defects,
-stretched-not-native widescreen, and missing features — are listed plainly
+**Status: v0.4.0 (2026-09-28) — fully playable, with a small set of known
+caveats.** The full single-player campaign runs at a steady 60 fps and is
+completable end to end (all 20 missions, plus the ending-credits sequence,
+playtested on Windows, Linux and Steam Deck). It is the most complete release
+to date: **native widescreen** (on by default — undistorted world at your
+display's aspect, 4:3 menus pillarboxed), a **complete aim system** (N64 or
+centred PC style, for mouse *and* controller), **in-game key rebinding** with
+a GEPD-style default layout, **crosshair customization**, **rumble-pak
+haptics** on supported gamepads, and a **rebuilt options overlay** with
+fine-tuning rows (frame cap, MSAA, draw/LOD distance, HUD scale). The most
+common defect classes from earlier releases — particle colour drift, water
+seams, z-fighting, billboard trees, muzzle flashes, the front-end Nintendo
+logo, gunshot SFX — are fixed in this version; what remains is a short list,
 under [Honest status](#honest-status).
 
 **This is a pre-1.0 release, not a finished product** — v1.0 is the target
-for a polished, feature-complete build; expect rough edges and missing
-features until then. See the
+for a polished, feature-complete build; expect missing features and the
+occasional breaking change until then. See the
 [README's Roadmap section](https://github.com/jkdansereau/goldeneye-pc-port#roadmap)
-for direction (PAL/JP support, real widescreen, LAN multiplayer under
-consideration, and more).
+for direction (PAL/JP support, controller-button rebinding, LAN multiplayer
+under consideration, and more).
 
 <p align="center">
   <img src="media/goldeneye-gh-preview.gif" width="70%"
-       alt="~12 s gameplay montage from live play sessions">
-  <br><em>~12 s gameplay montage from live v0.3.0 play sessions, running in the port.</em>
+       alt="~24 s gameplay montage from live play sessions">
+  <br><em>~24 s gameplay montage from live v0.4.0 play sessions (Runway tank,
+  Dam, Caverns, Aztec, Bunker&nbsp;2, Surface&nbsp;2), running in the port.</em>
 </p>
+
+## News
+
+- **2026-09-28** — **v0.4.0**: native widescreen, a complete aim system for
+  mouse and controller, in-game key rebinding, crosshair customization,
+  rumble-pak haptics, a rebuilt options overlay, and a broad fidelity-fix
+  pass (water, particles, billboard trees, front-end logo, gunshot SFX, a
+  true stable 60 fps). [Release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases/tag/v0.4.0) ·
+  [downloads](#download).
+- **2026-09-20** — **v0.3.0**: the first release with the complete campaign
+  playable end to end at 60 fps on Windows, Linux, and Steam Deck.
+  [Release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases/tag/v0.3.0).
+- **2026-09-04 → 2026-09-16** — **v0.1.0 – v0.2.2**: the alpha and beta
+  cycle — build chain, software RSP, first rendered frames, front end, and
+  per-level stabilization across the campaign.
 
 ## Download
 
@@ -59,89 +86,61 @@ without a ROM you already own.
 ## See it running
 
 <p align="center">
-  <img src="img/shots/shot-06.jpg" width="45%" alt="Bunker 1, rendered by the port (v0.2.0 playtest)">
-  <img src="img/shots/shot-01.jpg" width="45%" alt="Dam, rendered by the port (v0.2.0 playtest)">
+  <img src="img/shots/shot-28.jpg" width="45%" alt="Streets, rendered by the port (v0.4.0 intro attract)">
+  <img src="img/shots/shot-01.jpg" width="45%" alt="Dam, rendered by the port (v0.4.0 intro attract)">
 </p>
 
 <details>
-<summary><strong>Full playtest gallery</strong>: 19 in-engine captures from the v0.2.0 Windows playtest, across the campaign</summary>
+<summary><strong>Full gallery</strong>: 12 in-engine captures from a v0.4.0 intro-attract pass (3072×1728 widescreen, Sep 2026)</summary>
 
 <p align="center">
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-01.jpg" width="100%" alt="In-engine: Dam (v0.2.0)">
+    <img src="img/shots/shot-01.jpg" width="100%" alt="In-engine: Dam (v0.4.0 intro attract)">
     <div><small>Dam</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-02.jpg" width="100%" alt="In-engine: Facility (v0.2.0)">
-    <div><small>Facility</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-03.jpg" width="100%" alt="In-engine: Runway (v0.2.0)">
+    <img src="img/shots/shot-03.jpg" width="100%" alt="In-engine: Runway (v0.4.0 intro attract)">
     <div><small>Runway</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-04.jpg" width="100%" alt="In-engine: Surface (v0.2.0)">
+    <img src="img/shots/shot-04.jpg" width="100%" alt="In-engine: Surface (v0.4.0 intro attract)">
     <div><small>Surface</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-05.jpg" width="100%" alt="In-engine: Surface (v0.2.0)">
-    <div><small>Surface</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-06.jpg" width="100%" alt="In-engine: Bunker 1 (v0.2.0)">
-    <div><small>Bunker 1</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-07.jpg" width="100%" alt="In-engine: Silo (v0.2.0)">
-    <div><small>Silo</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-09.jpg" width="100%" alt="In-engine: Frigate (v0.2.0)">
+    <img src="img/shots/shot-09.jpg" width="100%" alt="In-engine: Frigate (v0.4.0 intro attract)">
     <div><small>Frigate</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-10.jpg" width="100%" alt="In-engine: Frigate (v0.2.0)">
-    <div><small>Frigate</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-11.jpg" width="100%" alt="In-engine: Surface 2 (v0.2.0)">
+    <img src="img/shots/shot-11.jpg" width="100%" alt="In-engine: Surface 2 (v0.4.0 intro attract)">
     <div><small>Surface 2</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-13.jpg" width="100%" alt="In-engine: Bunker 2 (v0.2.0)">
-    <div><small>Bunker 2</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-16.jpg" width="100%" alt="In-engine: Statue (v0.2.0)">
+    <img src="img/shots/shot-16.jpg" width="100%" alt="In-engine: Statue (v0.4.0 intro attract)">
     <div><small>Statue</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-19.jpg" width="100%" alt="In-engine: Statue (v0.2.0)">
-    <div><small>Statue</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-20.jpg" width="100%" alt="In-engine: Archives (v0.2.0)">
+    <img src="img/shots/shot-20.jpg" width="100%" alt="In-engine: Archives (v0.4.0 intro attract)">
     <div><small>Archives</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-21.jpg" width="100%" alt="In-engine: Cradle (v0.2.0)">
+    <img src="img/shots/shot-21.jpg" width="100%" alt="In-engine: Cradle (v0.4.0 intro attract)">
     <div><small>Cradle</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-23.jpg" width="100%" alt="In-engine: Cradle (v0.2.0)">
-    <div><small>Cradle</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-24.jpg" width="100%" alt="In-engine: Aztec (v0.2.0)">
+    <img src="img/shots/shot-24.jpg" width="100%" alt="In-engine: Aztec (v0.4.0 intro attract)">
     <div><small>Aztec</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-25.jpg" width="100%" alt="In-engine: Aztec (v0.2.0)">
-    <div><small>Aztec</small></div>
+    <img src="img/shots/shot-27.jpg" width="100%" alt="In-engine: Control (v0.4.0 intro attract)">
+    <div><small>Control</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-26.jpg" width="100%" alt="In-engine: Frigate (v0.2.0)">
-    <div><small>Frigate</small></div>
+    <img src="img/shots/shot-28.jpg" width="100%" alt="In-engine: Streets (v0.4.0 intro attract)">
+    <div><small>Streets</small></div>
+  </div>
+  <div style="width:32%;text-align:center;margin:4px">
+    <img src="img/shots/shot-29.jpg" width="100%" alt="In-engine: Jungle (v0.4.0 intro attract)">
+    <div><small>Jungle</small></div>
   </div>
 </p>
 </details>
@@ -190,34 +189,25 @@ catalogue: [Porting notes](porting-notes.md).
 
 ## Honest status
 
-- **Particle colours** can still drift through a rainbow palette
-  intermittently: one genuine cause is fixed this release, a second hasn't
-  been found yet (D252).
-- **Some muzzle flashes draw an extra erroneous long flash** straight up from
-  the gun, on top of the correct one. Cosmetic only (D303).
-- Water levels show a moving seam between two water patterns (D245);
-  occasional z-fighting on some geometry (D308); in-level security-camera
-  props can occasionally face backwards (D307). Minor and cosmetic.
-- **The front-end Nintendo logo renders as two white blobs** and the Rareware
-  logo's texture filtering looks off (D75).
-- Surface 1's 2D billboard trees render as a solid wall of tree texture
-  instead of discrete sprites; under active investigation (D236).
-- **Widescreen is stretched, not native**: 16:9 stretches the 4:3 frame to
-  fill the display; automatic FOV scaling keeps the framing comfortable and
-  gameplay is unaffected, but a distortion-free native widescreen render is
-  still on the roadmap. Distant geometry can also drop out on the biggest
-  open levels (D249).
-- **Gunshot SFX can sound off during sustained/rapid fire** (D240/D241).
-- **`All unlocked` is highly experimental** — don't enable it until you have
-  at least one save written, or it can break audio and mouse aim
-  (D257/D259/D281).
-- Bond's cutscene positioning is fixed and right the large majority of the
-  time now; on the rare occasion he's off it's a small drift — no more
-  floating or spin-glitching (D173/D292/D243).
-- No macOS/ARM support; no controller rebinding UI yet.
+- On Facility, if gas leaks during Ourumov's monologue he can pause for up to
+  ~10 s before resuming the scripted shootout — a latent race that exists in
+  the N64 original too (where it softlocks permanently); the port detects and
+  auto-recovers it. (D318)
+- With native widescreen on, the F10 options overlay stretches with the
+  window instead of pillarboxing like the front-end menus (legible; cosmetic;
+  the F10 *Native widescreen* toggle restores the old stretched frame
+  throughout). The world/HUD widescreen rendering itself is correct. (D335b)
+- The front-end Rareware logo shows a subtle texture-filtering artifact
+  (the Nintendo logo and legal page are clean). Cosmetic only. (D75)
+- **`All unlocked` is experimental**: the fresh-install corruption case is
+  fixed, but saves made while it is on are not guaranteed recoverable by
+  switching it off — complete a level normally first, and back up
+  `data/ge007.eep` before enabling it. (D387)
+- No macOS or ARM support. Keyboard/mouse rebinding shipped in v0.4.0;
+  controller-button rebinding is not supported yet.
 
 The full list, with root causes and fix status: the
-[README's Status section](https://github.com/jkdansereau/goldeneye-pc-port#status)
+[release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases)
 and the [finding log](https://github.com/jkdansereau/goldeneye-pc-port/tree/main/docs/dev).
 
 ## Documentation
@@ -227,9 +217,3 @@ and the [finding log](https://github.com/jkdansereau/goldeneye-pc-port/tree/main
 - [Internals](internals.md): architecture, the software RSP-emulation approach, GoldenEye-vs-Perfect-Dark engine differences, the phased plan.
 - [Porting notes](porting-notes.md): the recurring Nintendo 64 → PC bug classes hit during the port, with fixes.
 - [Building](building.md): full build and asset-extraction guide.
-
----
-
-<small>Non-commercial fan preservation/research project. No ROM or game assets
-are distributed; you supply a ROM you already own. Not affiliated with or
-endorsed by Nintendo, Rare, Microsoft, MGM, Danjaq, or EON Productions.</small>

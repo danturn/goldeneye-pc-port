@@ -13,7 +13,18 @@
 
 #if defined(PORT)
 #    include "include/PR/ucode.h"
-#    include "pc_protos.h"
+#    /* D402 (Linux build): a TU that includes <bondconstants.h> before
+#     * <ultra64.h> (e.g. port/src/optionsoverlay.c) sets src/bondconstants.h's
+#     * include-guard, then that header's own top `#include <ultra64.h>` reaches
+#     * this pc_protos.h -> bondtypes.h -> bondconstants.h chain while
+#     * src/bondconstants.h is still mid-parse (its ITEM_IDS/ACT_TYPE/... are
+#     * defined only later in the file). glibc GCC rejects the half-defined
+#     * types hard (MinGW tolerated it, so this only surfaced on Linux). The
+#     * bondconstants.h shim sets _PORT_DEFER_PC_PROTOS around that pass so the
+#     * D38 prototypes are pulled in only once, after the constants are whole. */
+#    if !defined(_PORT_DEFER_PC_PROTOS)
+#        include "pc_protos.h"
+#    endif
 #else
 #    include <PR/ucode.h>
 #endif

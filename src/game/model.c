@@ -18,6 +18,9 @@
 #include "objecthandler.h"
 #include "quaternion.h"
 #include "random.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 
 typedef struct ModelGroupMtxBuildArg {
@@ -541,7 +544,7 @@ union ModelRwData* modelGetNodeRwData(Model *Objinst, ModelNode *root)
 
 #ifdef PORT
     /* TEMP D51: trace rwdata pool addressing */
-    if (getenv("GE_D51")) {
+    if (GE_ENVFLAG("GE_D51")) {
         static FILE *f = NULL;
         if (!f) { f = fopen("d52rw.log", "a"); setvbuf(f, NULL, _IONBF, 0); }
         fprintf(f, "GND obj=%p datas=%p idx=%d rwdatalen=%d op=%d data=%p res=%p\n",
@@ -2717,8 +2720,26 @@ void modelCopyAnimForMerge(Model *model, f32 timemerge)
 }
 
 
+#ifdef PORT
+/* D311 (M-194): the upstream poison source is still unknown -- GDB caught
+ * oldspeed=-1.75e18 / newspeed=-3.2e7 but not which call first wrote a
+ * garbage speed. Every write of model->speed funnels through
+ * modelSetAnimSpeed (startframe<=0 path) or modelSetAnimation2, so flag any
+ * anomalous value entering OR already resident at those two choke points.
+ * Fires only on |v|>1e4 or NaN -- silent in healthy play; the line pins the
+ * exact transition that poisons the model. Same unconditional-on-fire
+ * pattern as the D156 guards (which log when they fire, no env var). */
+static int d311Anomalous(f32 v) { return (v != v) || (v > 10000.0f) || (v < -10000.0f); }
+#endif
+
 void modelSetAnimation2(Model *model, ModelAnimation *anim, s32 flip, f32 frame, f32 speed, f32 arg5)
 {
+#ifdef PORT
+    if (model != NULL && d311Anomalous(speed)) {
+        osSyncPrintf("D311: setanimation2 ANOMALY in=%.6g resident=%.6g frame=%.6g model=%p\n",
+                     (double)speed, (double)model->speed, (double)frame, (void *)model);
+    }
+#endif
     s32 hadNoAnim = !model->anim;
     s32 padding;
     s32 type;
@@ -2953,6 +2974,13 @@ void sub_GAME_7F06FE44(Model *model, s32 arg1) {
 
 void modelSetAnimSpeed(Model *model, f32 anim_speed, f32 startframe) {
 #ifdef PORT
+    if (model != NULL && (d311Anomalous(anim_speed) || d311Anomalous(model->speed))) {
+        osSyncPrintf("D311: setanimspeed ANOMALY in=%.6g resident=%.6g startframe=%.6g "
+                     "oldspeed=%.6g newspeed=%.6g timespeed=%.6g model=%p\n",
+                     (double)anim_speed, (double)model->speed, (double)startframe,
+                     (double)model->oldspeed, (double)model->newspeed,
+                     (double)model->timespeed, (void *)model);
+    }
     /* D243 M-180: log all modelSetAnimSpeed calls during scripted camera modes
      * to identify if unusual speed values are being set during cutscenes.
      * Env-gated on GE_D243M (already cached elsewhere). */
@@ -3460,6 +3488,64 @@ void modelSetAnimFrame2WithChrStuff(Model *model, f32 framea, f32 frameb, f32 fr
             va = modelptr->framea;
             vb = modelptr->frameb;
 
+#ifdef PORT
+            /* D329 (RULE-2-SIGNOFF 2026-09-23, user approved): tick-
+             * granularity fix. The per-frame loop above only writes
+             * framea/frameb when floor(frame) crosses an integer. N64 GE
+             * renders at ~20-30 fps, so modelTickAnim folds 2-3 ticks into
+             * this call and any attack-speed advance (0.5-0.8/tick) crosses
+             * at once; the port at 60 fps folds 1 tick, which does not. A
+             * pair clamped equal by an earlier endframe (aim hold: both at
+             * ceil(H)) is then re-emitted stale after the endframe is raised
+             * (actor_fire_or_aim_at_target_update -> chrlvAttackActionRelated
+             * changes only the endframe) and the sub-frame progress below is
+             * discarded every call -> permanent pin (D318/D320). Only when
+             * the loop did not run, progress was requested, and the CURRENT
+             * endframe no longer blocks the next frame, re-derive frameb the
+             * way modelSetAnimFrame does, so the model advances at the rate
+             * the N64 does. Genuine holds (endframe still at the frame) and
+             * every >=2-tick call are untouched. */
+            /* GE_D329=0 disables (A/B only); GE_D329LOG=1 logs each trigger
+             * (capped). Both cached -- this is a per-model per-frame path. */
+            static s32 s_d329 = -1;
+            static s32 s_d329log = 0;
+            static s32 s_d329n = 0;
+
+            if (s_d329 < 0)
+            {
+                const char *e = getenv("GE_D329");
+
+                s_d329 = !(e && e[0] == '0');
+                s_d329log = (getenv("GE_D329LOG") != NULL);
+            }
+
+            if (s_d329 && (vb == va)
+                && (forward ? ((endframe < floorFloatToInt(framea) + 1) && (framea < frameb))
+                            : ((ceilFloatToInt(framea) - 1 < endframe) && (frameb < framea))))
+            {
+                s32 next = modelConstrainOrWrapAnimFrame(forward ? va + 1 : va - 1, modelptr->anim, modelptr->endframe);
+
+                if (next == (forward ? va + 1 : va - 1))
+                {
+                    if (s_d329log && s_d329n < 2000)
+                    {
+                        extern s32 g_GlobalTimer;
+                        extern s32 g_ClockTimer;
+
+                        s_d329n++;
+                        osSyncPrintf("D329: t=%d clk=%d model=%p va=%d next=%d framea=%.4f frameb=%.4f "
+                                     "endframe=%.4f speed=%.4f playspeed=%.4f\n",
+                                     (int) g_GlobalTimer, (int) g_ClockTimer, (void *) modelptr, (int) va,
+                                     (int) next, (double) framea, (double) frameb,
+                                     (double) modelptr->endframe, (double) modelptr->speed,
+                                     (double) modelptr->playspeed);
+                    }
+                    modelptr->frameb = next;
+                    vb = next;
+                }
+            }
+#endif
+
             if (vb == va)
             {
                 modelptr->unk2c = 0.0f;
@@ -3871,15 +3957,23 @@ void modelTickAnim(struct Model *model, s32 numticks, s32 update_chrstuff)
             {
                 ge_d156_logged = 1;
                 fprintf(stderr,
-                    "[D156] bad anim frame guarded: frame=%g animframe1=%g "
+                    "[D156] bad anim frame guarded: model=%p frame=%g animframe1=%g "
                     "speed=%g playspeed=%g newspeed=%g oldspeed=%g "
                     "timespeed=%g elapsespeed=%g unkb0=%g unk88=%g anim=%p\n",
-                    (double)frame, (double)model->animframe1,
+                    (void *)model, (double)frame, (double)model->animframe1,
                     (double)model->speed, (double)model->playspeed,
                     (double)model->newspeed, (double)model->oldspeed,
                     (double)model->timespeed, (double)model->elapsespeed,
                     (double)model->unkb0, (double)model->unk88,
                     (void *)model->anim);
+                /* TEMP D294: hexdump the struct to identify the overwriter. */
+                {
+                    const unsigned char *p = (const unsigned char *)model;
+                    int i;
+                    fprintf(stderr, "[D156] model=%p bytes:", (void *)model);
+                    for (i = 0; i < 128; i++) { if ((i & 15) == 0) fprintf(stderr, "\n  +%02x: ", i); fprintf(stderr, "%02x ", p[i]); }
+                    fprintf(stderr, "\n");
+                }
                 fflush(stderr);
             }
             /* D311: heal the stored state BEFORE falling back to it -- if
@@ -4591,7 +4685,7 @@ void modelRenderNodeGundl(ModelRenderData* renderdata, ModelNode* arg1)
 
 #if defined(PORT)
         /* TEMP D63: log Primary/Secondary before emit (env GE_D63=1) */
-        if (getenv("GE_D63") && ((renderdata->flags & 1) && rodata->Primary))
+        if (GE_ENVFLAG("GE_D63") && ((renderdata->flags & 1) && rodata->Primary))
             osSyncPrintf("D63 modelRenderNodeGundl Primary=%p Secondary=%p BaseAddr=%p ModelType=%d\n",
                          (void *)rodata->Primary, (void *)rodata->Secondary,
                          (void *)rodata->BaseAddr, (int)rodata->ModelType);

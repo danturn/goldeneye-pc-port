@@ -40,6 +40,9 @@
 #ifdef PORT
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef PORT
+#include "hudaspect.h"   /* D335 HUD alignment under native widescreen */
+#endif
 /* D102: the 1P weapon Model and its RW-data pool were punned onto
  * hand->field_B68 / hand->modeldatas; on x86-64 struct Model (0xE8) is too
  * big for that layout and modelInit() aliases objinst->datas onto the pool
@@ -500,6 +503,16 @@ void gunUpdateAndFire(GUNHAND handnum)
         gunofs.y += g_CurrentPlayer->ducking_height_offset / (-100.0f);
         gunofs.z += (3.0f * g_CurrentPlayer->ducking_height_offset) / (-100.0f);
 
+#ifdef PORT
+        /* D334: a native-widescreen window counts as the N64's 16:9 ratio for
+         * the rocket launcher's lowered viewmodel (>= 16:10 treated as wide). */
+        extern f32 portNativeAspect(void);
+        if ((item == ITEM_ROCKETLAUNCH) && portNativeAspect() >= 1.55f)
+        {
+            gunofs.y -= 3.0f;
+        }
+        else
+#endif
         if ((item == ITEM_ROCKETLAUNCH) && (((cur_player_get_screen_setting() == SCREEN_SIZE_WIDESCREEN) || (cur_player_get_screen_setting() == SCREEN_SIZE_CINEMA)) || (get_screen_ratio() == SCREEN_RATIO_16_9)))
         {
             gunofs.y -= 3.0f;
@@ -2029,7 +2042,21 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
     struct coord3d coord_node12_pos;
     struct coord3d coord_node12_base;
 
+#ifdef PORT
+    /* D290 (ABI/layout class; same pattern as D264 above): on N64 this
+     * 64-byte copy starts at the last word of D_80035D04 (0) and runs into
+     * watchControllerButtonBases {1, 3, 0..} (gun.c), i.e. the same
+     * ModelRenderData template as D264: basemtx=NULL, zbufferenabled=TRUE,
+     * flags=3, rest zero. On PC the struct is wider (8-byte pointers) and the
+     * globals are not laid out at those byte offsets, so flags read 0 and
+     * subdraw() skipped every node: the watch control-options page showed
+     * its labels but no controller model. Use the explicit template. */
+    renderdata = (ModelRenderData){0};
+    renderdata.zbufferenabled = TRUE;
+    renderdata.flags = 3;
+#else
     renderdata = *(ModelRenderData *)((u8 *)D_80035D04 + 0x3c);
+#endif
 
     sub_GAME_7F05DA8C(GUNRIGHT, 0x55);
 
@@ -2091,7 +2118,13 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
     for (i = 0; i < objheader->numMatrices; i++)
     {
+#ifdef PORT
+        /* D290: N64 does this pointer math through a u32 cast, which truncates a
+         * 64-bit pointer (fatal once the pool sits above 4 GB, e.g. Linux PIE). */
+        matrix_4x4_copy((Mtxf *)((u8 *)modelstack.render_pos + i * sizeof(Mtxf)), &sp41c);
+#else
         matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+#endif
         matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
     }
 
@@ -2326,7 +2359,13 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
         for (i = 0; i < objheader->numMatrices; i++)
         {
+#ifdef PORT
+            /* D290: N64 does this pointer math through a u32 cast, which truncates a
+             * 64-bit pointer (fatal once the pool sits above 4 GB, e.g. Linux PIE). */
+            matrix_4x4_copy((Mtxf *)((u8 *)modelstack.render_pos + i * sizeof(Mtxf)), &sp41c);
+#else
             matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+#endif
             matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
         }
 
@@ -3287,6 +3326,23 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
                             sndDeactivate((struct ALSoundState *) handptr->field_A48);
                         }
 
+#ifdef PORT
+                        /* TEMP D207/D241 (M-201): classify every shot-sound
+                         * attempt: into handle 1, handle 2, or SKIPPED because
+                         * both per-hand handles are still held (the stop above
+                         * is async). GE_D207S=1; one line per attempt. */
+                        if (bondwalkItemGetSound(var_s1) != 0)
+                        {
+                            extern char *getenv(const char *name);
+                            static int d207s = -1;
+                            if (d207s < 0) d207s = getenv("GE_D207S") != NULL;
+                            if (d207s)
+                                osSyncPrintf("D207S t=%d hand=%d item=%d rate=%d -> %s\n", (int)g_GlobalTimer, (int)hand,
+                                             (int)var_s1, (int)bondwalkItemGetSoundTriggerRate(var_s1),
+                                             handptr->audioHandle == NULL ? "H1"
+                                             : (struct ALSoundState *)handptr->field_A48 == 0 ? "H2" : "SKIP");
+                        }
+#endif
                         if (bondwalkItemGetSound(var_s1) != 0)
                         {
                             if (handptr->audioHandle == NULL)
@@ -4935,6 +4991,33 @@ void sub_GAME_7F067FBC(f32 turn_x, f32 turn_y)
     gunaimdamp = item_stats->AimLockSpeed;
 #endif
 
+#ifdef PORT
+    /* Defined in port/src/input.c. Declared here rather than including
+     * port/include/input.h, which pulls in SDL types game code cannot see --
+     * the same pattern other game files use for port functions. */
+    extern int portMouseAimPdGetTurn(f32 *tx, f32 *ty);
+
+    /* Input.PdMouseAim (findings D332): PD's mouse-aim model.
+     *
+     * PD chooses its crosshair damp PER INPUT DEVICE -- its mouse path calls
+     * bgunSwivelWithDamp(x, y, 0.01f) while its stick path uses ~0.945. GE has
+     * one damp for both, and the weapon's CrosshairSpeed (~0.8) is a stick
+     * value: the integrator is what smooths a stick. With a mouse that slow
+     * integrator is what makes the drawn crosshair step, because the port
+     * writes once per input poll while the game damps once per sim tick -- the
+     * displayed value is write*damp^k with k varying (D332). At 0.01 the input
+     * dominates and k stops mattering.
+     *
+     * The port supplies the turn; PD does the same from its own game files
+     * (bondmove.c/bondgun.c, behind #ifndef PLATFORM_N64) calling port
+     * functions. Identity when Input.PdMouseAim is off, and the N64 build
+     * never sees any of it. Behavioural hook, not the ABI exception:
+     * Rule-2 sign-off given by the maintainer 2026-09-23. */
+    if (portMouseAimPdGetTurn(&turn_x, &turn_y)) {
+        guncrossdamp = 0.01f;
+    }
+#endif
+
     caclulate_gun_crosshair_position_rotation(turn_x, turn_y, guncrossdamp, gunaimdamp);
 }
 
@@ -5735,7 +5818,19 @@ void sub_GAME_7F068EC4(CasingRecord *casing, Gfx **gdl)
     ModelFileHeader *model_header = casing->header;
     RenderPosView   *model_matrices = dynAllocate(model_header->numMatrices * sizeof(RenderPosView));
     ModelHead        model;
+#ifdef PORT
+    /* D331 (ABI/layout class; D264/D290 pattern): g_DefaultCasingModelRenderData
+     * is a u32[15] {0, 1, 3, 0..} holding the N64 ModelRenderData template
+     * (basemtx NULL, zbufferenabled TRUE, flags 3). Read as the PC struct
+     * (8-byte basemtx) it gives zbufferenabled 3 / flags 0 -- subdraw() then
+     * draws nothing, so ejected shell casings were invisible -- and the read
+     * runs past the 60-byte array. Use the explicit template. */
+    ModelRenderData  render_data = {0};
+    render_data.zbufferenabled = TRUE;
+    render_data.flags = 3;
+#else
     ModelRenderData  render_data = *(ModelRenderData *)g_DefaultCasingModelRenderData;
+#endif
     Mtxf             casing_model_mtx;
     s32              axis_offset;
     s32              matrix_translation_in_range = TRUE;
@@ -6141,6 +6236,11 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 rightx = 109;
             }
 
+#ifdef PORT
+            /* D335: right-hand ammo anchors to the right edge (native widescreen). */
+            PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_RIGHT);
+            PORT_HUD_SCALE(gdl, viGetViewLeft() + viGetViewWidth(), viGetViewTop() + viGetViewHeight());   /* D226 */
+#endif
             if (weapon_right != ITEM_UNARMED)
             {
                 ammotype = get_ammo_type_for_weapon(weapon_right);
@@ -6207,6 +6307,12 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 }
             }
 
+#ifdef PORT
+            /* D335: left-hand (dual-wield) ammo anchors to the left edge. */
+            PORT_HUD_SCALE_END(gdl);
+            PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_LEFT);
+            PORT_HUD_SCALE(gdl, viGetViewLeft(), viGetViewTop() + viGetViewHeight());   /* D226 */
+#endif
             if (weapon_left != ITEM_UNARMED)
             {
                 ammotype = get_ammo_type_for_weapon(weapon_left);
@@ -6275,6 +6381,10 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
         }
     }
 
+#ifdef PORT
+    PORT_HUD_SCALE_END(gdl);
+    PORT_HUD_ASPECT(gdl, GE_HUD_ASPECT_NONE);
+#endif
     return gdl;
 }
 
@@ -6391,6 +6501,17 @@ void gunDrawSight(s32 *gdl) {
      * stack as the pointer high word → wild `gdl` write in texSetRenderMode
      * when the player raises the crosshair (right-mouse aim). §A. */
     Gfx *sp54;
+    /* D373/D381: opt-in hide/colour/size/style. With the defaults the
+     * original red sprite, 16-unit half-size, and N64 combiner are intact.
+     * Non-PORT builds keep the original literals and control flow. */
+    extern s32 portCrosshairHide;
+    extern void portCrosshairTint(s32 *r, s32 *g, s32 *b);
+    extern void portCrosshairApplyTintCombine(Gfx *envCommand);
+    extern int portCrosshairStyle(void);
+    extern float portCrosshairScale(void);
+    extern struct sImageTableEntry *betacrosshairimage;
+    struct sImageTableEntry *sightimage;
+    s32 crosshair_r, crosshair_g, crosshair_b;
 #else
     s32 sp54;
 #endif
@@ -6399,8 +6520,13 @@ void gunDrawSight(s32 *gdl) {
 
     if ((g_CurrentPlayer->gunsightmode == 0) && (g_CurrentPlayer->mpmenuon == FALSE)) {
 #ifdef PORT
+        if (portCrosshairHide)
+            return;
+        portCrosshairTint(&crosshair_r, &crosshair_g, &crosshair_b);
+        sightimage = portCrosshairStyle() && betacrosshairimage
+            ? betacrosshairimage : crosshairimage;
         sp54 = *(Gfx **)gdl;
-        texSelect(&sp54, crosshairimage, 4, 0, 0);
+        texSelect(&sp54, sightimage, 4, 0, 0);
 #else
         sp54 = *gdl;
         texSelect(&sp54, crosshairimage, 4, 0, 0);
@@ -6410,14 +6536,37 @@ void gunDrawSight(s32 *gdl) {
         xypos[1] = g_CurrentPlayer->crosshair_angle.f[1];
         halfedxy[0] = 16.0f;
         halfedxy[1] = 16.0f;
+#ifdef PORT
+        /* Opt-in size changes only the sprite footprint, never the aim point,
+         * texture dimensions, or the N64/default display list. */
+        halfedxy[0] *= portCrosshairScale();
+        halfedxy[1] *= portCrosshairScale();
+#endif
 
+#ifdef PORT
+        /* D334: native widescreen generalises the N64 16:9 sprite fix
+         * (x0.75 = (4/3)/(16/9)) to the window aspect, so the crosshair
+         * sprite isn't stretched by the canvas-to-window mapping. */
+        extern f32 portNativeAspect(void);
+        if (portNativeAspect() > 0.0f) {
+            halfedxy[0] = halfedxy[0] * ((4.0f / 3.0f) / portNativeAspect());
+        } else
+#endif
         if (get_screen_ratio() == SCREEN_RATIO_16_9) {
             halfedxy[0] = halfedxy[0] * 0.75f;
         }
 #ifdef VERSION_EU
         halfedxy[1] = halfedxy[1] * g_GunSightAspectRatio;
 #endif
+#ifdef PORT
+        Gfx *envCommand = sp54;
+        display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, crosshair_r, crosshair_g, crosshair_b, 0x6E, (sightimage->level > 0), 0);
+        /* D379: only recoloured reticles use the texture-alpha silhouette.
+         * Original (the default) keeps the N64 G_CC_FADEA commands. */
+        portCrosshairApplyTintCombine(envCommand);
+#else
         display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, 0xFF, 0xFF, 0xFF, 0x6E, (crosshairimage->level > 0), 0);
+#endif
 #ifdef PORT
         *(Gfx **)gdl = sp54;
 #else

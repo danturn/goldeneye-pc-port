@@ -170,6 +170,9 @@ docs/img/shots/CONTACT-SHEET.jpg
 /audiodump.raw
 /audiotrace.log
 /mixertrace.log
+# texture-dump probe artifacts (regenerable via GE_TEXDUMP)
+/texdump/
+/texdump_p23_old/
 
 # Claude Code local state / agent worktrees
 .claude/
@@ -188,3 +191,12 @@ build-pyinst/
 # Local working junk (frame captures, timerun state, PPM dumps) - moved here
 # from repo root / scratch on 2026-09-18; never commit.
 /local/
+build-pc-cmd.bat
+
+# v0.4.0 modern-options wave: per-landing sweep capture dirs (capture.sh output)
+tools_pc/sweep-captures/capture-*/
+
+# Stray full CPython install that landed in repo root (2026-09-28);
+# referenced by no project tooling. Never commit.
+/Python/
+docs/media/*.mp4

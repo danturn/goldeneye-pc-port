@@ -11,6 +11,9 @@
 #include <PR/ultratypes.h>
 #include <PR/gbi.h>
 #include "gimgfixup.h"
+extern char *getenv(const char *name); /* D324: no CRT proto via GE stdlib.h */
+#include "envflag.h"
+extern void osSyncPrintf(const char *fmt, ...);
 
 #define GIMG_REGION_SIZE 0x13F8u
 
@@ -99,9 +102,17 @@ void gimgFixupGlobalimagetable(u8 *base)
     }
 }
 
+/* D252 (2026-09-26): which compiled G_SETTIMG slots are IMAGESEG texture
+ * references. Learned on the first sync, while they still hold the 0xABCD
+ * marker; every later sync re-copies exactly these slots. */
+#define GIMG_MAX_CMDS 256
+static u8 s_imgslot[N_DLS][GIMG_MAX_CMDS];
+static int s_imgslot_learned = 0;
+
 void gimgSyncCompiledGlobalDLs(u8 *base)
 {
     int i;
+    int nslots = 0, nchanged = 0; /* D252 TEMP verify counters */
     u8 *end = base + GIMG_REGION_SIZE;
 
     for (i = 0; i < N_DLS; i++)
@@ -110,21 +121,44 @@ void gimgSyncCompiledGlobalDLs(u8 *base)
         Gfx *dst = s_dl_syms[i];
         int j = 0;
 
-        while (p + 8 <= end && p[0] != (u8)G_ENDDL)
+        while (p + 8 <= end && p[0] != (u8)G_ENDDL && j < GIMG_MAX_CMDS)
         {
             /* D68/C2: texLoadFromDisplayList() has already replaced every
              * IMAGESEG w1 word in the ROM copy with a real texture pointer,
-             * so the 0xABCDxxxx marker is gone from `p`. Identify the slots
-             * that need syncing from the COMPILED array instead: a G_SETTIMG
-             * command whose w1 is still an unresolved IMAGESEG marker
-             * (0xABCDxxxx). Copy the ROM copy's resolved word into it. */
-            if ((u8)(dst[j].words.w0 >> 24) == (u8)G_SETTIMG &&
+             * so the 0xABCDxxxx marker is gone from `p`. On the first call,
+             * identify the slots from the COMPILED array instead (a
+             * G_SETTIMG whose w1 is still an unresolved 0xABCDxxxx marker)
+             * and remember them.
+             *
+             * D252: texReset() runs on EVERY stage load and re-resolves the
+             * ROM copy into the new stage's texture pool. The original sync
+             * only ever copied into slots still holding the marker, i.e.
+             * only on the first stage (the title screen). Every later stage
+             * kept the title's pointers into its freed texture pool; once
+             * the new stage's allocations overwrote that memory, explosion
+             * smoke/fire/debris sampled garbage (rainbow particles). Re-copy
+             * the remembered slots on every call, as the N64 does by running
+             * the freshly patched ROM copy directly. */
+            if (!s_imgslot_learned &&
+                (u8)(dst[j].words.w0 >> 24) == (u8)G_SETTIMG &&
                 (dst[j].words.w1 >> 16) == 0xABCDu)
             {
+                s_imgslot[i][j] = 1;
+            }
+            if (s_imgslot[i][j])
+            {
+                nslots++;
+                if ((u32)dst[j].words.w1 != *(u32 *)(p + 4))
+                    nchanged++;
                 dst[j].words.w1 = *(u32 *)(p + 4);
             }
             p += 8;
             j++;
         }
     }
+    s_imgslot_learned = 1;
+    /* D252 TEMP: before the fix, every stage after the first left
+     * `nchanged` explosion texture pointers stale. */
+    if (GE_ENVFLAG("GE_D252POOL"))
+        osSyncPrintf("D252SYNC: %d texture slots re-synced, %d changed\n", nslots, nchanged);
 }

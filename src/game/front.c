@@ -49,6 +49,9 @@
 #include "ob.h"
 #include "gbi_extension.h"
 #include "model.h"
+#ifdef PORT
+#include "hudaspect.h"   /* D335 front-end pillarbox under native widescreen */
+#endif
 
 
 /**
@@ -954,6 +957,9 @@ Gfx *constructor_menu12_mpstage(Gfx *DL);
 Gfx *constructor_menu13_mpscenario(Gfx *DL);
 Gfx *constructor_menu14_mpteams(Gfx *DL);
 Gfx *constructor_menu15_cheat(Gfx *DL);
+#ifdef PORT
+#include "frontoptions.h"   /* D343: MENU_PC_OPTIONS lives in port/src/frontoptions.c */
+#endif
 Gfx *constructor_menu16_nocontrollers(Gfx *DL);
 Gfx *constructor_menu17_switchscreens(Gfx *DL);
 Gfx *constructor_menu18_displaycast(Gfx *DL);
@@ -2203,7 +2209,17 @@ void frontCleanUpWalletBond(void)
 void init_menu05_fileselect(void)
 {
     s32 size = 0x6e000;
+#ifdef PORT
+    /* File-select folders (M-201): the PC wallet model is 0x1664C bytes and
+     * loads at the start of this buffer with a 0x17000 reservation (D45, see
+     * load_walletbond), not N64's 0xA000. Scratch placed after it at the N64
+     * offset 4096*10 landed INSIDE the wallet model, corrupting the folder
+     * body/photo geometry once written. Same N64 budget: 0x85000 - 0x17000
+     * == 0x78000 - 0xA000 == 0x6e000. Layout-only. */
+    Gfx* DL = (Gfx *)(ptr_logo_and_walletbond_DL + 0x17000);
+#else
     Gfx* DL = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+#endif
     int i;
 
     prev_keypresses = FALSE;
@@ -2762,7 +2778,14 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         textMeasure(&textsize.p[1], &textsize.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
         textpos.p[0] = 285 - (textsize.p[1] / 2);
+#ifdef PORT
+        /* D343 (user sign-off 2026-09-27): Copy/Erase shift left to make room
+         * for "PC Options" at the right end of the bar (N64: 247/225/357/335).
+         * D399: whole row shifted a further 15px left (user: "a bit cramped"). */
+        textpos.p[1] = 207;
+#else
         textpos.p[1] = 247;
+#endif
 
         DL = textRender(DL, &textpos.p[1], &textpos.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, -1, viGetX(), viGetY(), 0, 0);
         folder_option_COPY_bound.right = (f32) (textsize.p[0] + textpos.p[1]);
@@ -2774,14 +2797,28 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
 
         textMeasure(&textsize.p[1], &textsize.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
+#ifdef PORT
+        textpos.p[1] = 289;   /* D343: see Copy above; D399: -15 row shift */
+#else
         textpos.p[1] = 357;
+#endif
         textpos.p[0] = 285 - (textsize.p[1] / 2);
 
         DL = textRender(DL, &textpos.p[1], &textpos.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, -1, viGetX(), viGetY(), 0, 0);
 
         folder_option_ERASE_bound.right = (f32) (textsize.p[0] + textpos.p[1]);
 
+#ifdef PORT
+        /* D343: "PC Options" at the right end of this bar; a click enters
+         * MENU_PC_OPTIONS. All logic lives in port/src/frontoptions.c. */
+        DL = optionsFileSelectLabel(DL);
+#endif
+
+#ifdef PORT
+        copypos.f[0] = 185.0f;   /* D343; D399: -15 row shift */
+#else
         copypos.f[0] = 225.0f;
+#endif
         copypos.f[1] = 285.0f;
 
         copyhalfsize.f[0] = (f32) (mainfolderimages + IMG_COPY)->width * 0.5f;
@@ -2794,7 +2831,11 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         folder_option_COPY_bound.up = copypos.f[1] - copyhalfsize.f[1];
         folder_option_COPY_bound.down = copypos.f[1] + copyhalfsize.f[1];
 
+#ifdef PORT
+        erasepos.f[0] = 267.0f;  /* D343; D399: -15 row shift */
+#else
         erasepos.f[0] = 335.0f;
+#endif
         erasepos.f[1] = 285.0f;
 
         erasehalfsize.f[0] = (mainfolderimages + IMG_DEL)->width * 0.5f;
@@ -2807,7 +2848,11 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         folder_option_ERASE_bound.up = (f32) (erasepos.f[1] - erasehalfsize.f[1]);
         folder_option_ERASE_bound.down = (f32) (erasepos.f[1] + erasehalfsize.f[1]);
 
+#ifdef PORT
+        selectpos.f[0] = 95.0f;  /* D399: row shift -15 (was 110) */
+#else
         selectpos.f[0] = 110.0f;
+#endif
         selectpos.f[1] = 285.0f;
 
         selecthalfsize.f[0] = (mainfolderimages + IMG_SEL)->width * 0.5f;
@@ -3461,6 +3506,13 @@ Gfx *constructor_menu07_missionsel(Gfx *DL)
 
     DL = frontAddPreviousTabText(DL);
     DL = frontDrawCursor(DL);
+#ifdef AVOID_UB
+    /* porting-notes D6: the decomp falls off the end of this Gfx*-returning
+     * function and the caller uses the result; N64 and x86-64 GCC -O2 return
+     * frontDrawCursor()'s result by accident of the return register (verified:
+     * identical machine code with and without this line). */
+    return DL;
+#endif
 }
 
 
@@ -6602,7 +6654,15 @@ void load_briefing_text_for_stage(void)
     s32 argg;
 
     // what is this
+#ifdef PORT
+    /* File-select folders (M-201): past the PC wallet model's 0x17000
+     * reservation (see init_menu05_fileselect). The briefing data loaded here
+     * overwrote the wallet model tail -> folder bodies/photos vanished after
+     * backing out of a file. Layout-only. */
+    temp_s0 = (Gfx *)(ptr_logo_and_walletbond_DL + 0x17000);
+#else
     temp_s0 = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+#endif
 
     // alright
     argg = 0x200;
@@ -7500,6 +7560,13 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
     DL = frontAddNextTabText(DL);
     DL = frontAddPreviousTabText(DL);
     DL = frontDrawCursor(DL);
+#ifdef AVOID_UB
+    /* porting-notes D6: the decomp falls off the end of this Gfx*-returning
+     * function and the caller uses the result; N64 and x86-64 GCC -O2 return
+     * frontDrawCursor()'s result by accident of the return register (verified:
+     * identical machine code with and without this line). */
+    return DL;
+#endif
 }
 
 
@@ -8640,6 +8707,9 @@ static const char *d243MenuName(MENU m)
         case MENU_NO_CONTROLLERS:      return "MENU_NO_CONTROLLERS";
         case MENU_DISPLAY_CAST:        return "MENU_DISPLAY_CAST";
         case MENU_SPECTRUM_EMU:        return "MENU_SPECTRUM_EMU";
+#ifdef PORT
+        case MENU_PC_OPTIONS:          return "MENU_PC_OPTIONS";
+#endif
         default:                       return "MENU_<unknown>";
     }
 }
@@ -8745,6 +8815,9 @@ void menu_init(void)
             case MENU_NO_CONTROLLERS:         update_menu16_nocontrollers();        break;
             case MENU_DISPLAY_CAST:           update_menu18_displaycast();          break;
             case MENU_SPECTRUM_EMU:           update_menu19_spectrum();             break;
+#ifdef PORT
+            case MENU_PC_OPTIONS:             frontOptionsMenuUpdate();             break;
+#endif
         }
 
         if (menu_update > MENU_INVALID)
@@ -8798,6 +8871,9 @@ void menu_init(void)
             case MENU_NO_CONTROLLERS:         init_menu16_nocontroller();           break;
             case MENU_DISPLAY_CAST:           init_menu18_displaycast();            break;
             case MENU_SPECTRUM_EMU:           init_menu19_spectrum();               break;
+#ifdef PORT
+            case MENU_PC_OPTIONS:             frontOptionsMenuInit();               break;
+#endif
         }
     }
 
@@ -8827,6 +8903,9 @@ void menu_init(void)
         case MENU_NO_CONTROLLERS:         interface_menu16_nocontrollers();         break;
         case MENU_DISPLAY_CAST:           interface_menu18_displaycast();           break;
         case MENU_SPECTRUM_EMU:           interface_menu19_spectrum();              break;
+#ifdef PORT
+        case MENU_PC_OPTIONS:             frontOptionsMenuInterface();              break;
+#endif
         case MENU_RUN_STAGE:
             if (interface_menu0B_runstage())
             {
@@ -8855,6 +8934,22 @@ void menu_init(void)
 
 Gfx * menu_jump_constructor_handler(Gfx *DL)
 {
+#ifdef PORT
+    /* D335: under native widescreen the front end is 4:3 logical content;
+     * pillarbox it (centred, undistorted) instead of stretching it to the
+     * window. input.c maps the menu pointer into the same centred region. */
+    PORT_HUD_ASPECT(DL, GE_HUD_ASPECT_CENTER);
+    {
+        /* D335a: a full-canvas scissor set while CENTER is active is squeezed
+         * to the pillarbox, so off-canvas draws (the gun-barrel backdrop sliding
+         * in from logical x > 320) clip at the 4:3 edge as they would at the
+         * N64 screen edge instead of painting into the side bars. */
+        extern f32 portNativeAspect(void);
+        if (portNativeAspect() > 1.3334f) {
+            gDPSetScissor(DL++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
+        }
+    }
+#endif
     switch(current_menu) {
         case MENU_LEGAL_SCREEN:
             DL = constructor_menu00_legalscreen(DL);
@@ -8930,8 +9025,28 @@ Gfx * menu_jump_constructor_handler(Gfx *DL)
             break;
         case MENU_SPECTRUM_EMU:
             DL = constructor_menu19_spectrum(DL);
+#ifdef PORT
+            break;
+        case MENU_PC_OPTIONS:
+            DL = frontOptionsMenuDraw(DL);
+#endif
     }
 
+#ifdef PORT
+    PORT_HUD_ASPECT(DL, GE_HUD_ASPECT_NONE);
+    {
+        /* D335a follow-up: fast3d stores the scissor as adjusted when it was
+         * set, so the pillarbox scissor above would persist -- squeezed to the
+         * 4:3 centre -- into the first stage frames after the front end hands
+         * over, clipping anything the stage draws before setting its own
+         * scissor (right-anchored HUD such as the ammo counter vanished).
+         * Re-set the full-canvas scissor with the aspect mode off. */
+        extern f32 portNativeAspect(void);
+        if (portNativeAspect() > 1.3334f) {
+            gDPSetScissor(DL++, G_SC_NON_INTERLACE, 0, 0, viGetX(), viGetY());
+        }
+    }
+#endif
     return DL;
 }
 

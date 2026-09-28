@@ -17,6 +17,9 @@
 #include "config.h"
 #include "audio.h"
 #include "audiotrace.h"
+#ifdef PORT
+#include "envflag.h"   /* cached getenv for hot-path probes */
+#endif
 
 static SDL_AudioDeviceID dev = 0;
 
@@ -85,6 +88,18 @@ static int d204OldMode(void)
 
 int audioInit(void)
 {
+#if defined(_WIN32) && defined(SDL_HINT_AUDIODRIVER)
+    /* D322: prefer DirectSound over SDL2's WASAPI backend on Windows. Measured
+     * side by side on the same USB interface (tools_pc/sdl_drain_monitor.c,
+     * four simultaneous streams, 700 s): WASAPI fell to 81-88 % drain for
+     * ~30-50 s every ~317 s and lost 1.4 % of playback overall, whichever
+     * buffer size was used, while DirectSound drained at exactly real time
+     * throughout. Each WASAPI shortfall overflowed our queue and dropped whole
+     * blocks (the periodic "garbled audio" bursts). WASAPI stays as the
+     * fallback, and the SDL_AUDIODRIVER environment variable still overrides
+     * this (SDL_HINT_NORMAL yields to the environment). */
+    SDL_SetHint(SDL_HINT_AUDIODRIVER, "directsound,wasapi");
+#endif
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         sysLogPrintf(LOG_ERROR, "audioInit: SDL_InitSubSystem: %s", SDL_GetError());
         return -1;
@@ -101,7 +116,8 @@ int audioInit(void)
         return -1;
     }
     SDL_PauseAudioDevice(dev, 0);
-    sysLogPrintf(LOG_INFO, "audioInit: opened SDL audio device at %d Hz", have.freq);
+    sysLogPrintf(LOG_INFO, "audioInit: opened SDL audio device at %d Hz (driver %s)", have.freq,
+                 SDL_GetCurrentAudioDriver() ? SDL_GetCurrentAudioDriver() : "?");
     return 0;
 }
 
@@ -289,7 +305,7 @@ void audioSetNextBuffer(const s16 *buf, u32 len)
      * baseline after quiet sections, is the voice-leak signature; q pinning at
      * queueLimit with drop climbing is the overproduction/queue signature.
      * Cheap (one locked list walk per 5 s) -- safe for a full playtest. */
-    if (getenv("GE_D322")) {
+    if (GE_ENVFLAG("GE_D322")) {
         static u64 d322StartUs = 0, d322NextUs = 0;
         extern void sndD322PoolSummary(s32 *, s32 *, s32 *, s32 *, s32 *, s32 *);
         u64 now = sysGetMicroseconds();

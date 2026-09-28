@@ -2575,8 +2575,27 @@ void texLoad(s32 *updateword, struct texpool *pool)
             // pointer to the start of the pool. It'll be garbage data but the
             // only other option is a crash. GBI commands contain texture IDs
             // instead of pointers, and they must be replaced with pointers.
+#if defined(PORT)
+            /* D252 TEMP (2026-09-26): Facility explosions turn rainbow after the
+             * player passes into the middle of the level (user). Log every new
+             * texture load with pool identity + free bytes, and pool-full
+             * events, to test the pool-exhaustion hypothesis. Load-time only. */
+            {
+                static int d252pool = -1;
+                if (d252pool < 0) d252pool = getenv("GE_D252POOL") != NULL;
+                if (d252pool)
+                    osSyncPrintf("D252POOL load texnum=%d pool=%s free=%d zlib=%d\n",
+                                 (int)g_TexNumToLoad,
+                                 pool == (struct texpool *)&ptr_texture_alloc_start ? "main" : "other",
+                                 (int)texFreeBytesInBuffer(pool), (int)iszlib);
+            }
+#endif
             if ((!iszlib && (texFreeBytesInBuffer(pool) < 0x10CC)) || (iszlib && texFreeBytesInBuffer(pool) < 0xA28)) {
 #if defined(PORT)
+                if (getenv("GE_D252POOL"))
+                    osSyncPrintf("D252POOL POOL-FULL texnum=%d pool=%s free=%d\n", (int)g_TexNumToLoad,
+                                 pool == (struct texpool *)&ptr_texture_alloc_start ? "main" : "other",
+                                 (int)texFreeBytesInBuffer(pool));
                 /* D85: env-gated -- a room rendering with placeholder textures
                  * usually means the stage pool filled up here. */
                 if (getenv("GE_D85TEX"))
