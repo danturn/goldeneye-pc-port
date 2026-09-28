@@ -68,10 +68,13 @@
   (D371/D374/D383/D385).
 
 **Controllers**
-- Crouch now uses the engine's real crouch input (D375); Xbox-variant
-  controller parity (D394); pad invert/deadzone/trigger rows (D237); the
-  F10 overlay is fully gamepad-driven with value-adjust and hold-to-repeat
-  (D347).
+- The default pad layout now matches how the game is actually played:
+  **A uses / interacts, X reloads, Y cycles weapons** (previously two
+  buttons both crouched and there was no in-game use button) (D393);
+  crouch itself now uses the engine's real crouch input (D375); Xbox-
+  variant controller parity (D394); pad invert/deadzone/trigger rows
+  (D237); and the F10 overlay is fully gamepad-driven with value-adjust and
+  hold-to-repeat (D347/D395/D396).
 - **The N64 Rumble Pak now drives real gamepad haptics** on supported pads,
   with a `Rumble strength` slider (D401).
 
@@ -83,14 +86,21 @@
   normally first, and back up `data/ge007.eep` before enabling it** (D387).
   The in-game warning says the same.
 
+**Performance**
+- **The whole game now holds a steady 60 fps.** v0.3.0 could settle at 30
+  fps game-wide on some setups; the cause was a geometry in the frame
+  timing chain, and it's root-caused and fixed (D248). Combined with the
+  v0.3.0 software-RSP work, the campaign runs at a steady 60 with audio.
+
 **Audio**
 - Gunshot SFX cadence now matches the N64 original's rate, and the
   intermittent silence under sustained fire near a looping sound is gone
   (D240/D241).
 - Windows audio now prefers the DirectSound backend over WASAPI for lower,
-  more robust latency (D322), and long-session audio degradation (issue #87)
-  got pool hardening plus an optional `GE_D322=1` telemetry probe if it ever
-  recurs.
+  more robust latency (D322), long-session audio degradation (issue #87) got
+  pool hardening plus an optional `GE_D322=1` telemetry probe if it ever
+  recurs, and the silenced-PPK "slap" plus the broader real-time mixer
+  corruption behind it are fixed (D202).
 - The **particle "rainbow" effect is fixed** (D252): the intermittently
   recoloured explosion/spark particles from v0.3.0 no longer occur.
 
@@ -111,7 +121,10 @@
   narrowed to a subtle filtering residual and the Nintendo logo/copyright
   page renders correctly (D403/D75); the train-intro soldier pose is correct
   (D392); file-select background/gun-barrel comb rendering fixed (D397);
-  stale-texture artifacts after level transitions fixed (D235).
+  stale-texture artifacts after level transitions fixed (D235); the
+  randomly flickering F10 menu items are gone (D314); the watch's
+  controller-page graphic renders again (D290); and file-select folders
+  and Bond photos no longer vanish after backing out of a file (D342).
 - Distant-geometry dropout on the biggest open levels (Streets, Egyptian) is
   substantially improved at default settings (D249).
 
