@@ -86,16 +86,16 @@ without a ROM you already own.
 ## See it running
 
 <p align="center">
-  <img src="img/shots/shot-06.jpg" width="45%" alt="Bunker 1, rendered by the port (v0.2.0 playtest)">
-  <img src="img/shots/shot-01.jpg" width="45%" alt="Dam, rendered by the port (v0.2.0 playtest)">
+  <img src="img/shots/shot-28.jpg" width="45%" alt="Streets, rendered by the port (v0.4.0 intro attract)">
+  <img src="img/shots/shot-01.jpg" width="45%" alt="Dam, rendered by the port (v0.4.0 intro attract)">
 </p>
 
 <details>
-<summary><strong>Full playtest gallery</strong>: 19 in-engine captures from the v0.2.0 Windows playtest, across the campaign</summary>
+<summary><strong>Full gallery</strong>: 16 in-engine captures — 12 from a v0.4.0 intro-attract pass (3072×1728 widescreen, Sep 2026) and 4 from the v0.2.0 playtest</summary>
 
 <p align="center">
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-01.jpg" width="100%" alt="In-engine: Dam (v0.2.0)">
+    <img src="img/shots/shot-01.jpg" width="100%" alt="In-engine: Dam (v0.4.0 intro attract)">
     <div><small>Dam</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
@@ -103,15 +103,11 @@ without a ROM you already own.
     <div><small>Facility</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-03.jpg" width="100%" alt="In-engine: Runway (v0.2.0)">
+    <img src="img/shots/shot-03.jpg" width="100%" alt="In-engine: Runway (v0.4.0 intro attract)">
     <div><small>Runway</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-04.jpg" width="100%" alt="In-engine: Surface (v0.2.0)">
-    <div><small>Surface</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-05.jpg" width="100%" alt="In-engine: Surface (v0.2.0)">
+    <img src="img/shots/shot-04.jpg" width="100%" alt="In-engine: Surface (v0.4.0 intro attract)">
     <div><small>Surface</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
@@ -123,15 +119,11 @@ without a ROM you already own.
     <div><small>Silo</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-09.jpg" width="100%" alt="In-engine: Frigate (v0.2.0)">
+    <img src="img/shots/shot-09.jpg" width="100%" alt="In-engine: Frigate (v0.4.0 intro attract)">
     <div><small>Frigate</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-10.jpg" width="100%" alt="In-engine: Frigate (v0.2.0)">
-    <div><small>Frigate</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-11.jpg" width="100%" alt="In-engine: Surface 2 (v0.2.0)">
+    <img src="img/shots/shot-11.jpg" width="100%" alt="In-engine: Surface 2 (v0.4.0 intro attract)">
     <div><small>Surface 2</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
@@ -139,36 +131,32 @@ without a ROM you already own.
     <div><small>Bunker 2</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-16.jpg" width="100%" alt="In-engine: Statue (v0.2.0)">
+    <img src="img/shots/shot-16.jpg" width="100%" alt="In-engine: Statue (v0.4.0 intro attract)">
     <div><small>Statue</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-19.jpg" width="100%" alt="In-engine: Statue (v0.2.0)">
-    <div><small>Statue</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-20.jpg" width="100%" alt="In-engine: Archives (v0.2.0)">
+    <img src="img/shots/shot-20.jpg" width="100%" alt="In-engine: Archives (v0.4.0 intro attract)">
     <div><small>Archives</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-21.jpg" width="100%" alt="In-engine: Cradle (v0.2.0)">
+    <img src="img/shots/shot-21.jpg" width="100%" alt="In-engine: Cradle (v0.4.0 intro attract)">
     <div><small>Cradle</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-23.jpg" width="100%" alt="In-engine: Cradle (v0.2.0)">
-    <div><small>Cradle</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-24.jpg" width="100%" alt="In-engine: Aztec (v0.2.0)">
+    <img src="img/shots/shot-24.jpg" width="100%" alt="In-engine: Aztec (v0.4.0 intro attract)">
     <div><small>Aztec</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-25.jpg" width="100%" alt="In-engine: Aztec (v0.2.0)">
-    <div><small>Aztec</small></div>
+    <img src="img/shots/shot-27.jpg" width="100%" alt="In-engine: Control (v0.4.0 intro attract)">
+    <div><small>Control</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-26.jpg" width="100%" alt="In-engine: Frigate (v0.2.0)">
-    <div><small>Frigate</small></div>
+    <img src="img/shots/shot-28.jpg" width="100%" alt="In-engine: Streets (v0.4.0 intro attract)">
+    <div><small>Streets</small></div>
+  </div>
+  <div style="width:32%;text-align:center;margin:4px">
+    <img src="img/shots/shot-29.jpg" width="100%" alt="In-engine: Jungle (v0.4.0 intro attract)">
+    <div><small>Jungle</small></div>
   </div>
 </p>
 </details>

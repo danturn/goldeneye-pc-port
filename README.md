@@ -48,6 +48,21 @@ timeline, and an honest account of what worked and what didn't.
   from live v0.4.0 play sessions, opening on the Runway tank.</em>
 </p>
 
+<table align="center" cellspacing="8" cellpadding="0">
+  <tr>
+    <td align="center"><img src="docs/img/shots/shot-28.jpg" width="21%"
+      alt="Streets, rendered by the port (v0.4.0 intro attract)"><br><small>Streets</small></td>
+    <td align="center"><img src="docs/img/shots/shot-01.jpg" width="21%"
+      alt="Dam, rendered by the port (v0.4.0 intro attract)"><br><small>Dam</small></td>
+    <td align="center"><img src="docs/img/shots/shot-03.jpg" width="21%"
+      alt="Runway, rendered by the port (v0.4.0 intro attract)"><br><small>Runway</small></td>
+    <td align="center"><img src="docs/img/shots/shot-24.jpg" width="21%"
+      alt="Aztec, rendered by the port (v0.4.0 intro attract)"><br><small>Aztec</small></td>
+  </tr>
+</table>
+<p align="center"><small>In-engine renders from the v0.4.0 intro attract —
+16 more in the <a href="docs/index.md">project index</a>.</small></p>
+
 ---
 
 ## News
