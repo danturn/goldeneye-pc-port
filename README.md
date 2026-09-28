@@ -3,40 +3,38 @@
 [![CI](https://github.com/jkdansereau/goldeneye-pc-port/actions/workflows/ci.yml/badge.svg)](https://github.com/jkdansereau/goldeneye-pc-port/actions/workflows/ci.yml)
 ![license](https://img.shields.io/badge/license-MIT-ffb454)
 
-[Download](#download) · [Status](#status) · [Roadmap](#roadmap) · [Building](#building) · [Docs](#documentation) · [Legal](#legal)
+<p align="center"><em>GoldenEye 007 (Nintendo 64, 1997) on the PC —
+decompiled, ported, and playable at 60 fps.</em></p>
 
-This is a PC port of _GoldenEye 007_ (Rare, 1997, Nintendo 64) — the
-original N64 game, not the Xbox 360 remaster.
+[Download](#download) · [News](#news) · [Status](#status) · [Roadmap](#roadmap) · [Building](#building) · [Docs](#documentation) · [Legal](#legal)
 
-The game code is the community [decompilation](https://github.com/n64decomp/007):
-the original game reconstructed as C source, compiled here for x86-64. The
-N64's graphics coprocessor (the RSP) is emulated in software, and the
-remaining console hardware — video, audio, controllers, timers, save memory
-— is replaced by a thin porting layer in `port/`. The approach follows the
-[Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark): the same
-Rare engine family, one hardware generation apart.
+A native PC port of _GoldenEye 007_ (Rare, 1997, Nintendo 64), compiled from
+the [GoldenEye 007 decompilation](https://github.com/n64decomp/007): the
+original N64 game running from reconstructed source, not the Xbox 360
+remaster. The N64's graphics coprocessor (RSP) is emulated in software; every
+other hardware surface (video, audio, input, timers, save storage) is shimmed
+in a dedicated `port/` layer, following the architecture of the
+[Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the same
+Rare "Indy" engine family, one hardware generation apart.
 
-**News:**
+**v0.4.0** (released 2026-09-28) is out for Windows and Linux (including
+Steam Deck, where the Linux bundle sideloads as-is). It is the most complete
+release to date: the full campaign runs at a steady 60 fps with the known
+issues now few and mostly cosmetic ([Status](#status)). Free to download,
+build on and modify (you bring the ROM).
 
-- **2026-09-28** — v0.4.0 released for Windows and Linux (the Linux bundle
-  runs unmodified on Steam Deck). The full campaign plays at 60 fps, and
-  this release was playtested end to end; the remaining known issues are
-  listed under [Status](#status). The bundles are free to download and
-  modify; you supply the ROM.
-
-**This is a pre-1.0 release, not a finished product.** It plays the complete
-game, but expect rough edges, missing features, and occasional breaking
-changes before 1.0. [Status](#status) lists what works and what does not;
-[Roadmap](#roadmap) outlines the direction.
+**This is a pre-1.0 release, not a finished product.** v1.0 is the target
+for a polished, feature-complete build; until then, expect missing features
+and the occasional breaking change between versions. See [Status](#status)
+for what works today and [Roadmap](#roadmap) for where this is headed.
 
 **AI disclosure:** development here was agentic - Claude Pro plus a local
 open-weight model on a single RTX 5090, as of August–September 2026. This
 project is as much a study of *that process* as it is a port: whether
 current LLMs can carry a codebase like this, and what actually goes wrong
-along the way. Judge the result for yourself.
-Development is directed by a single maintainer working in spare time, not a
-team. See [Background](#background) for the full setup, timeline, and an
-honest account of what worked and what didn't.
+along the way. Judge the result for yourself. I'm one person doing this in my
+spare time, not a team. See [Background](#background) for the full setup,
+timeline, and an honest account of what worked and what didn't.
 
 > [!IMPORTANT]
 > **You must supply your own GoldenEye 007 ROM.** This repository contains no
@@ -49,6 +47,23 @@ honest account of what worked and what didn't.
   <br><em>All in-engine, running in the port — a ~12&nbsp;s gameplay montage
   from live v0.3.0 play sessions.</em>
 </p>
+
+---
+
+## News
+
+- **2026-09-28** — **v0.4.0**: native widescreen, a complete aim system for
+  mouse and controller, in-game key rebinding, crosshair customization,
+  rumble-pak haptics, a rebuilt options overlay, and a broad fidelity-fix
+  pass (water, particles, billboard trees, front-end logo, gunshot SFX, a
+  true stable 60 fps). [Release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases/tag/v0.4.0) ·
+  [downloads](#download).
+- **2026-09-20** — **v0.3.0**: the first release with the complete campaign
+  playable end to end at 60 fps on Windows, Linux, and Steam Deck.
+  [Release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases/tag/v0.3.0).
+- **2026-09-04 → 2026-09-16** — **v0.1.0 – v0.2.2**: the alpha and beta
+  cycle — build chain, software RSP, first rendered frames, front end, and
+  per-level stabilization across the campaign.
 
 ---
 
@@ -75,19 +90,22 @@ included or distributed. Then:
 2. Make a `data/` folder next to the executable and drop the ROM in as `ge007.ntsc-final.z64`.
 3. Launch the executable from that folder. The first run takes a few extra seconds: it detects the ROM and generates the derived asset folders once (no Python or other tooling needed).
 
-Read the [Status](#status) caveats first: v0.4.0 has known rough edges,
-listed plainly there.
+Read the [Status](#status) section first: the small number of known issues
+in this release are listed plainly there.
 
 ---
 
 ## Status
 
-**v0.4.0 - playable, with known rough edges.** The full single-player
-campaign is completable end to end (all 20 missions, Agent difficulty,
-playtested), at a steady 60 fps; all 20 solo missions — plus the
-end-of-campaign credits sequence — load, render and run crash-free, verified
-on Windows, Linux and real Steam Deck hardware. Feedback and bug reports
-are welcome — open an issue.
+**v0.4.0 - fully playable, with a small set of known caveats.** The full
+single-player campaign is completable end to end (all 20 missions, Agent
+difficulty, playtested), at a steady 60 fps; all 20 solo missions — plus
+the end-of-campaign credits sequence — load, render and run crash-free,
+verified on Windows, Linux and real Steam Deck hardware. The most common
+defect classes from earlier releases — particle colour drift, water seams,
+z-fighting, billboard trees, muzzle flashes, the front-end Nintendo logo,
+gunshot SFX — are fixed in this version; what remains is a short list,
+below. Feedback is very welcome.
 
 What a release actually installs (no networking, no telemetry, no ROM or
 game assets shipped) and how faithfully the port tracks the original N64
@@ -107,8 +125,9 @@ crosshair customization (opt-in); Bond is fixed in cutscenes (no more
 floating or spin-glitching) and his third-person model positioning generally
 is right the large majority of the time now, at most a small drift when off; file-backed saves; faithful N64 progression
 by default (F10 → *All unlocked* opens every level, 007 mode and the full
-cheat menu); F10 in-game options overlay (display, audio, gameplay, HUD;
-resolution, frame cap, MSAA, filtering, FOV, sensitivity); Windows and
+cheat menu); F10 in-game options overlay (video, input, gameplay, HUD,
+graphics, audio; frame cap, MSAA, filtering, FOV, sensitivity, key rebinding,
+crosshair, vibration); Windows and
 Linux, including Steam Deck.
 
 **Known issues:**
@@ -142,23 +161,23 @@ and the finding log in [`docs/dev/findings.md`](docs/dev/findings.md).
 
 The Linux bundle is the Deck build. SFTP it over from your PC, or download
 it straight from the [releases page](https://github.com/jkdansereau/goldeneye-pc-port/releases) on the Deck itself:
-unzip, drop your ROM in `data/`, launch it once (the first run generates the
+extract, drop your ROM in `data/`, launch it once (the first run generates the
 derived assets), and add the executable as a non-Steam game. SDL2 is bundled, so no dependencies need
 installing. On SteamOS the first launch seeds `ge007.ini` with Deck-friendly
 defaults: native 1280×800 fullscreen, VSync, 2× MSAA, and 250% draw/LOD
-distance (the N64-authored fade distances read short on the close-up 7" panel);
-everything is changeable in the options overlay and persists afterwards.
-**Do that first launch in Game Mode, not Desktop Mode** — an ini created by
-an earlier Desktop Mode launch (e.g. while testing before adding it as a
-Steam shortcut) permanently skips the Deck preset, since any existing ini
-always wins over it (D283). If your resolution isn't 1280×800 on first
-Game Mode boot, just set it manually: F10 → *Resolution*. The renderer is
-CPU-bound (software RSP); expect original N64-era
-performance at 60 fps rather than more. This release was playtested on real
-Deck hardware; the v0.1.0-era Facility crash (D203) did not recur: its root
-cause was identified and fixed (D253), and a separate intermittent SIGSEGV
-in heavy firefights/terminal destruction (D255) and an audio-thread crash
-(D305) are both fixed and live-verified on real hardware as of this release.
+distance (the N64-authored fade distances read short on the close-up 7"
+panel); everything is changeable in the options overlay and persists
+afterwards. **Do that first launch in Game Mode, not Desktop Mode** — an ini
+created by an earlier Desktop Mode launch (e.g. while testing before adding
+it as a Steam shortcut) permanently skips the Deck preset, since any
+existing ini always wins over it (D283). If your resolution isn't 1280×800
+on first Game Mode boot, just set it manually: F10 → *Resolution*. The
+renderer is CPU-bound (software RSP); expect original N64-era performance at
+60 fps rather than more. This release was playtested on real Deck hardware;
+the v0.1.0-era Facility crash (D203) did not recur: its root cause was
+identified and fixed (D253), and a separate intermittent SIGSEGV in heavy
+firefights/terminal destruction (D255) and an audio-thread crash (D305) are
+both fixed and live-verified on real hardware as of this release.
 
 **In-game settings on the Deck.** The options overlay is fully gamepad-driven:
 it opens with **Select**, the D-pad or left stick (up/down) moves between
@@ -171,8 +190,8 @@ overlay is `F10` + arrows/Enter.
 
 ## Roadmap
 
-No committed timeline — this is spare-time work. Directionally, on the way
-to 1.0:
+No fixed timeline or committed feature list — this is spare-time work — but
+directionally, on the way to v1.0:
 
 - Working through the [known issues](#status) above and the fuller list in
   [`docs/dev/findings.md`](docs/dev/findings.md).
@@ -218,8 +237,8 @@ asset pipeline, first frames), and **Claude Code** (Sonnet 5, Opus 5 for the
 hardest bugs) joining for the collaborative phase (the 21-level sweep, the
 ABI finding catalog, SDL input, front end), handing work back and forth
 through shared written notes, directed by one person part-time. In short:
-43 days (16 Aug – 28 Sep), 981 commits, 283 findings root-caused and
-logged (`D1`–`D405`).
+43 days (16 Aug – 28 Sep), 981 commits, 283 findings root-caused and logged
+(`D1`–`D405`).
 
 The full write-up (timeline, handoff mechanism, effort breakdown, an honest
 "what worked / what didn't"): [`docs/dev/agentic-development.md`](docs/dev/agentic-development.md).
@@ -342,20 +361,17 @@ lives in `ge007.eep`. Launch with `-fresh` to wipe both before starting
 | Next weapon         | Mouse wheel down / `Q`   | Y             |
 | Previous weapon     | Mouse wheel up           | —             |
 | Start               | `Enter` / `Tab`          | Start         |
-| Options overlay     | `F10`                    | Back (A selects/toggles; B backs; D-pad/stick left/right adjusts sliders; Start closes) |
+| Options overlay     | `F10`                    | Select (A toggles/steps; B backs; D-pad/stick adjusts sliders; Start closes) |
 
-Gameplay follows the Xbox **1.1 Jinx** button roles in the user-provided
-[StrategyWiki control table](https://strategywiki.org/wiki/GoldenEye_007/Controls):
-A use, X reload, B gadget cycle, Y weapon cycle, either stick click crouch,
-LB/LT aim and RT fire. The PC gadget cycle selects the next owned gadget in
-the N64 inventory; the user has confirmed the gameplay buttons on a physical
-pad, but exact gadget-category parity remains unaudited. In menus A
-accepts and B cancels. RB's *updated graphics* toggle cannot be provided by
-the original N64 port (no remastered assets); it is reserved. Back opens PC
-options rather than Xbox's *view scores*; exact menu parity is not claimed.
-The other Xbox schemes (1.2 Christmas, 1.3 Frost, 1.4 Elektra) are planned,
-not yet selectable. Keyboard → Bindings edits **keyboard/mouse
-only**; a controller can navigate those pages and use B to go back, but
+The default layout is the GEPD-style preset on the keyboard and the standard
+dual-stick scheme on controllers (left stick move, right stick look,
+triggers fire/aim, A use, X reload, B gadget cycle, Y weapon cycle, stick
+click crouch). The watch gadget cycle selects the next owned gadget in the
+N64 inventory. The controller layout matches Rare's Xbox 1.1 (Jinx) button
+roles (user-tested on a physical pad; D394), and the remaining Xbox schemes
+(1.2 Christmas, 1.3 Frost, 1.4 Elektra) are planned as selectable presets
+and not yet available. Keyboard → Bindings edits **keyboard/mouse only**; a
+controller can navigate those pages and use B to go back, but
 controller-button rebinding is not supported yet.
 
 Mouse sensitivity, Y-inversion and the aim/turn split are tunable in the
@@ -508,4 +524,4 @@ is covered by [`NOTICE`](NOTICE), not by that license.
 
 ---
 
-*Last updated 2026-09-28 — v0.4.0.*
+*Last updated 2026-09-28 — v0.4.0 · <a href="https://github.com/jkdansereau/goldeneye-pc-port">GitHub</a> · <a href="https://github.com/jkdansereau/goldeneye-pc-port/releases">Releases</a>*

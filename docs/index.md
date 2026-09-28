@@ -5,32 +5,40 @@ title: GoldenEye 007 PC Port
 # stretched-widescreen/gunshot items all fixed; D335b F10-overlay stretch is
 # the new widescreen residual). Description kept short (Bing's 160 limit).
 description: >-
-  A native PC port of the 1997 N64 classic, built from decompiled source with
-  a software RSP. v0.4.0 for Windows, Linux and Steam Deck.
+  A native PC port of GoldenEye 007 (Nintendo 64, 1997), built from
+  decompiled source with a software RSP. v0.4.0 for Windows, Linux and
+  Steam Deck.
 ---
 
-A native PC port of the original 1997 Nintendo 64 _GoldenEye 007_, compiled
-from the game's [decompiled source](https://github.com/n64decomp/007) with the
-N64's graphics coprocessor (RSP) running in software, the same architecture
-as the [Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the
-same Rare "Indy" engine family, one hardware generation apart.
+A native PC port of _GoldenEye 007_ (Rare, 1997, Nintendo 64), compiled from
+the [GoldenEye 007 decompilation](https://github.com/n64decomp/007): the
+original N64 game running from reconstructed source, not the Xbox 360
+remaster. The N64's graphics coprocessor (RSP) is emulated in software; every
+other hardware surface (video, audio, input, timers, save storage) is shimmed
+in a dedicated `port/` layer, following the architecture of the
+[Perfect Dark PC port](https://github.com/fgsfdsfgs/perfect_dark), the same
+Rare "Indy" engine family, one hardware generation apart.
 
-[Download](#download) · [See it running](#see-it-running) · [Honest status](#honest-status) · [Documentation](#documentation)
+[Download](#download) · [News](#news) · [See it running](#see-it-running) · [Honest status](#honest-status) · [Documentation](#documentation)
 
-**Status: v0.4.0.** The full single-player campaign runs at a rock-stable
-60 fps and is completable end to end (all 20 missions playtested on Windows
-and Steam Deck). This release adds **native widescreen** (on by default —
-undistorted world at your display's aspect, 4:3 menus pillarboxed), a
-**complete aim system** (N64 or centred PC style, for mouse *and*
-controller), **in-game key rebinding** with a GEPD-style default layout,
-**crosshair customization**, real **rumble-pak haptics** on supported
-gamepads, and a **rebuilt options overlay** with fine-tuning rows (frame cap,
-MSAA, draw/LOD distance, HUD scale). The remaining rough edges are few and
-mostly cosmetic — listed plainly under [Honest status](#honest-status).
+**Status: v0.4.0 (2026-09-28) — fully playable, with a small set of known
+caveats.** The full single-player campaign runs at a steady 60 fps and is
+completable end to end (all 20 missions, plus the ending-credits sequence,
+playtested on Windows, Linux and Steam Deck). It is the most complete release
+to date: **native widescreen** (on by default — undistorted world at your
+display's aspect, 4:3 menus pillarboxed), a **complete aim system** (N64 or
+centred PC style, for mouse *and* controller), **in-game key rebinding** with
+a GEPD-style default layout, **crosshair customization**, **rumble-pak
+haptics** on supported gamepads, and a **rebuilt options overlay** with
+fine-tuning rows (frame cap, MSAA, draw/LOD distance, HUD scale). The most
+common defect classes from earlier releases — particle colour drift, water
+seams, z-fighting, billboard trees, muzzle flashes, the front-end Nintendo
+logo, gunshot SFX — are fixed in this version; what remains is a short list,
+under [Honest status](#honest-status).
 
 **This is a pre-1.0 release, not a finished product** — v1.0 is the target
-for a polished, feature-complete build; expect rough edges and missing
-features until then. See the
+for a polished, feature-complete build; expect missing features and the
+occasional breaking change until then. See the
 [README's Roadmap section](https://github.com/jkdansereau/goldeneye-pc-port#roadmap)
 for direction (PAL/JP support, controller-button rebinding, LAN multiplayer
 under consideration, and more).
@@ -40,6 +48,21 @@ under consideration, and more).
        alt="~12 s gameplay montage from live play sessions">
   <br><em>~12 s gameplay montage from live v0.3.0 play sessions, running in the port.</em>
 </p>
+
+## News
+
+- **2026-09-28** — **v0.4.0**: native widescreen, a complete aim system for
+  mouse and controller, in-game key rebinding, crosshair customization,
+  rumble-pak haptics, a rebuilt options overlay, and a broad fidelity-fix
+  pass (water, particles, billboard trees, front-end logo, gunshot SFX, a
+  true stable 60 fps). [Release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases/tag/v0.4.0) ·
+  [downloads](#download).
+- **2026-09-20** — **v0.3.0**: the first release with the complete campaign
+  playable end to end at 60 fps on Windows, Linux, and Steam Deck.
+  [Release notes](https://github.com/jkdansereau/goldeneye-pc-port/releases/tag/v0.3.0).
+- **2026-09-04 → 2026-09-16** — **v0.1.0 – v0.2.2**: the alpha and beta
+  cycle — build chain, software RSP, first rendered frames, front end, and
+  per-level stabilization across the campaign.
 
 ## Download
 
