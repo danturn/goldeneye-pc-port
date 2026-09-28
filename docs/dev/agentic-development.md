@@ -11,6 +11,10 @@ work back and forth through shared written notes, under one person's
 part-time direction. The goal, the setup, the timeline, and an honest read on
 what did and didn't work.*
 
+> *Snapshot as of the v0.3.0 milestone (20 Sep 2026; findings through D321).
+> v0.4.0 (28 Sep) extended the timeline with the options/input work -- the
+> README's Background section carries the final project numbers.*
+
 ## Contents
 
 - [Why this project exists](#why-this-project-exists)
