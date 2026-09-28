@@ -7,7 +7,7 @@ D43-D50,RESOLVED,"model-file loading → offline sidecar ""Plan B"" (d43_emit.py
 D51-D58,RESOLVED,"font pixeldata, osGetCount tick rate, model RW pools, cseq BE header, synth slots, RLE menu bg, watch raw offsets, gun-barrel DL",resolved
 D59-D68,RESOLVED,"intro render: blood-RLE clobber, DMA validate, OSMesgQueue, HEADS/BODIES sentinels, romCopy width, image_entry, Globalimagetable BE→LE",resolved
 D70-D74,RESOLVED,"intro-logo pixels: C-array bswap, UV path, sinf/cosf DVAL(), texture-import truncation",resolved
-D75,FIXED,front-end 3D model transforms (D77 audio split out below —,"FIXED (M-197, 2026-09-21; user-confirmed live):"
+D75,PARTIAL,front-end 3D model transforms (D77 audio split out below —,PARTIAL (M-197 fixed the logo texture blobs; v0.4.0 campaign 2026-09-28:
 D76 · D164,FIXED,Legal screen only draws line 1 —,"FIXED — this row and the ## D164 entry below were stale; the proposed one-line #ifdef PORT fix was actually committed 8dfc578f4 (2026-08-31), well before this correction (2026-09-18)."
 D159,FIXED,"front-end wallet-Bond photo ""interlaced""/combed (RC1 / D149) —",FIXED (#ifdef PORT no-op the swap in image.c)
 D161,FIXED,Depot (-level_30) ceiling = bright-blue speckle + radial rays (B2).,FIXED (port/fast3d/gfx_pc.cpp)
@@ -56,7 +56,7 @@ D152+,FIXED,D152 addendum (M-31):,"FIXED (src/snd.c, port/src/libultra.c, #ifdef
 D168,FIXED,GE_PCDUMP / F12 PPM captures were vertically flipped —,FIXED (port/fast3d/gfx_opengl.cpp); D114 / D116 reclassified as capture-orientation artifacts (below).
 D169,FIXED,Front-end mouse pointer can't reach the outer cells of the mission/level-select grid —,"FIXED (M-33, port/src/input.c, port-only, no #ifdef PORT)."
 D178,FIXED,Pre-mission briefing screen:,FIXED (M-36) — high confidence
-D175,OPEN,In-game stutter / brief hang during normal play —,"OPEN (user, 2026-09-26:"
+D175,CLOSED,In-game stutter / brief hang during normal play —,"CLOSED (v0.4.0 campaign sign-off 2026-09-28, user:"
 D176,FIXED,"Surface exterior renders wrong (-level_36), two independent defects.","(a) scroll-speed FIXED (fidelity pass; HIGH confidence on root cause, MODERATE on N64 parity); M-93 playtest + M-98 Defect-2 starburst screenshot in the sections."
 D177,FIXED,Ladders non-functional —,FIXED (M-36) — high confidence; interactive climb test owed
 D172,FIXED,"Bullet-impact / blood / spark particles render magenta or cyan instead of dark red (M-82, ROOT CAUSE FOUND + FIXED).",FIXED (port/fast3d/gfx_pc.cpp gfx_lod_tile_offset)…
@@ -137,15 +137,15 @@ D236,CLOSED,"Surface 1: 2D billboard trees render as a wall/sheet of tree textur
 D237,FIXED,"QoL ask (M-106, user QA):","FIXED (2026-09-23): category headers + 5 more settings (SkipIntro, Show FPS, pad invert/deadzone/trigger); wheel scroll already existed."
 D238,FIXED,"QoL ask (M-106, user QA):",FIXED (2026-09-26: covered by D337/D338 aim work; user reports mouse feel good; code-side validation owed).
 D239,CLOSED,"QoL ask (M-106, user QA):",CLOSED — executed in the v0.2.0 prep pass (port-only)…
-D240,OPEN,"Player gunshot SFX timing/cadence reportedly does not match the N64 original's rate (M-106, user QA report).","OPEN — not root-caused; static call-site tracing only, no runtime verification possible in this environment."
-D241,OPEN,Player gunshot SFX goes silent under some conditions —,"OPEN — not newly root-caused; high confidence this is D207 reproduced, not an independent bug."
+D240,CLOSED,"Player gunshot SFX timing/cadence reportedly does not match the N64 original's rate (M-106, user QA report).","CLOSED (v0.4.0 campaign sign-off 2026-09-28, user:"
+D241,CLOSED,Player gunshot SFX goes silent under some conditions —,"CLOSED as the D207 family (v0.4.0 campaign sign-off 2026-09-28, user:"
 D242,FIXED,Player-death sequence UX regression vs N64 original:,"FIXED/CLOSED (2026-09-26, user:"
 D243,FIXED,"Dam end-of-level cutscene (the abseil/bungee sequence, D148/D160's subject):","FIXED, live-confirmed by the user (M-189/M-190, 2026-09-18)."
 D245,FIXED,IsWater water: two competing patterns with a visible seam that moves as the player looks around (mouse/aim) —,"FIXED (M-201, 2026-09-26, user-verified vs 1964):"
 D246,FIXED,"Tiny pixel strips at the left and right edges of the screen, ""like overscan"" —","FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
 D247,FIXED,Black bars top and bottom of screen —,"FIXED (2026-09-18 session, port-only, Video.SafeAreaCrop)."
 D248,FIXED,"Port runs a stable 30 FPS instead of 60 FPS game-wide (M-117, user asked to verify FPS after the D209 timing-keystone fixes).","FIXED, root-caused to a genuine pointer-width ABI bug in src/sched.c (compiled for the PC build, not excluded)."
-D249,OPEN,"LOD/culling breaks down on large open levels (Streets, Egyptian named specifically) at *default* FOV —","OPEN — M-142 static review ruled out the unscaled-far-clip and LOD-multiplier suspects (both already correct); narrowed to the portal/room-visibility BFS, needs a live screenshot+location, not more c…"
+D249,OPEN,"LOD/culling breaks down on large open levels (Streets, Egyptian named specifically) at *default* FOV —","OPEN — M-142 static review ruled out the unscaled-far-clip and LOD-multiplier suspects (both already correct); CLOSED (v0.4.0 campaign sign-off 2026-09-28, user:"
 D250,FIXED,"FPS is inconsistent/low on many levels after 60 Hz shipped (M-119, user QA; D248 follow-on).","FIXED — per-call getenv() cost was the bottleneck; rock-steady 60-61 fps after, user re-tested 1440p/4K clean."
 D251,FIXED,F10 options overlay QoL pass:,"FIXED (port-only, port/src/optionsoverlay.c)."
 D252,FIXED,"Particle effects cycle through a rainbow palette (M-124, user playtest of the v0.2.0-pre candidate).","FIXED (M-201, 2026-09-26, user-verified):"
@@ -161,7 +161,7 @@ D262,FIXED,v0.2.1 (user report):,"FIXED (primary cause, D264) —"
 D264,FIXED,"D262's root cause (ABI/layout class, cf.","FIXED — build green, probes removed; visual confirmation pending."
 D263,RESOLVED,v0.2.1 (user report):,"RESOLVED (not a bug), refined (v0.2.1 further user testing, 2026-09-15)."
 D265,CLOSED,"D236 investigation (port-layer, port/fast3d/gfx_pc.cpp):",CLOSED (2026-09-26 bookkeeping:
-D258,OPEN,PAL/JP asset conversion is broken at the source-data level —,"OPEN — repair path verified, not applied (out of v0.2.0 scope)."
+D258,PROPOSED,PAL/JP asset conversion is broken at the source-data level —,DEFERRED (user call 2026-09-28:
 D284,FIXED,port/src/random.c's MIPS64 dsll32/dsrl32 shift helpers were backwards —,"FIXED, 21-level sweep clean, no crashes —"
 D285,FIXED,Steam Deck SIGSEGV during D255 live-testing = SEPARATE bug:,"FIXED (user, 2026-09-26:"
 D286,CLOSED,"User-confirmed real ~8s frame freeze on Caverns, Steam Deck —","CLOSED (2026-09-26, user-approved:"
@@ -223,11 +223,11 @@ D342,FIXED,"File select: folder bodies and Bond photos vanish after selecting a 
 D343,FIXED,"File select: PC ""Options"" label opens the settings overlay (v0.4.0 feature, M1 of the route-B options screen, 2026-09-27); also fixes F10 on file select jumpin…","FIXED (M1, closed): one Rule-2 #ifdef PORT draw hook (user sign-off 2026-09-27); headless + user-verified (mouse, F10, >30 s, widescreen, physical controller on the bottom-bar label and options scree…"
 D344,FIXED,Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during game test runs; probable cause:,"FIXED (probable cause; orderly quit + GE_QUITFRAME), headless + user-verified; no dump, watch for recurrence."
 D345,FIXED,"Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select setCursorPOSforMode(0), front.c:2516; every MENU_PC_OPTIONS p…","Port-only, user-verified (parts a–g):"
-D346,PARTIAL,PC-settings wording pass:,Port-only display change landed (optionsoverlay.c rows[]/valueText + one colour match in frontoptions.c); both UIs (F10 overlay + options screen) share the table.
+D346,CLOSED,PC-settings wording pass:,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D347,FIXED,F10 overlay controller:,"FIXED (port-only, optionsoverlay.c):"
 D348,?,"File-select ""PC Options"" label:",SUPERSEDED by D398 (glyph replaced with the IMG_DOT texture; no new art).
-D349,PARTIAL,GE watch settings are not normally saved to the Bond file:,ANALYZED (static decomp audit):
-D350,PARTIAL,Watch-backed PC options:,"PARTIAL (implemented; user reports tests good, review pending):"
+D349,CLOSED,GE watch settings are not normally saved to the Bond file:,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D350,CLOSED,Watch-backed PC options:,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D351,FIXED,Existing D346 value/unit rows had positional initializers shifted into hidePtr:,"FIXED (port-only): designated row initializers restore unit, deadzone divisor and hide-if-auto fields; build clean, headless smoke clean."
 D352,FIXED,D350 review of 1303c0eb:,"FIXED (port-only, port/src/watchsettings.c):"
 D353,FIXED,Turok-style settings regrouping:,"FIXED (port-only, optionsoverlay.c/frontoptions.c):"
@@ -235,49 +235,49 @@ D354,FIXED,Front-end F10 Bond rows silently disabled:,"FIXED (port-only, port/sr
 D355,FIXED,F10/options Music slider inaudible in-stage:,"FIXED (port-only, port/src/watchsettings.c):"
 D356,FIXED,"Settings regroup: Turok-style pages renamed to functional sections (INPUT/GAMEPLAY/GRAPHICS/AUDIO/VIDEO) with PD-style ""(File N)"" scoping annotations, the redu…","FIXED (port-only, port/src/optionsoverlay.{h,c} + port/src/watchsettings.{h,c} + port/src/frontoptions.c; plan docs/dev/D356-SETTINGS-REGROUP-PLAN.md):"
 D358,FIXED,D356 level-1 overlap:,"FIXED (port-only, port/src/frontoptions.c):"
-D359,PARTIAL,"Settings UI file terminology settled on the end-user term ""Profile"":","LANDED (port-only, frontoptions.c + optionsoverlay.c + comments):"
-D360,OPEN,F10 INPUT heading scrolled away; F10 navigation and distance defaults (2026-09-27).,IMPLEMENTED (port-only):
+D359,CLOSED,"Settings UI file terminology settled on the end-user term ""Profile"":",CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D360,CLOSED,F10 INPUT heading scrolled away; F10 navigation and distance defaults (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D361,FIXED,Main-menu F10 Audio freezes the game:,"FIXED (port-only, port/src/watchsettings.c + F10 probe in optionsoverlay.c):"
 D362,CLOSED,F10 GoldenEye dossier-style visual refresh (2026-09-27).,CLOSED (superseded by D363 after user playtest):
 D363,FIXED,F10 return to a dark overlay with the N64 watch's green/Bank Gothic visual language (2026-09-27).,"FIXED (palette/font user-approved, 2026-09-27); D364 follows up on profile tags, click alignment and slider calibration."
 D364,FIXED,Settings UI feedback:,FIXED (user mostly accepted; D365 follows up on annotation size and click targets).
-D365,OPEN,F10 annotation hierarchy and visible mouse change targets (2026-09-27).,IMPLEMENTED (optionsoverlay.c):
-D366,PARTIAL,Input calibration label:,PARTIAL: label changed in both UIs; numeric parity with external GEPD bundle needs its actual settings before changing input defaults.
+D365,CLOSED,F10 annotation hierarchy and visible mouse change targets (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D366,CLOSED,Input calibration label:,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D367,?,F10 full-width control boxes misaligned with their contents (2026-09-27).,SUPERSEDED by D368 after user playtest:
 D368,?,Simplify F10 click targets:,"INPUT RULE KEPT; tinted strips user-rejected, removed in D369."
 D369,FIXED,Remove F10 row boxes/strips entirely (2026-09-27).,FIXED (awaiting live acceptance):
-D370,PARTIAL,F10 distance/volume drags hurt frame rate (2026-09-27).,PARTIAL (user live test):
+D370,CLOSED,F10 distance/volume drags hurt frame rate (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D371,FIXED,"GEPD key-layout preset + reload/crouch bindings, v0.4.0 modern options wave M3 (2026-09-27).",FIXED (headless-verified; awaiting user live accept):
 D372,FIXED,"Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).",FIXED (headless-verified; awaiting user live accept):
 D373,FIXED,"In-game crosshair on/off + colour (v0.4.0 modern options wave M2, 2026-09-27).",FIXED (user live-tested; rule-2 sign-off recorded 2026-09-27):
 D374,FIXED,"GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27).",FIXED (headless + user live-tested):
-D375,PARTIAL,Crouch wired to the wrong pad bit:,"PARTIAL; single-controller keyboard fixed, but gamepad B/Y still emitted B (D376)."
-D376,PARTIAL,Crouch follow-up + modern-options spot check (2026-09-27).,"PARTIAL: gamepad B/Y mapping corrected, but aim gate was inappropriate for GEPD-style free crouch; superseded by D377."
+D375,CLOSED,Crouch wired to the wrong pad bit:,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D376,CLOSED,Crouch follow-up + modern-options spot check (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D377,FIXED,GEPD independent crouch (2026-09-27).,FIXED (scripted stance verified; user says live crouch was good; pad/hold-vs-toggle specifics owed):
 D378,FIXED,GEPD use/reload separation (2026-09-27).,FIXED (headless edges tested; user says E/R seemed good; targeted door/partial-mag cases owed):
 D379,FIXED,Crosshair colour: authored texture is red (2026-09-27).,FIXED (cyan frame capture; live yellow/blue recheck owed):
 D380,FIXED,One PC keyboard layout; PD-style rebind design (2026-09-27).,FIXED (follow-up D383):
-D381,PARTIAL,"RULE-2-SIGNOFF: opt-in RGB, size and Beta crosshair (2026-09-27).",PARTIAL (scripted captures + informal user report crosshair looks good; specific size/colour/style and visual gate owed):
-D382,PARTIAL,Crosshair menu placement and slider hitches (2026-09-27).,PARTIAL (NTSC build + isolated boot; user thinks slider performance fixed; no timing measurement):
-D383,PARTIAL,PD-style keyboard rebinding in both options UIs (2026-09-27).,"PARTIAL (user found A/D/C front-menu regression, D384 repair pending live retest):"
-D384,PARTIAL,Front PC Options key-bind navigation feedback + two-slot UI (2026-09-27).,"PARTIAL (NTSC build, isolated probes, user said fresh-settings retest looks good; visual gate owed):"
-D385,PARTIAL,Real mouse 1–5 action rebinding in the two-slot editor (2026-09-27).,"PARTIAL (NTSC build + isolated probes; user spotted wrong Aim default, D386):"
-D386,PARTIAL,Correct Aim default from SDL middle (Mouse 2) to right (Mouse 3) (2026-09-27).,PARTIAL (NTSC build and isolated ini migration test; live acceptance owed):
+D381,CLOSED,"RULE-2-SIGNOFF: opt-in RGB, size and Beta crosshair (2026-09-27).",CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D382,CLOSED,Crosshair menu placement and slider hitches (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D383,PARTIAL,PD-style keyboard rebinding in both options UIs (2026-09-27).,PARTIAL (2026-09-28).
+D384,CLOSED,Front PC Options key-bind navigation feedback + two-slot UI (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D385,CLOSED,Real mouse 1–5 action rebinding in the two-slot editor (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D386,CLOSED,Correct Aim default from SDL middle (Mouse 2) to right (Mouse 3) (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D387,OPEN,M7 AllUnlocked's read-time fake unlocks leak into saved EEPROM (2026-09-27).,OPEN (isolated user-data-copy save/untoggle repro; no fix):
-D388,PARTIAL,Nest functional binding/HUD menus and remove redundant M5 toggle (2026-09-27).,"PARTIAL (NTSC build, isolated nested navigation/reset/capture probes; physical UI acceptance and visual release gate owed):"
-D389,PARTIAL,F10 footer clipping and ambiguous submenu links (2026-09-27).,PARTIAL (NTSC build + measured 320-wide footer variants; visual/user review owed):
-D390,PARTIAL,F10 pinned Back selection did not visibly change (2026-09-27).,PARTIAL (NTSC build + isolated page/tree probes; human visual check owed):
-D391,PARTIAL,F10 click at glyph bottom could select next row (2026-09-27).,"PARTIAL (pixel-bound measurement, NTSC build, isolated hit probes; real pointer UX owed):"
+D388,CLOSED,Nest functional binding/HUD menus and remove redundant M5 toggle (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D389,CLOSED,F10 footer clipping and ambiguous submenu links (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D390,CLOSED,F10 pinned Back selection did not visibly change (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
+D391,CLOSED,F10 click at glyph bottom could select next row (2026-09-27).,CLOSED (2026-09-28). Shipped in v0.4.0; accepted in the user's final review / campaign playtest.
 D392,FIXED,Train intro soldier hunched; hand intersects torso vs 1964 —,FIXED (#ifdef PORT ABI/layout in chraction.c); Train aim-angle probe confirms correction; user visually verified the soldier looks fixed against 1964.
 D393,FIXED,Controller B/Y both crouch; no in-game use button —,FIXED + user live-tested A use / X reload / Y weapon cycle.
-D394,PARTIAL,Xbox 1.1 Jinx controller parity —,PARTIAL (port 1.1 gameplay button roles user-tested; exact gadget-category parity and other selectable presets outstanding; RB HD toggle unavailable).
-D395,PARTIAL,Controller trapped in keyboard/mouse-only binding capture —,PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; Steam Deck retest 2026-09-27:
-D396,PARTIAL,"F10 pad B/A used as slider decrement/increment, not back/select —","PARTIAL (B backs one F10 page, closes at root; A/X accept/toggle on edge but never shift a slider; D-pad/stick left/right still adjust; NTSC linked, pad retest owed)."
+D394,PARTIAL,Xbox 1.1 Jinx controller parity —,PARTIAL (2026-09-28).
+D395,RESOLVED,Controller trapped in keyboard/mouse-only binding capture —,"RESOLVED (v0.4.0 campaign sign-off 2026-09-28, user:"
+D396,RESOLVED,"F10 pad B/A used as slider decrement/increment, not back/select —","RESOLVED (v0.4.0 campaign sign-off 2026-09-28, user:"
 D397,RESOLVED,SELECT FILE background + intro gun-barrel show an interlaced/comb look —,RESOLVED (2026-09-28):
 D398,FIXED,PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).,"SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 textMeasure arg-swap bug was found and fixed there)."
 D399,PARTIAL,File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).,"LANDED (port-only, D343 class):"
 D400,PARTIAL,"File-select ""PC Options"" label:","LANDED (port-only, frontoptions.c):"
-D401,PARTIAL,Rumble Pak → real gamepad haptics (re-promotes D224/M-87):,"LANDED (port-only, input.c/input.h/libultra.c + optionsoverlay.c per docs/dev/RUMBLE-PLAN.md; zero src/ edits)."
+D401,CLOSED,Rumble Pak → real gamepad haptics (re-promotes D224/M-87):,CLOSED (2026-09-28). Rumble shipped in v0.4.0 (D401); Steam Deck real-pad validation:
 D402,RESOLVED,First clean Linux (glibc / SteamOS) build of release/v0.4.0 broke in two port-layer include-resolution spots MinGW tolerated (bondconstants.h first-include cyc…,RESOLVED (Linux/Ubuntu-24.04 build → glibc-2.41-compatible binary for the Steam Deck):
 D403,RESOLVED,Deck v0.4.0-pre test:,"RESOLVED (2026-09-27, user-confirmed on the Deck:"
-D404,OPEN,"""Aim style: Centred (PC)"" (Input.AimMode=1, D333/D337) has no effect when aiming with a gamepad; the row's own doc comment over-promises (""applies to every aim…",OPEN (log-only per user):
+D404,RESOLVED,"""Aim style: Centred (PC)"" (Input.AimMode=1, D333/D337) has no effect when aiming with a gamepad; the row's own doc comment over-promises (""applies to every aim…","RESOLVED (2026-09-28, port-layer only):"

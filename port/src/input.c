@@ -496,6 +496,7 @@ static int aimGepdAccumulate(double dxPx, double dyLook);
 static void aimGepdEdgeScroll(void);
 static int aimGepdCompute(double dxPx, double dyLook);
 static int hipDirectCompute(double dxPx, double dyLook);
+static int padDirectCompute(int dx, int dy);   /* D404: pad twin of the above */
 /* D194: bondview2's "look-ahead" pitch centreing (docentreupdown) arms during
  * hip-fire walking whenever the pitch strays from the horizon target, and --
  * once armed -- keeps pulling vv_verta back to it even in aim mode, EXCEPT
@@ -1973,8 +1974,22 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
                 rys = (int)lround(padSmSY[idx]);
             }
             if (padLookInvertY) rys = -rys;
-            if (rxs) sx = rxs;
-            if (rys) sy = rys;
+            if (aimModeGet() == AIMMODE_CENTRED && padDirectCompute(rxs, rys)) {
+                /* D404 (resolved by implementation, 2026-09-28): pad CENTRED
+                 * aim -- the stick drives the camera directly (crosshair
+                 * pinned at centre), the pad-side twin of the mouse CENTRED
+                 * branch above, so the Aim-style toggle is no longer inert
+                 * on a pad. No look stick is emitted this poll; when
+                 * padDirectCompute declines (dead/watch/pause/cutscene) the
+                 * legacy stick emission below runs, as the mouse branch
+                 * falls back to its legacy path. AIMMODE_N64 keeps today's
+                 * behaviour: the deflection feeds the game's crosshair
+                 * integrator (travel + edge scroll + spring-back -- the
+                 * original controller feel). */
+            } else {
+                if (rxs) sx = rxs;
+                if (rys) sy = rys;
+            }
         } else {
             int px = scaleAxis(lx, padDeadzoneL);
             int py = -scaleAxis(ly, padDeadzoneL);       /* SDL up = negative -> N64 up = positive */
@@ -2546,6 +2561,64 @@ static int hipDirectCompute(double dxPx, double dyLook)
         sysLogPrintf(LOG_NOTE,
             "GE_INPUTLOG hipdirect d=(%.1f,%.1f) cam=(%.1f,%.1f)",
             dxPx, dyLook, (double)p->vv_theta, (double)p->vv_verta);
+    }
+    return 1;
+}
+
+/* D404 (resolved by implementation, 2026-09-28): the pad-side twin of
+ * hipDirectCompute's CENTRED path -- the right stick drives the camera
+ * directly and the crosshair stays pinned at centre, so the Aim-style
+ * toggle is no longer inert on a pad (it used to be: the pad always
+ * emitted deflection into the game's N64 crosshair integrator, i.e. it
+ * was *always in N64 mode*). Same safety gates as hipDirectCompute
+ * (dead / watch / pause / scripted camera); the mouseDirectLook/
+ * mouseGrabbed gate is dropped -- it is meaningless for a pad. Input
+ * units are stick deflection (STICK_MAX = full, the same unit the N64
+ * path feeds the game's integrator).
+ *
+ * Gain = the N64 natural-turn curve VERBATIM (bondview2.c, canNaturalTurn
+ * / canNaturalPitch branches): v = clamp(deflection/70, \u00b11); v =
+ * sign(v)\u00b7v\u00b2; camera += v \u00b7 (fov/60) \u00b7 3.5 deg/poll. First pass used a
+ * linear 2.0 deg/poll \u00b7 (fov/GEPD_BASE_FOV) gain, which the user measured
+ * as a dramatic sensitivity loss in Centred mode (linear vs quadratic
+ * curve, and the 60-vs-90 FOV base compounded it to ~2.6\u00d7 slower at full
+ * stick). With the verbatim curve, full-stick Centred turns at exactly
+ * the N64 path's top rate -- switching modes changes the crosshair
+ * behaviour, not the feel. */
+static int padDirectCompute(int dx, int dy)
+{
+    struct player *p = g_CurrentPlayer;
+
+    if (p == NULL)
+        return 0;
+    if (p->bonddead || !p->outside_watch_menu || p->pause_state != 0)
+        return 0;
+    if (gameScriptedCameraActive())
+        return 0;
+
+    if (dx == 0 && dy == 0)
+        return 1;   /* nothing to turn; caller simply emits no stick */
+
+    f32 fov = viGetFovY();
+    double k = (fov > 0.0f) ? (double)fov / 60.0 : 1.0;   /* bondview2's base */
+    double v;
+
+    v = (double)dx / 70.0;   /* analogTurn = raw stick \u00b1 5, /70 -- bondview2.c:6222 */
+    if (v > 1.0) v = 1.0; else if (v < -1.0) v = -1.0;
+    if (v >= 0.0) v *= v; else v = -v * v;
+    p->vv_theta += (f32) (v * k * 3.5);
+
+    v = (double)dy / 70.0;   /* analogPitch, /70 -- bondview2.c:6161 */
+    if (v > 1.0) v = 1.0; else if (v < -1.0) v = -1.0;
+    if (v >= 0.0) v *= v; else v = -v * v;
+    p->vv_verta -= (f32) (v * k * 3.5);   /* game: speedverta = -v\u00b7(fov/60) */
+    if (p->vv_verta >  90.0f) p->vv_verta =  90.0f;
+    if (p->vv_verta < -90.0f) p->vv_verta = -90.0f;
+
+    if (configGetInputLog()) {
+        sysLogPrintf(LOG_NOTE,
+            "GE_INPUTLOG paddirect d=(%d,%d) cam=(%.1f,%.1f)",
+            dx, dy, (double)p->vv_theta, (double)p->vv_verta);
     }
     return 1;
 }

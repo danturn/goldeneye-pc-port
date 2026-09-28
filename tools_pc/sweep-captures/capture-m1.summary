@@ -1,0 +1,22 @@
+dam: frames=9 crash=no
+facility: frames=5 crash=no
+runway: frames=0 crash=no
+surface1: frames=0 crash=no
+bunker1: frames=0 crash=no
+silo: frames=0 crash=no
+frigate: frames=0 crash=no
+surface2: frames=1 crash=no
+bunker2: frames=0 crash=no
+statue: frames=0 crash=no
+archives: frames=1 crash=no
+streets: frames=4 crash=no
+depot: frames=0 crash=no
+train: frames=0 crash=no
+jungle: frames=0 crash=no
+control: frames=0 crash=no
+caverns: frames=0 crash=no
+cradle: frames=3 crash=no
+aztec: frames=0 crash=no
+egypt: frames=5 crash=no
+cuba: frames=0 crash=no
+exit=1

@@ -75,6 +75,12 @@ Needs CMake + SDL2 + zlib + OpenGL, and must run from the MSYS2 MINGW64 shell
    (suspect: heredoc line-ending/whitespace corruption).
    **Working workaround:** extract the heredoc `.ps1` and run
    `powershell -NoProfile -ExecutionPolicy Bypass -File <ps1> "C:\msys64\usr\bin" "C:\msys64\mingw64\bin" C:/msys64 <repo-win-path> build-pc <romid>`.
+   Re-confirmed 2026-09-28: in-script re-exec fails again (cmake configure
+   dies inside the ps1; re-exec logs left stale) while the identical
+   standalone invocation reconfigured and built cleanly (extract with
+   `awk "/<<'PS1'\$/{f=1;next} /^PS1\$/{f=0} f" build-pc.sh > /tmp/ps1`
+   — mind the leading whitespace, and `export PATH` to include mingw/bin
+   first, failure mode 3).
 2. **`cannot open output file ge007.x86_64.exe: Permission denied`.** A
    **running** `ge007.x86_64.exe` locks the output file (Windows rule; you
    can't relink over a live PE). Check with `Get-Process | Where-Object {

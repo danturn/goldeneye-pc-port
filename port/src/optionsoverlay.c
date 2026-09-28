@@ -207,8 +207,15 @@ static struct Row rows[] = {
      * overrides it at launch for A/B runs. */
     /* D337: N64 = the N64 aim model (crosshair travels, camera edge-scrolls)
      * with the mouse fed through the game's integrator at PD's mouse damp --
-     * the default. CENTRED (PC) = opt-in FPS-style aim (#104), not N64. Applies
-     * to every aim input (RMB, Shift, Q/L, pad trigger, Toggle mode). */
+     * the default. CENTRED (PC) = opt-in FPS-style aim (#104), not N64.
+     * Device-neutral (D404, resolved by implementation 2026-09-28): mouse --
+     * N64 feeds the game's integrator, CENTRED drives the camera directly
+     * (hipDirectCompute); pad -- N64 emits right-stick deflection into the
+     * same integrator (the original controller feel: crosshair travel +
+     * edge scroll + spring-back), CENTRED drives the camera directly from
+     * the stick (padDirectCompute, crosshair pinned at centre). Applies to
+     * every aim input (RMB, Shift, Q/L, Toggle mode, pad right stick in
+     * natural-pitch mode). */
     { .key="Input.AimMode", .label="Aim style", .kind=ROW_ENUM, .step=1, .names=kAimMode },
     /* D338: how far the N64-style crosshair travels. PC = to the screen edge
      * (GEPD / mouse-injector feel, default); N64 = the original stick limits
@@ -222,9 +229,9 @@ static struct Row rows[] = {
      * (natural-pitch) feel options, identity at their defaults. All port-layer. */
     { .key="Input.PadDeadzoneL", .label="Deadzone (left stick)", .kind=ROW_SLIDER, .step=500 },
     { .key="Input.PadDeadzoneR", .label="Deadzone (right stick)", .kind=ROW_SLIDER, .step=500 },
-    { .key="Input.PadLookSensX", .label="X axis look sensitivity", .kind=ROW_SLIDER, .step=5 },
-    { .key="Input.PadLookSensY", .label="Y axis look sensitivity", .kind=ROW_SLIDER, .step=5 },
-    { .key="Input.PadLookSmooth", .label="Look smoothing", .kind=ROW_SLIDER, .step=1, .dispMax=10 },
+    { .key="Input.PadLookSensX", .label="X axis look sensitivity (controller)", .kind=ROW_SLIDER, .step=5 },
+    { .key="Input.PadLookSensY", .label="Y axis look sensitivity (controller)", .kind=ROW_SLIDER, .step=5 },
+    { .key="Input.PadLookSmooth", .label="Look smoothing (controller)", .kind=ROW_SLIDER, .step=1, .dispMax=10 },
     { .key="Input.PadSouthpaw", .label="Southpaw", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1 },
     /* D401 item 3 (docs/dev/RUMBLE-PLAN.md): Rumble Pak strength (D224

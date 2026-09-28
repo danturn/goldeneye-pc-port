@@ -99,21 +99,6 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
 
 **Known issues:**
 
-- Some muzzle flashes draw an extra, erroneous long flash straight up from
-  the gun (seen on the M16, among others), overlaid on the normal, correctly
-  drawn flash. Cosmetic only (D303).
-- Water levels show a moving seam between two water patterns (D245).
-- Occasional z-fighting on some levels' geometry (D308) — a Dam intro/
-  truck-wheel instance showing odd transparent-looking areas may be related
-  (D306). Minor and cosmetic.
-- In-level security camera props (not the player's own view) can
-  occasionally end up facing backwards on some levels, seen on Bunker
-  (D307). The orientation math has been verified faithful to the N64; if you
-  see it, a report of which level and which camera is what's needed to keep
-  chasing it.
-- Rarely, Bond's model can briefly render out of place after an animation
-  transition — purely visual: no effect on gameplay or saves, and it clears
-  on its own or by re-entering the level (D311).
 - On Facility, if gas leaks during Ourumov's monologue he can pause for up to
   ~10 s before resuming the scripted shootout — a latent race that exists in
   the N64 original too (where it softlocks permanently); the port detects and
@@ -122,19 +107,15 @@ filtering, FOV, sensitivity); Windows and Linux, including Steam Deck.
   your display's aspect (wider view, same vertical FOV) and the HUD keeps its
   shape; front-end menus are shown 4:3 with side bars. The F10 *Native
   widescreen* toggle restores the old stretched frame.
-- Distant geometry can drop out on the biggest open levels (Streets,
-  Egyptian) at default FOV — a culling/LOD issue that sometimes
-  self-corrects as you keep moving (D249).
-- Gunshot SFX can sound off during sustained/rapid fire: cadence can drift
-  from the N64 original's rate, and PP7/AK47 fire can occasionally go silent
-  under heavy automatic fire near another looping sound (D240/D241).
+- The Rareware front-end logo shows a subtle texture-filtering artifact
+  (Nintendo logo and legal page are clean). Cosmetic only (D75).
+- This release ships NTSC (US) assets; PAL/JP ROMs are not supported in this
+  version (D258).
 - **`All unlocked` is experimental: back up `data/ge007.eep` before enabling
   it.** Any save while ON, even a profile-settings change, can permanently
   write artificial cheat unlocks and completion times into the EEPROM;
-  switching OFF does not undo them (D387). In the v0.3.0 release, turning it
-  on before a real save exists can also cause silent audio and missing
-  aim/HUD settings (D257/D259/D281). Do not use it on a save whose original
-  progression you need to preserve.
+  switching OFF does not undo them (D387). Do not use it on a save whose
+  original progression you need to preserve.
 - Assorted further cosmetic defects are tracked in
   [`docs/dev/GRAPHICS-BACKLOG.md`](docs/dev/GRAPHICS-BACKLOG.md).
 - No macOS or ARM support; no controller rebinding UI.
