@@ -66,8 +66,9 @@ frame cadence. Fixed at the root; the game now holds a rock-stable 60 fps
   D347/D360–D370)
 - The front end gained a **PC Options screen** beside the file-select bar,
   and save-file **Copy/Erase** moved into the bottom bar. Long sections
-  (Input) page within the screen with a (1/2) marker in the title, so every
-  row stays on screen and stays reachable. (D343/D406)
+  (Input) page within the screen -- a "Page 1/2" marker plus a bottom hint
+  on every page -- so every row stays on screen and stays reachable.
+  (D343/D406)
 - Watch-only settings — **Auto-aim**, **Look ahead** and the rest — are now
   editable from the PC options and **persist correctly** (this closes the
   "auto-aim won't stay on" report, issue #103). (D330/D350/D352/D354)
