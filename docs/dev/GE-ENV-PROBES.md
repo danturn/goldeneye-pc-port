@@ -3,7 +3,7 @@
 Every `getenv("GE_…")` in the tree. The table prose is hand-curated;
 **`tools_pc/gen_env_probes.py`** re-greps the live sites and reports drift
 (NEW / GONE vars + a fresh file:line map) — run it before trusting the
-File:line cells. Last reconciled 2026-10-07 (v0.4.0 release sweep: rows added for probes introduced since 09-21 — D383 bind-capture smoke, D388 option-tree walk, D406 front-options diagnostics, D354/D344 watch-settings & quit-frame harnesses, D318B boundary suite, z-fight grid; the drift checker now also sees the cached env-flag wrapper reads from `port/include/envflag.h`). All are **env-gated**: unset = zero behavior
+File:line cells. Last reconciled 2026-09-28 (v0.4.0 release sweep: rows added for probes introduced since 09-21 — D383 bind-capture smoke, D388 option-tree walk, D406 front-options diagnostics, D354/D344 watch-settings & quit-frame harnesses, D318B boundary suite, z-fight grid; the drift checker now also sees the cached env-flag wrapper reads from `port/include/envflag.h`). All are **env-gated**: unset = zero behavior
 change, so they are safe to leave in a release build (they only cost a
 `getenv` on the guarded path). "Dead" below means *the finding it was built
 for is closed* — the probe is strip-candidate scaffolding, not that it does
