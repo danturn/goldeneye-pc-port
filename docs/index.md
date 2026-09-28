@@ -45,8 +45,9 @@ under consideration, and more).
 
 <p align="center">
   <img src="media/goldeneye-gh-preview.gif" width="70%"
-       alt="~12 s gameplay montage from live play sessions">
-  <br><em>~12 s gameplay montage from live v0.3.0 play sessions, running in the port.</em>
+       alt="~24 s gameplay montage from live play sessions">
+  <br><em>~24 s gameplay montage from live v0.4.0 play sessions (Runway tank,
+  Dam, Caverns, Aztec, Bunker&nbsp;2, Surface&nbsp;2), running in the port.</em>
 </p>
 
 ## News

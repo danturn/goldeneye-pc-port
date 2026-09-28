@@ -1,8 +1,8 @@
 # GoldenEye 007 PC Port — v0.4.0
 
 <p align="center">
-  <img src="https://github.com/jkdansereau/goldeneye-pc-port/raw/v0.3.0/docs/media/goldeneye-gh-preview.gif" width="480"
-       alt="~12 s gameplay montage from live v0.3.0 play sessions (no audio track)">
+  <img src="https://github.com/jkdansereau/goldeneye-pc-port/raw/v0.4.0/docs/media/goldeneye-gh-preview.gif" width="480"
+       alt="~24 s gameplay montage from live v0.4.0 play sessions, opening on the Runway tank (no audio track)">
 </p>
 
 Platforms: **Windows x86-64** and **Linux x86-64 (including Steam Deck)**.
