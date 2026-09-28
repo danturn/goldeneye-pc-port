@@ -550,6 +550,24 @@ static void gfx_generate_cc(struct ColorCombiner* comb, const ColorCombinerKey& 
     comb->used_textures[1] = used_textures[1];
     // comb->prg = gfx_lookup_or_create_shader_program(shader_id0, shader_id1);
     memcpy(comb->shader_input_mapping, shader_input_mapping, sizeof(shader_input_mapping));
+#ifdef PORT
+    /* D397 TEMP probe (env-gated, remove before merge): dump which runtime
+     * G_CCMUX inputs this combine feeds as vInput1..N so the file-select
+     * LERP factor source can be settled against the measured census. */
+    if (getenv("GE_D397SH")) {
+        fprintf(stderr,
+                "D397SHM: id0=%016llx cmode=0x%016llx map0=[%u %u %u %u %u %u %u] map1=[%u %u %u %u %u %u %u]\n",
+                (unsigned long long)comb->shader_id0, (unsigned long long)key.combine_mode,
+                (unsigned)comb->shader_input_mapping[0][0], (unsigned)comb->shader_input_mapping[0][1],
+                (unsigned)comb->shader_input_mapping[0][2], (unsigned)comb->shader_input_mapping[0][3],
+                (unsigned)comb->shader_input_mapping[0][4], (unsigned)comb->shader_input_mapping[0][5],
+                (unsigned)comb->shader_input_mapping[0][6],
+                (unsigned)comb->shader_input_mapping[1][0], (unsigned)comb->shader_input_mapping[1][1],
+                (unsigned)comb->shader_input_mapping[1][2], (unsigned)comb->shader_input_mapping[1][3],
+                (unsigned)comb->shader_input_mapping[1][4], (unsigned)comb->shader_input_mapping[1][5],
+                (unsigned)comb->shader_input_mapping[1][6]);
+    }
+#endif
 }
 
 static struct ColorCombiner* gfx_lookup_or_create_color_combiner(const ColorCombinerKey& key) {
