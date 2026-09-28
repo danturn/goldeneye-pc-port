@@ -31,7 +31,7 @@ D192,CLOSED,Front-end mission/level-select grid pointer still can't reach the ou
 D221,FIXED,SELECT FILE mouse hit-box offset —,"FIXED (M-91) — explicit {min,max} coord2d pairs under #ifdef PORT; human mouse-playtest confirmed."
 D222,FIXED,High Video.FovScale breaks culling —,"FIXED, awaiting visual verification (M-121)."
 D223,FIXED,QoL ask: mouse-wheel weapon cycling should be directional like a normal PC shooter —,"FIXED (M-105, port/src/input.c) —…"
-D224,?,"QoL gap (M-87, from a PD-PC-port survey):","DEPRIORITIZED (M-87, user call)."
+D224,PARTIAL,"QoL gap (M-87, from a PD-PC-port survey):","LANDED via D401 (2026-09-27, re-promoted from DEPRIORITIZED)."
 D225,FIXED,"Dev-tooling QoL (M-87, user ask):","FIXED (2026-09-18) — GE_DEBUG_UNLOCKALL=1 short-circuits fileGetIsCheatUnlocked() (src/game/file2.c, #ifdef PORT, cached getenv) to always return TRUE; default off, no save mutation."
 D226,FIXED,"QoL ask: player-adjustable HUD scale for the ammo counter, bottom-left pickup/item status text, and top-of-screen dialogue/subtitle text.","FIXED (2026-09-24): Game.HudScale 75–150% (user-verified, capped at 150) via fast3d G_HUDSCALE_EXT rect scaling about per-element anchors; dialogue/bottom messages width-capped."
 D227,FIXED,Sky renders as two independently-moving halves —,"FIXED (M-100b, PR #43) —"
@@ -277,3 +277,4 @@ D397,RESOLVED,SELECT FILE background + intro gun-barrel show an interlaced/comb 
 D398,FIXED,PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).,"SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 textMeasure arg-swap bug was found and fixed there)."
 D399,PARTIAL,File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).,"LANDED (port-only, D343 class):"
 D400,PARTIAL,"File-select ""PC Options"" label:","LANDED (port-only, frontoptions.c):"
+D401,PARTIAL,Rumble Pak → real gamepad haptics (re-promotes D224/M-87):,"LANDED (port-only, input.c/input.h/libultra.c + optionsoverlay.c per docs/dev/RUMBLE-PLAN.md; zero src/ edits)."

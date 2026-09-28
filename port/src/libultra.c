@@ -1099,7 +1099,10 @@ static void contSnapshotFromKeyboard(void)
         u16 button = connected ? (u16)inputComputePad(i, &sx, &sy) : 0;
 
         g_contStatus[i].type   = connected ? CONT_TYPE_NORMAL : 0;
-        g_contStatus[i].status = 0;
+        /* D401: present a Rumble Pak (CONT_CARD_ON) whenever the connected
+         * pad can actually rumble. joyRumblePakInit (src/joy.c:184) gates
+         * the whole rumble-pak path on this bit. */
+        g_contStatus[i].status = (connected && inputRumbleSupported(i)) ? CONT_CARD_ON : 0;
         g_contStatus[i].errno  = connected ? 0 : CONT_NO_RESPONSE_ERROR;
 
         g_contPad[i].button  = button;
@@ -1409,15 +1412,62 @@ s32 osEepromLongRead(OSMesgQueue *mq, u8 addr, u8 *buf, int nbytes)
 s32 osEepromLongWrite(OSMesgQueue *mq, u8 addr, u8 *buf, int nbytes)
 { (void)mq; return geEepromRW(addr, buf, nbytes, 1); }
 
-/* Memory Pak (PFS) + Rumble Pak (motor): no accessories on the PC. */
+/* Memory Pak (PFS) + Rumble Pak (motor): no Memory Pak on the PC (saves are
+ * file-backed EEPROM), but the Rumble Pak path is routed to real gamepad
+ * haptics (D401): a pad that can rumble presents itself as a "card is on"
+ * accessory, and the motor calls become SDL_GameControllerRumble via
+ * inputRumble (port/src/input.c). */
 s32 osPfsInit(OSMesgQueue *queue, OSPfs *pfs, int channel)
-{ (void)queue; (void)pfs; (void)channel; return PFS_ERR_NOPACK; }
+{
+    (void)queue; (void)pfs;
+    /* PFS_ERR_DEVICE ("wrong device type") = a Rumble Pak is present, not a
+     * Memory Pak: exactly what joyRumblePakInit (src/joy.c:186-190) needs
+     * to proceed to osMotorInit. PD's osPfsInitPak does the same. */
+    return inputRumbleSupported(channel) ? PFS_ERR_DEVICE : PFS_ERR_NOPACK;
+}
 s32 osPfsIsPlug(OSMesgQueue *queue, u8 *pattern)
-{ (void)queue; if (pattern) *pattern = 0; return 0; }
+{
+    (void)queue;
+    if (pattern) {
+        *pattern = 0;
+        /* JPN: MAXCONTROLLERS can be 6 > MAX_PADS; inputRumbleSupported()
+         * bounds-checks, so the extra channels just never light up. */
+        for (int i = 0; i < MAXCONTROLLERS; ++i)
+            if (inputRumbleSupported(i)) *pattern |= (u8)(1 << i);
+    }
+    return 0;
+}
 s32 osMotorInit(OSMesgQueue *mq, OSPfs *pfs, int channel)
-{ (void)mq; (void)pfs; (void)channel; return -1; }
-s32 osMotorStart(OSPfs *pfs) { (void)pfs; return -1; }
-s32 osMotorStop(OSPfs *pfs)  { (void)pfs; return -1; }
+{
+    if (pfs && inputRumbleSupported(channel)) {
+        pfs->queue = mq;
+        pfs->channel = channel;
+        pfs->activebank = 0xff;
+        /* NOTE: PFS_MOTOR_INITIALIZED is not defined in GE's headers and
+         * joy.c never reads pfs->status -- it only tests osMotorInit()==0
+         * (src/joy.c:190) to mark the pad RUMBLEPAKINITSTATE_READY, so no
+         * status store is needed (PD's osMotorProbe writes one). */
+        return 0;
+    }
+    (void)mq; (void)channel;
+    return PFS_ERR_NOPACK;
+}
+s32 osMotorStart(OSPfs *pfs)
+{
+    if (!pfs) return PFS_ERR_NOPACK;
+    /* The N64 motor has no duration; the game's joyRumblePakTimer60 (src/joy.c)
+     * arms a per-event countdown and turns the motor off via osMotorStop.
+     * Issue one generous 5 s window, PD-style ("hope the timer stops it");
+     * inputRumble no-ops internally for non-rumble pads. */
+    inputRumble(pfs->channel, 1.0f, 5.0f);
+    return 0;
+}
+s32 osMotorStop(OSPfs *pfs)
+{
+    if (!pfs) return PFS_ERR_NOPACK;
+    inputRumble(pfs->channel, 0.0f, 0.0f);   /* zero strength/duration = stop */
+    return 0;
+}
 
 /* ------------------------------------------------------------------------ */
 /* SP (RSP) — runs the software RSP inline, then posts the done messages    */

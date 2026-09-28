@@ -415,7 +415,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D221 | **SELECT FILE mouse hit-box offset — compiler stack-layout dependency, not coordinate mismatch (M-87 QA / M-91 fix).** — full `## D221` entry at file tail | **FIXED (M-91)** — explicit `{min,max}` `coord2d` pairs under `#ifdef PORT`; human mouse-playtest confirmed. Distinct from D192 (mode-0 clamp range, still open). |
 | D222 | **High `Video.FovScale` breaks culling — NPCs and some world objects stop rendering near the screen edges (M-87, user QA).** — full `## D222` entry at file tail | **FIXED, awaiting visual verification (M-121).** Root cause traced one step further than the original write-up… |
 | D223 | **QoL ask: mouse-wheel weapon cycling should be directional like a normal PC shooter — wheel up = next weapon, wheel down = previous — instead of both directions…** — full `## D223` entry at file tail | **FIXED (M-105, `port/src/input.c`) —… |
-| D224 | **QoL gap (M-87, from a PD-PC-port survey): the N64 Rumble Pak is fully dropped instead of modernized.** — full `## D224` entry at file tail | **DEPRIORITIZED (M-87, user call).** Gamepad-only —… |
+| D224 | **QoL gap (M-87, from a PD-PC-port survey): the N64 Rumble Pak is fully dropped instead of modernized.** — full `## D224` entry at file tail | **LANDED via D401 (2026-09-27, re-promoted from DEPRIORITIZED).** Rumble Pak now drives real SDL gamepad haptics (`SDL_GameControllerRumble`) via the port-layer `inputRumble*` API + `CONT_CARD_ON`/`PFS_ERR_DEVICE` gating; single global `Input.RumbleScale` (0..1) config + one `Rumble strength` slider row. Real-pad playtest owed. Gamepad-only —… |
 | D225 | **Dev-tooling QoL (M-87, user ask): a debug-build/env toggle that unlocks all missions + all cheats, for testing.** — full `## D225` entry at file tail | **FIXED (2026-09-18)** — `GE_DEBUG_UNLOCKALL=1` short-circuits `fileGetIsCheatUnlocked()` (`src/game/file2.c`, `#ifdef PORT`, cached getenv) to always return TRUE; default off, no save mutation. Build-verified; headless boot with `GE_STARTMENU=7` (mission select) crash-free. |
 | D226 | **QoL ask: player-adjustable HUD scale for the ammo counter, bottom-left pickup/item status text, and top-of-screen dialogue/subtitle text.** — full `## D226` entry at file tail | **FIXED (2026-09-24)**: Game.HudScale 75–150% (user-verified, capped at 150) via fast3d G_HUDSCALE_EXT rect scaling about per-element anchors; dialogue/bottom messages width-capped. |
 | D227 | **Sky renders as two independently-moving halves — "two sky processes" (M-93 QA; root cause M-100b: unit error, `unk20`/`unk24` are S10.5 not texels).** — full `## D227` entries (M-94→M-100b) at file tail | **FIXED (M-100b, PR #43)** — also fixed "scrolls too fast" (M-96) + over-tiling; human play-test confirmed. Full history in the sections. |
@@ -685,6 +685,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D398 | **PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).** Full `## D398` entry at file tail. | SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 `textMeasure` arg-swap bug was found and fixed there). |
 | D399 | **File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).** Full `## D399` entry at file tail. | LANDED (port-only, D343 class): `selectpos.f[0]` 110→95 (new `#ifdef PORT` in front.c), Copy 200/222→185/207, Erase 282/304→267/289 (D343 PORT block), `LABEL_X` 358→343 (`frontoptions.c`); hit bounds recompute from the shifted positions. Clean build, PCDUMP frame 195 no overlaps; by-eye check owed. |
 | D400 | **File-select "PC Options" label: icon removed, text-only; fixed a swapped textMeasure() arg bug and a 7px vertical misalignment vs Copy/Erase (user sign-off 2026-09-27).** Full `## D400` entry at file tail. | LANDED (port-only, `frontoptions.c`): D398's dot icon dropped on user instruction ("most straightforward design"); label now a plain `textRender` word, GAP 28 after Erase. Two measurement bugs fixed: (1) `textMeasure(textheight, textwidth)` args passed swapped -> label 35px above the bar, hot band transposed; (2) bare-label height measures 0 (vs 14 for newline-terminated Copy/Erase) -> 7px lower tops; fixed by restoring the `kLabelNL` height measure. PCDUMP frame 195: tops aligned 279.8 vs 279.3, 31px clearance from Erase; by-eye check owed. |
+| D401 | **Rumble Pak → real gamepad haptics (re-promotes D224/M-87): `CONT_CARD_ON` gate + `osPfs*`/`osMotor*` shims rewired to `SDL_GameControllerRumble`, single global `Rumble strength` slider on `Input.RumbleScale` (2026-09-27/28).** Full `## D401` entry at file tail. | LANDED (port-only, `input.c`/`input.h`/`libultra.c` + `optionsoverlay.c` per `docs/dev/RUMBLE-PLAN.md`; zero `src/` edits). Both M-87 addendum blockers: `g_contStatus[i].status` now sets `CONT_CARD_ON` for connected rumble-capable pads (so `joyRumblePakInit` arms) and `osPfsInit` returns `PFS_ERR_DEVICE` for them (so `osMotorInit` is attempted). New `inputRumble*` API + global `Input.RumbleScale` (0..1, dflt 0.5; the four per-player `Input.PlayerN.RumbleScale` keys were dropped in the final menu-shape decision); `osMotorStart/Stop` drive it. **Real-pad haptics confirmed working by user (2026-09-28)**; plan item 3 (one global `Rumble strength` slider in the F10 overlay + front options screen, reset-table entry) landed the same day. `RumbleScale=0` silence check still unverified (trivial early-out path). |
 
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
@@ -10772,6 +10773,13 @@ D243 (cutscene shake/duplication, its own CONSOLIDATED NEXT STEPS block appears 
 
 ## D224 — QoL gap (M-87, from a PD-PC-port survey): the N64 Rumble Pak is fully dropped instead of modernized.
 
+**DONE via D401 (2026-09-27).** Re-promoted from DEPRIORITIZED; implemented per
+`docs/dev/RUMBLE-PLAN.md` exactly as the M-87 addendum prescribed — both
+upstream blockers (`CONT_CARD_ON` gate + `osPfsInit` → `PFS_ERR_DEVICE`) landed
+with the `SDL_GameControllerRumble` wiring, plus `Input.PlayerN.RumbleScale`
+config (options-menu slider deferred). Real-pad playtest + `RumbleScale=0`
+silence check owed. See `## D401` (file tail) for the full record.
+
 **QoL gap (M-87, from a PD-PC-port survey): the N64 Rumble Pak is fully dropped instead of modernized.** GE genuinely has a rumble subsystem (`src/motor.c`, `src/joy.c`) but the port's `osMotorInit/Start/Stop` (`port/src/libultra.c:1220-1223`) are all hard stubs — "no accessories on the PC," `osMotorStart`/`osMotorStop` return `-1` unconditionally, `osPfsFindFile`-family returns `PFS_ERR_NOPACK`. So every in-game rumble event (weapon recoil, explosions, etc.) computes and calls into a dead path. **PD's PC port wires the equivalent straight through to real gamepad rumble:** `inputRumbleSupported(idx)` checks `SDL_GameControllerHasRumble`/`SDL_JoystickIsHaptic` (with a Windows fallback: some pads report no haptics but rumble anyway), `inputRumble(idx, strength, time)` calls `SDL_GameControllerRumble()` scaled by a per-pad `RumbleScale` config value (options-menu slider, `Input.PadN.RumbleScale`), and `osPfsFindFile` reports a "Rumble Pak" present exactly when a real pad supports rumble (`libultra.c` — same "pretend the N64 accessory is there" pattern GE's port already uses for `osMemSize`/Expansion Pak, just applied to a real capability instead of faked). Cross-ref `QOL-INVENTORY.md` (folded into the existing "per-pad tuning" row).
 
 **Status (from §F table):** **DEPRIORITIZED (M-87, user call).** Gamepad-only — irrelevant to mouse/keyboard, which is the primary target for this next release; no keyboard/mouse play is affected by NOT doing this. Root cause + fix still valid whenever gamepad support becomes a priority (no `src/` game-logic touch: GE's `motor.c`/`joy.c` call sites already exist and already call the `osMotor*` shims; the fix is entirely in `port/src/libultra.c` + `input.c` — add `inputRumbleSupported`/`inputRumble` per the PD shape, wire `osMotorStart`/`osMotorStop` to them, add `Input.PadN.RumbleScale` config). **M-87 PD-legacy-survey addendum (`docs/dev/notes/PD-LEGACY-SURVEY.md` candidate 1, high confidence) — the D224 fix as originally stated is NOT sufficient by itself.** Two more upstream blockers sit before the stubbed `osMotorInit/Start/Stop` ever gets reached: (1) `port/src/libultra.c:1096-1098` sets `g_contStatus[i].status = 0` for every pad — `CONT_CARD_ON` is never set, and `src/joy.c:184` gates the *entire* rumble-pak init path on that bit, so `joyRumblePakInit()` never even calls `osPfsInit`. (2) `src/joy.c:186-190` only attempts `osMotorInit` if `osPfsInit`'s return is `PFS_ERR_ID_FATAL` or `PFS_ERR_DEVICE` — but the port's stub (`libultra.c:1214`) returns `PFS_ERR_NOPACK`, so motor init is never attempted even once (1) is fixed. PD's exact trick (`libultra.c:213-227,349-351`): set `CONT_CARD_ON` for connected pads, and make `osPfsInitPak()` return `PFS_ERR_DEVICE` specifically when the pad supports rumble. **Whenever D224 gets implemented, both of these must land alongside the `SDL_GameControllerRumble` wiring** or the game's state machine parks at `RUMBLEPAKINITSTATE_NOT_READY` forever and nothing audibly changes despite looking wired up correctly.
@@ -15293,3 +15301,91 @@ right margin (canvas 440). **Owed: by-eye check via `scratch\playtest_v040.bat`
 (idle legibility, gold hover not purple, click opens the F10 overlay, vertical
 alignment with Copy/Erase).** Cross-ref D348 (glyph lineage), D398
 (superseded icon approach), D399 (bottom-row 15px shift).
+
+## D401 — Rumble Pak → real gamepad haptics: `CONT_CARD_ON` gate + `osPfs*`/`osMotor*` shims rewired to `SDL_GameControllerRumble`, global `Input.RumbleScale` slider (2026-09-27/28).
+
+Implements **D224 (M-87)** per `docs/dev/RUMBLE-PLAN.md` — the N64 Rumble
+Pak state machine (`src/joy.c` `joyRumblePakInit`/`joyRumblePakTick`/Start/Stop,
+call sites `gunfire.c:3284/3288`, `bondview2.c:9722/9726`, `lv.c:1688`,
+`sched.c:272`) now drives real SDL gamepad haptics. **Port layer only: zero
+`src/` edits**, so rule 2 / the ABI exception are not implicated.
+
+**The two M-87 addendum blockers** (both `port/src/libultra.c`):
+
+1. `contSnapshotFromKeyboard` left `g_contStatus[i].status = 0`, so
+   `joyRumblePakInit` (`src/joy.c:178` — requires `status & CONT_CARD_ON`) never
+   ran and `joyRumblePak` was never populated. Now
+   `status = (connected && inputRumbleSupported(i)) ? CONT_CARD_ON : 0` —
+   gated on real capability so non-rumble pads never enter the rumble path
+   (cleaner than PD's unconditional bit; `joyRumblePakInit` is the real gate).
+   `type` stays `CONT_TYPE_NORMAL` (includes `CONT_JOYPORT`; PD's
+   `CONT_ABSOLUTE` would have broken the init gate).
+2. `osPfsInit` stubbed `PFS_ERR_NOPACK`, so `osMotorInit` was never
+   attempted (`src/joy.c:186-190` proceeds only on `PFS_ERR_ID_FATAL` or
+   `PFS_ERR_DEVICE`). Now returns `PFS_ERR_DEVICE` ("Rumble Pak present, not a
+   Memory Pak") for rumble-capable channels, `PFS_ERR_NOPACK` otherwise.
+
+**`port/src/input.c`** (flat statics, GE style — not PD's `padsCfg[]`):
+`padRumbleOn[MAX_PADS]` + a single global `gRumbleScale` (default 0.5) —
+the per-pad `padRumbleScale[]` array was superseded 2026-09-28 by the
+global slider (see "Menu row" below). Detection in
+`inputOpenPads`: `SDL_GameControllerHasRumble` on SDL ≥ 2.0.18, else
+`SDL_JoystickIsHaptic` with the known-type Windows no-haptic fallback; zeroed
+on close in `inputDestroy`/`inputRescanPads`. PS4/PS5 HIDAPI rumble hints in
+`inputInit`. New API: `inputRumbleSupported(idx)` (bounds-checked against
+`MAX_PADS` — JPN `_HW_VERSION_1` has `MAXCONTROLLERS == 6`, so out-of-range
+channels report unsupported and stay silent), `inputRumble(idx, strength,
+time)` (no-op on `gRumbleScale <= 0`; scales strength, `*65535` / `*1000`
+units, `SDL_GameControllerRumble`; `(0,0)` stops), global
+`inputRumbleGetScale(void)`/`inputRumbleSetScale(f32)`. Config: a single
+`Input.RumbleScale` (range 0..1, default 0.5) registered in
+`inputConfigInit`; the four per-player `Input.Player%d.RumbleScale` keys
+were dropped in the same-day menu-shape decision (stale keys in an
+existing ini log four `unknown key` `LOG_NOTE` lines and self-clean on the
+next `configSave`). `keyboard`/mouse-only play stays silent: no pad open
+⇒ `pads[idx]` NULL ⇒ `inputRumble` no-ops.
+
+**`port/src/libultra.c`** shims: `osPfsInit` as above; `osPfsIsPlug` sets its
+pattern bits for the capable channels over `MAXCONTROLLERS` (completeness
+only — **no GE game call sites**); `osMotorInit` stores `pfs->queue`,
+`pfs->channel`, `pfs->activebank = 0xff` (PD `osMotorProbe` shape) and returns
+0 for capable channels, `PFS_ERR_NOPACK` otherwise (no `PFS_MOTOR_INITIALIZED`
+store — not defined in GE headers and `joy.c` never reads `pfs->status`);
+`osMotorStart` → `inputRumble(channel, 1.0f, 5.0f)` (one generous window;
+the game's `joyRumblePakTimer60` normally stops it, PD-style), `osMotorStop` →
+`inputRumble(channel, 0.0f, 0.0f)`; both return 0 for non-NULL `pfs`.
+
+**Verification.** `./build-pc.sh ntsc-final` clean (no new undefined/duplicate
+symbols; `inputRumble*` defined once in input.c, declared in input.h).
+**Real-pad haptics confirmed working by the user (2026-09-28)** — the gun-
+impact rumble path is live on a real controller. The `RumbleScale=0`
+silence check remains unverified (it is the trivial `gRumbleScale <= 0`
+early-out in `inputRumble`). Same-session environment fix: the
+recurring `Cannot create temporary file in C:\Windows\: Permission denied`
+link failure is now self-healed by `build-pc.sh` (native-TMP probe →
+cmake+ninja re-run under PowerShell with `TMP`/`TEMP` set natively; see the
+AGENTS.md "Build" note), and `cannot open output file ... Permission denied`
+is documented as the running-`.exe`-lock case (close the game before
+rebuilding).
+
+**Menu row (plan item 3, 2026-09-28).** The deferred options-menu slider
+landed the day after the user confirmed the haptics, as a **single global
+row** (user decision — "making the rumble menu just 1 player"):
+`port/src/optionsoverlay.c` gains one `ROW_SLIDER` row — `Rumble strength`
+on `Input.RumbleScale` (0.05 detents; the generic `CONFIG_OPT_FLOAT`
+value/display path, shown `%.2f`) — placed in the INPUT section after the
+other controller rows, with a `kResetDefaults` entry (0.5, the
+`gRumbleScale` C initializer) so INPUT's "Reset to defaults" covers it.
+The originally-coded four per-player rows (`Rumble (Player 1..4)` on
+`Input.Player%d.RumbleScale`) were replaced before first compile; the
+four ini keys are dropped rather than kept as hidden overrides (stale ones
+self-clean on the next save, and a per-pad override would be a no-op since
+`configSave` rewrites all registered keys — see `RUMBLE-PLAN.md` item 3).
+Both the F10 overlay and the front options screen walk the shared `rows[]`
+(`frontoptions.c` via the `optionsRow*` accessors), so the row appears in
+both. A "row disabled when no pad is rumble-capable" state is NOT
+implemented — the overlay has no generic row-disabled mechanism; the row is
+inert (no-op) on unsupported/absent pads, and the disabled state is deferred
+with the per-pad tuning row (`QOL-INVENTORY.md`), which will need the same
+mechanism for deadzone/swap rows.
+

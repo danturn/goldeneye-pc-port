@@ -88,6 +88,17 @@ int  inputMenuPointerLive(void);
 /* Re-enumerate gamepads after a hotplug (SDL_CONTROLLERDEVICEADDED/REMOVED). */
 void inputRescanPads(void);
 
+/* D401: Rumble Pak -> real gamepad haptics. The osMotor* shims in
+ * libultra.c (game's src/joy.c rumble state machine) route here.
+ * idx is the N64 controller channel (0..3; out-of-range is a no-op).
+ * strength is 0..1, time seconds; 0/0 stops an active rumble. The scale
+ * is the single global Input.RumbleScale config value (0 = silent),
+ * applied to every pad. */
+int  inputRumbleSupported(int idx);
+void inputRumble(int idx, f32 strength, f32 time);
+f32  inputRumbleGetScale(void);
+void inputRumbleSetScale(f32 v);
+
 #ifdef __cplusplus
 }
 #endif

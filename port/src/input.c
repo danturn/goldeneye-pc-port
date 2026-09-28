@@ -70,6 +70,7 @@
  */
 
 #include "port_math.h"   /* real system math decls; see header for why */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -290,6 +291,13 @@ static SDL_GameController *pads[MAX_PADS];
 static int padBPrev[MAX_PADS];          /* B/Y edges; track through menus too */
 static int padYPrev[MAX_PADS];
 static int padSelectPrev = 0;           /* Select (BACK) edge: overlay toggle */
+
+/* D401: per-pad haptics (N64 Rumble Pak -> SDL_GameControllerRumble).
+ * padRumbleOn is detected when the pad opens (inputOpenPads); gRumbleScale
+ * is the single global Input.RumbleScale config value (0 = silent,
+ * 1 = full), applied to every pad. */
+static int padRumbleOn[MAX_PADS];
+static float gRumbleScale = 0.5f;
 
 static int mouseEnabled   = 1;
 static int mouseGrabbed    = 1;     /* released while the window is unfocused */
@@ -579,11 +587,27 @@ static void inputOpenPads(void)
         if (pads[i]) {
             continue;
         }
+        padRumbleOn[i] = 0;   /* D401: (re)detected below when the pad opens */
         pads[i] = SDL_GameControllerOpen(i);
         if (pads[i]) {
             connectedMask |= (1 << i);
-            sysLogPrintf(LOG_NOTE, "input: opened gamepad %d '%s' as controller %d",
-                         i, SDL_GameControllerName(pads[i]), i);
+            /* D401: haptics detection (PD pattern, pd_port input.c:320-324).
+             * SDL_GameControllerHasRumble() landed in SDL 2.0.18 even though
+             * SDL_GameControllerRumble() is from 2.0.9. */
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+            padRumbleOn[i] = SDL_GameControllerHasRumble(pads[i]);
+#else
+            padRumbleOn[i] = SDL_JoystickIsHaptic(SDL_GameControllerGetJoystick(pads[i]));
+            if (!padRumbleOn[i]) {
+                /* At least on Windows some controllers report no haptics but
+                 * rumble will still function: assume it's supported for a
+                 * known controller type. */
+                const SDL_GameControllerType ctype = SDL_GameControllerGetType(pads[i]);
+                padRumbleOn[i] = ctype && (ctype != SDL_CONTROLLER_TYPE_VIRTUAL);
+            }
+#endif
+            sysLogPrintf(LOG_NOTE, "input: opened gamepad %d '%s' as controller %d (rumble %s)",
+                         i, SDL_GameControllerName(pads[i]), i, padRumbleOn[i] ? "yes" : "no");
         }
     }
     for (int i = 0; i < MAX_PADS; ++i) {
@@ -812,6 +836,11 @@ int inputInit(void)
         }
     }
 
+    /* D401: make BT PS4/PS5 pads report haptics (PD input.c:696-697). Must
+     * be set before the pads below are opened. */
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, "1");
+
     for (int i = 0; i < MAX_PADS; ++i) {
         pads[i] = NULL;
     }
@@ -854,6 +883,7 @@ void inputDestroy(void)
             SDL_GameControllerClose(pads[i]);
             pads[i] = NULL;
         }
+        padRumbleOn[i] = 0;   /* D401: closed */
     }
     if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
         SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
@@ -2181,10 +2211,57 @@ void inputRescanPads(void)
             SDL_GameControllerClose(pads[i]);
             pads[i] = NULL;
         }
+        padRumbleOn[i] = 0;   /* D401: re-detected by inputOpenPads below */
     }
     inputOpenPads();
     sysLogPrintf(LOG_NOTE, "input: rescanned pads (mask=0x%x, %d controller(s))",
                  connectedMask, numControllers);
+}
+
+/* ------------------------------------------------------------------------
+ * D401: Rumble Pak -> real gamepad haptics.
+ *
+ * The game's Rumble-Pak state machine (src/joy.c joyRumblePakInit/Tick;
+ * events from gunfire.c / bondview2.c / lv.c / sched.c) drives the
+ * osMotor* shims in port/src/libultra.c, which route here. `strength`
+ * is 0..1 and `time` is seconds; a 0-strength / 0-duration call stops
+ * an active rumble. The global Input.RumbleScale config value (0 = fully
+ * silent) scales the strength for every pad. idx is the N64 controller
+ * channel 0..3 (MAXCONTROLLERS may be 6 on JPN; out-of-range is a no-op).
+ * ------------------------------------------------------------------------ */
+int inputRumbleSupported(int idx)
+{
+    if (idx < 0 || idx >= MAX_PADS) return 0;
+    return padRumbleOn[idx];
+}
+
+void inputRumble(int idx, f32 strength, f32 time)
+{
+    if (idx < 0 || idx >= MAX_PADS || !pads[idx]) return;
+    if (gRumbleScale <= 0.f) return;
+    if (padRumbleOn[idx]) {
+        strength *= gRumbleScale;
+        if (strength <= 0.f) {
+            strength = 0.f;
+            time = 0.f;
+        } else {
+            strength *= 65535.f;
+            time *= 1000.f;
+        }
+        SDL_GameControllerRumble(pads[idx], (Uint16)strength, (Uint16)strength, (Uint32)time);
+    }
+}
+
+f32 inputRumbleGetScale(void)
+{
+    return gRumbleScale;
+}
+
+void inputRumbleSetScale(f32 v)
+{
+    if (v < 0.f) v = 0.f;
+    if (v > 1.f) v = 1.f;
+    gRumbleScale = v;
 }
 
 int inputConnectedMask(void)
@@ -2495,6 +2572,12 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.PadDeadzone", &padDeadzone, 0, 30000);
     configRegisterInt("Input.PadTriggerPct", &padTriggerPct, 1, 99);
     configRegisterInt("Input.PadLookInvertY", &padLookInvertY, 0, 1);
+    /* D401: global rumble scale (0 = silent .. 1 = full), applied to every
+     * pad in inputRumble(). One setting for all pads (user call, 2026-09-28):
+     * the original per-pad Input.PlayerN.RumbleScale keys were dropped --
+     * stale ones in an existing ini log a one-time "unknown key" note and
+     * self-clean on the next configSave. */
+    configRegisterFloat("Input.RumbleScale", &gRumbleScale, 0.f, 1.f);
     /* D380: single PC layout. Old Input.Layout is ignored and removed on
      * configSave; BindingsVersion marks the one-time stale-default migration. */
     configRegisterInt("Input.BindingsVersion", &bindsVersion, 0, 3);

@@ -205,6 +205,16 @@ static struct Row rows[] = {
     { .key="Input.PadLookInvertY", .label="Invert look (controller)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Input.PadDeadzone", .label="Stick deadzone", .kind=ROW_SLIDER, .step=500 },
     { .key="Input.PadTriggerPct", .label="Trigger threshold", .kind=ROW_SLIDER, .step=1 },
+    /* D401 item 3 (docs/dev/RUMBLE-PLAN.md): Rumble Pak strength (D224
+     * re-promotion). One global Input.RumbleScale for all pads (user call,
+     * 2026-09-28 -- the original four per-player rows were dropped). The
+     * value lives in input.c's gRumbleScale (0 = silent, 1 = full, dflt
+     * 0.5), applied in inputRumble(); 0.05 detents give 20 steps, the
+     * generic float value path displays them as %.2f. Inert (inputRumble
+     * no-ops) when no rumble-capable pad is connected -- a generic
+     * row-disabled state for that case is deferred with the per-pad tuning
+     * row (QOL-INVENTORY). */
+    { .key="Input.RumbleScale", .label="Rumble strength", .kind=ROW_SLIDER, .step=0.05 },
     /* v0.4.0 M3 (modern options wave, D371): the GEPD mouse-injector
      * key-layout preset (docs/dev/notes/GEPORT-REFERENCE-DEEPDIVE.md
      * section 7.1) + the crouch bind's fire mode. Turok standard: these are
@@ -1252,6 +1262,7 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Input.PadLookInvertY",    0 },   /* = 0 */
     { "Input.PadDeadzone",       7000 },/* = STICK_DEADZONE (7000) */
     { "Input.PadTriggerPct",     23 },  /* = 23 */
+    { "Input.RumbleScale", 0.5 },       /* = gRumbleScale (0.5f), D401 */
     { "Input.CrouchMode",        0 },   /* = 0 (hold) */
     /* GRAPHICS (port/src/video.c initializers) */
     { "Video.MSAA",                 2 },   /* = 2 */
