@@ -94,6 +94,18 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 
 #define MAX_PAGES  8
 #define MAX_PROWS  15            /* D346b: 12 -> 15 for the merged Video section (see ROW_DY) */
+/* D406: content rows per page. The 440x330 paper ends at y=330; content row k
+ * sits at y = ROW_Y0 + (k+2)*ROW_DY (the D356 profile row takes slot 1), so a
+ * page fits while ROW_Y0 + (CAP+1)*ROW_DY + ~10px of text stays <= 330:
+ * CAP = 13 at ROW_DY 18. D346b's 18px pitch was sized for 15 rows with no
+ * profile row; D356's profile row plus the v0.4.0 Wave-A INPUT rows (17)
+ * pushed the 14th row to y=335 -- off the bottom of the paper -- and rows
+ * 15-17 (Crouch mode, Reset to defaults, Bindings...) were dropped by the
+ * old silent page cap, unreachable from the front screen. Sections that
+ * outgrow one page now page: the vertical stepper crosses page boundaries
+ * and the title carries a (p/N) marker. The F10 overlay is unaffected
+ * (it scrolls its own window, D345-D347). */
+#define ROWS_PER_PAGE 13
 
 static const char kLabel[]   = "PC Options";  /* ASCII only: issue #87 / D295 */
 static const char kLabelNL[] = "PC Options\n"; /* height measure only, D400 */
@@ -101,6 +113,8 @@ static const char kLabelNL[] = "PC Options\n"; /* height measure only, D400 */
 /* ---- screen state (game thread) ---- */
 static int s_level = 0;          /* 0 = categories, 1 = category, 2/3 = nested pages */
 static int s_page = 0;           /* current root category */
+static int s_pageno = 0;         /* D406: page within the active section */
+static int s_rowTotal = 0;       /* D406: visible rows in the active section */
 static int s_subHeader = -1;     /* rows[] header index for the nested page */
 static int s_hl = -1;            /* highlighted row / section, -1 = none */
 static int s_dragRow = -1;       /* global row index being dragged */
@@ -113,6 +127,7 @@ static int s_pageHdr[MAX_PAGES];
 static int s_pageN = 0;
 static int s_rowIdx[MAX_PROWS];
 static int s_rowN = 0;
+#define MAX_SECT_ROWS 48   /* D406: per-section gather buffer (INPUT = 17) */
 
 /* ------------------------------------------------------------------------ */
 
@@ -178,26 +193,26 @@ static void buildPages(void)
         s_page = 0;
     }
     s_rowN = 0;
+    s_rowTotal = 0;
     if (s_pageN > 0) {
-        int overflow = 0;
-        /* D356: the level-1 page also carries the top save-file row, so the
-         * content rows get one less line. */
-        int cap = MAX_PROWS - 1;
+        /* D406: gather every visible row of the active section, then page it
+         * (ROWS_PER_PAGE fits the paper, see above). The old code capped at
+         * MAX_PROWS-1 and silently dropped the rest -- a warning, no access.
+         * s_pageno is re-clamped on every build so rows that auto-hide
+         * (aim range, auto-FOV) cannot strand the cursor past the end. */
+        int tmp[MAX_SECT_ROWS];
+        int tn = 0;
         for (int i = activeHeader() + 1; i < n && !optionsRowIsHeader(i); i++) {
             if (!optionsRowIsShown(i)) continue;
-            if (s_rowN < cap) {
-                s_rowIdx[s_rowN++] = i;
-            } else {
-                overflow++;
-            }
+            if (tn < MAX_SECT_ROWS) tmp[tn++] = i;
         }
-        /* D353: the old code stopped at MAX_PROWS silently; a section that
-         * outgrew the page (the D346b VIDEO section did, at exactly 15) lost
-         * rows with no trace. */
-        if (overflow)
-            sysLogPrintf(LOG_WARNING, "frontoptions: section '%s' has %d row(s) past the page cap (%d); last visible: '%s'",
-                         optionsRowLabel(activeHeader()), overflow, cap,
-                         optionsRowLabel(s_rowIdx[cap - 1]));
+        s_rowTotal = tn;
+        int pages = (tn + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE;
+        if (pages < 1) pages = 1;
+        if (s_pageno > pages - 1) s_pageno = pages - 1;
+        int off = s_pageno * ROWS_PER_PAGE;
+        for (int k = 0; k < ROWS_PER_PAGE && off + k < tn; k++)
+            s_rowIdx[s_rowN++] = tmp[off + k];
     }
 }
 
@@ -258,6 +273,7 @@ void frontOptionsMenuInit(void)
 
     s_level = 0;
     s_page = 0;
+    s_pageno = 0;   /* D406 */
     s_subHeader = -1;
     s_hl = -1;
     s_dragRow = -1;
@@ -278,6 +294,7 @@ void frontOptionsMenuInit(void)
             for (int p = 0; p < s_pageN; p++) {
                 if (s_pageHdr[p] == root) {
                     s_page = p;
+                    s_pageno = 0;
                     s_level = depth;
                     s_subHeader = depth > 1 ? i : -1;
                     buildPages();
@@ -306,6 +323,7 @@ static void goBack(void)
     if (s_level >= 2) {
         int child = s_subHeader;
         int parent = optionsRowHeaderParent(child);
+        s_pageno = 0;   /* D406: every fresh page view starts at page 1 */
         if (parent == s_pageHdr[s_page]) {
             s_level = 1;
             s_subHeader = -1;
@@ -324,6 +342,7 @@ static void goBack(void)
     }
     if (s_level == 1) {
         s_level = 0;
+        s_pageno = 0;   /* D406 */
         cursorToItem(s_page);
         sysLogPrintf(LOG_INFO, "frontoptions: back to section list");
         return;
@@ -374,6 +393,7 @@ void frontOptionsMenuInterface(void)
             playSfx(DOOR_METAL_CLOSE2_SFX);
             s_page = s_hl;
             s_level = 1;
+            s_pageno = 0;   /* D406 */
             sysLogPrintf(LOG_INFO, "frontoptions: section %d", s_page + 1);
             buildPages();
             cursorToItem(0);
@@ -396,6 +416,7 @@ void frontOptionsMenuInterface(void)
                 optionsResetClear();
                 s_subHeader = child;
                 s_level++;
+                s_pageno = 0;   /* D406 */
                 buildPages();
                 sysLogPrintf(LOG_INFO, "frontoptions: opened %s (depth %d)",
                              optionsRowLabel(child), s_level);
@@ -510,14 +531,29 @@ void frontOptionsMenuInterface(void)
                 int n = itemCount();
                 if (n > 0) {
                     int q = (s_hl < 0 ? 0 : s_hl) + vdir;
-                    if (q < 0) q = 0;
-                    if (q >= n) q = n - 1;
+                    /* D406: stepping past the end of the visible page turns
+                     * the page (cursor lands on the first row of the next
+                     * page, or the last row of the previous one); with one
+                     * page the ends simply clamp, as before. */
+                    if (q >= n && s_pageno * ROWS_PER_PAGE + s_rowN < s_rowTotal) {
+                        s_pageno++;
+                        buildPages();
+                        q = 1;
+                    } else if (q < 0 && s_pageno > 0) {
+                        s_pageno--;
+                        buildPages();
+                        q = itemCount() - 1;
+                    } else {
+                        if (q < 0) q = 0;
+                        if (q >= n) q = n - 1;
+                    }
                     if (q != s_hl) {
                         if (getenv("GE_FRONTNAVLOG"))
-                            sysLogPrintf(LOG_INFO, "frontnav: %s -> item %d%s%s",
+                            sysLogPrintf(LOG_INFO, "frontnav: %s -> item %d%s%s (page %d)",
                                          s_level ? optionsRowLabel(activeHeader()) : "categories",
                                          q, s_level && q > 0 ? " " : "",
-                                         s_level && q > 0 ? optionsRowLabel(s_rowIdx[q - 1]) : "");
+                                         s_level && q > 0 ? optionsRowLabel(s_rowIdx[q - 1]) : "",
+                                         s_level ? s_pageno + 1 : 0);
                         s_hl = q;
                         cursorToItemRaw(q);
                     }
@@ -559,8 +595,14 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             DL = ink(DL, SEC_X, rowY(k), name, INK);
         }
     } else {
-        char title[32];
+        char title[48];
         titleCase(optionsRowLabel(activeHeader()), title, sizeof(title));
+        /* D406: multi-page sections mark the page in the title. */
+        if (s_rowTotal > ROWS_PER_PAGE) {
+            int pages = (s_rowTotal + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE;
+            snprintf(title + strlen(title), sizeof(title) - strlen(title),
+                     " (%d/%d)", s_pageno + 1, pages);
+        }
         int titleW = measureW(title);
         strcat(title, "\n");
         DL = ink(DL, ROW_X, TITLE_Y, title, INK);
@@ -717,6 +759,19 @@ Gfx *optionsFileSelectLabel(Gfx *gdl)
     }
     /* Same centring front.c uses for Copy/Erase (front.c:2779/2791). */
     y = LABEL_CY - (h / 2);
+
+    /* D406: test hook -- enter the screen without a mouse click so headless
+     * runs (GE_INPUTSCRIPT D-pad stepping + GE_FRONTNAVLOG / diagnostics)
+     * can exercise it. Diagnostic-only: never active without the env. */
+    if (getenv("GE_FRONTOPTIONS_AUTO") && menu_update == MENU_INVALID &&
+        folder_selected_for_deletion < 0) {
+        static int autoEntered = 0;
+        if (!autoEntered) {
+            autoEntered = 1;
+            playSfx(DOOR_LOCK_SFX);
+            frontChangeMenu(MENU_PC_OPTIONS, FALSE);
+        }
+    }
 
     hot = !optionsOverlayIsOpen()
        && menu_update == MENU_INVALID

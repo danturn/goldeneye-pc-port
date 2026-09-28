@@ -55,8 +55,8 @@ frame cadence. Fixed at the root; the game now holds a rock-stable 60 fps
 
 ### Rebuilt options (F10 overlay + front-end PC Options)
 
-- Both options screens are reorganized into functional sections — **Display,
-  Input, Gameplay, HUD, Bond file** — each with its own *Reset to
+- Both options screens are reorganized into functional sections — **Input,
+  Gameplay, HUD, Graphics, Audio, Display** — each with its own *Reset to
   defaults*; per-profile settings scoping; and the old "save file" wording
   is now **profile**. (D353–D356)
 - The **F10 in-game overlay** was refreshed GE-style: category headers,
@@ -65,7 +65,9 @@ frame cadence. Fixed at the root; the game now holds a rock-stable 60 fps
   **Invert look / Southpaw / Deadzone / Trigger threshold**. (D237/D345–
   D347/D360–D370)
 - The front end gained a **PC Options screen** beside the file-select bar,
-  and save-file **Copy/Erase** moved into the bottom bar. (D343)
+  and save-file **Copy/Erase** moved into the bottom bar. Long sections
+  (Input) page within the screen with a (1/2) marker in the title, so every
+  row stays on screen and stays reachable. (D343/D406)
 - Watch-only settings — **Auto-aim**, **Look ahead** and the rest — are now
   editable from the PC options and **persist correctly** (this closes the
   "auto-aim won't stay on" report, issue #103). (D330/D350/D352/D354)
