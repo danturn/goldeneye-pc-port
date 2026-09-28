@@ -6212,6 +6212,33 @@ void chrlvUpdateAimendbackShoulders(ChrRecord *self, void *arg1, s32 same, s32 s
     next_aimendback = 0.0f;
     next_lshoulder = next;
 
+#ifdef PORT
+    /* The leading anim union in weapon_firing_animation_table grows from
+     * four to eight bytes on PC. N64's float slots [12,13,16,17] are now
+     * different fields; read the intended limits/arm fractions by name. */
+    if (arg1 != NULL)
+    {
+        struct weapon_firing_animation_table *config = arg1;
+        if (config->max_up < next)
+        {
+            next_aimendback = next - config->max_up;
+            next_lshoulder = config->max_up;
+        }
+        else if (next < config->max_down)
+        {
+            next_aimendback = next - config->max_down;
+            next_lshoulder = config->max_down;
+        }
+        if (next_lshoulder > 0.0f)
+        {
+            next_rshoulder = config->free_arm_frac_up * next_lshoulder;
+        }
+        else
+        {
+            next_rshoulder = config->free_arm_frac_down * next_lshoulder;
+        }
+    }
+#else
     if (arg1 != NULL)
     {
         if (((f32*)arg1)[12] < next)
@@ -6235,6 +6262,7 @@ void chrlvUpdateAimendbackShoulders(ChrRecord *self, void *arg1, s32 same, s32 s
             next_rshoulder = ((f32*)arg1)[17] * next_lshoulder;
         }
     }
+#endif
 
     if (swap != 0)
     {
