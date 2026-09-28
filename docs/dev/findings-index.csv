@@ -271,10 +271,13 @@ D391,PARTIAL,F10 click at glyph bottom could select next row (2026-09-27).,"PART
 D392,FIXED,Train intro soldier hunched; hand intersects torso vs 1964 —,FIXED (#ifdef PORT ABI/layout in chraction.c); Train aim-angle probe confirms correction; user visually verified the soldier looks fixed against 1964.
 D393,FIXED,Controller B/Y both crouch; no in-game use button —,FIXED + user live-tested A use / X reload / Y weapon cycle.
 D394,PARTIAL,Xbox 1.1 Jinx controller parity —,PARTIAL (port 1.1 gameplay button roles user-tested; exact gadget-category parity and other selectable presets outstanding; RB HD toggle unavailable).
-D395,PARTIAL,Controller trapped in keyboard/mouse-only binding capture —,"PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; NTSC build linked, controller-only retest owed)."
+D395,PARTIAL,Controller trapped in keyboard/mouse-only binding capture —,PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; Steam Deck retest 2026-09-27:
 D396,PARTIAL,"F10 pad B/A used as slider decrement/increment, not back/select —","PARTIAL (B backs one F10 page, closes at root; A/X accept/toggle on edge but never shift a slider; D-pad/stick left/right still adjust; NTSC linked, pad retest owed)."
 D397,RESOLVED,SELECT FILE background + intro gun-barrel show an interlaced/comb look —,RESOLVED (2026-09-28):
 D398,FIXED,PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).,"SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 textMeasure arg-swap bug was found and fixed there)."
 D399,PARTIAL,File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).,"LANDED (port-only, D343 class):"
 D400,PARTIAL,"File-select ""PC Options"" label:","LANDED (port-only, frontoptions.c):"
 D401,PARTIAL,Rumble Pak → real gamepad haptics (re-promotes D224/M-87):,"LANDED (port-only, input.c/input.h/libultra.c + optionsoverlay.c per docs/dev/RUMBLE-PLAN.md; zero src/ edits)."
+D402,RESOLVED,First clean Linux (glibc / SteamOS) build of release/v0.4.0 broke in two port-layer include-resolution spots MinGW tolerated (bondconstants.h first-include cyc…,RESOLVED (Linux/Ubuntu-24.04 build → glibc-2.41-compatible binary for the Steam Deck):
+D403,OPEN,Deck v0.4.0-pre test:,"OPEN (test artifact, log-only per user; not a code regression):"
+D404,OPEN,"""Aim style: Centred (PC)"" (Input.AimMode=1, D333/D337) has no effect when aiming with a gamepad; the row's own doc comment over-promises (""applies to every aim…",OPEN (log-only per user):
