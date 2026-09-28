@@ -730,7 +730,10 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
              * rows per page leaves the last line of the paper for it). */
             int last = s_pageno * ROWS_PER_PAGE + s_rowN >= s_rowTotal;
             int first = s_pageno == 0;
-            DL = ink(DL, ROW_X, rowY(s_rowN + 2),
+            /* D406d: one row below the last content row (rowY(s_rowN + 1))
+             * -- pitch-aligned with the list; +2 sat ~26px clear of it and
+             * looked orphaned at the paper's bottom edge. */
+            DL = ink(DL, ROW_X, rowY(s_rowN + 1),
                      first ? "Down: next page\n"
                      : last ? "Up: previous page\n"
                             : "Up: previous page   Down: next page\n",
