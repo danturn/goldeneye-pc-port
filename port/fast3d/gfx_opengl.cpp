@@ -560,6 +560,36 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     vs_buf[vs_len] = '\0';
     fs_buf[fs_len] = '\0';
 
+#ifdef PORT
+    /* D397 TEMP probe (env-gated): dump the generated texel formula per
+     * shader so the file-select gunbarrel combine can be inspected. */
+    {
+        static int d397_on = -1;
+        if (d397_on < 0) d397_on = getenv("GE_D397SH") != NULL;
+        if (d397_on) {
+            fprintf(stderr,
+                    "D397SH: id0=%016llx id1=%08x 2cyc=%d alpha=%d noise=%d edge=%d blur=%d grey=%d "
+                    "c0r=(%u,%u,%u,%u) c0a=(%u,%u,%u,%u) c1r=(%u,%u,%u,%u) c1a=(%u,%u,%u,%u) "
+                    "single(%d,%d/%d,%d) mult(%d,%d/%d,%d) mix(%d,%d/%d,%d)\n",
+                    (unsigned long long)shader_id0, (unsigned)shader_id1,
+                    (int)cc_features.opt_2cyc, (int)cc_features.opt_alpha, (int)cc_features.opt_noise,
+                    (int)cc_features.opt_texture_edge, (int)cc_features.opt_blur, (int)cc_features.opt_grayscale,
+                    cc_features.c[0][0][0], cc_features.c[0][0][1], cc_features.c[0][0][2], cc_features.c[0][0][3],
+                    cc_features.c[0][1][0], cc_features.c[0][1][1], cc_features.c[0][1][2], cc_features.c[0][1][3],
+                    cc_features.c[1][0][0], cc_features.c[1][0][1], cc_features.c[1][0][2], cc_features.c[1][0][3],
+                    cc_features.c[1][1][0], cc_features.c[1][1][1], cc_features.c[1][1][2], cc_features.c[1][1][3],
+                    (int)cc_features.do_single[0][0], (int)cc_features.do_single[0][1],
+                    (int)cc_features.do_single[1][0], (int)cc_features.do_single[1][1],
+                    (int)cc_features.do_multiply[0][0], (int)cc_features.do_multiply[0][1],
+                    (int)cc_features.do_multiply[1][0], (int)cc_features.do_multiply[1][1],
+                    (int)cc_features.do_mix[0][0], (int)cc_features.do_mix[0][1],
+                    (int)cc_features.do_mix[1][0], (int)cc_features.do_mix[1][1]);
+            const char* tf = strstr(fs_buf, "texel = ");
+            if (tf) fprintf(stderr, "D397SHF: %s;\n", tf);
+        }
+    }
+#endif
+
     const GLchar* sources[2] = { vs_buf, fs_buf };
     const GLint lengths[2] = { (GLint)vs_len, (GLint)fs_len };
     GLint success;

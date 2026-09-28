@@ -1329,6 +1329,22 @@ static void import_texture(int i, int tile, bool importReplacement) {
      * palette path instead -- the port-layer equivalent of the ucode's
      * expand-at-load. Only fires when the tile format genuinely disagrees
      * with the loaded source, so real RGBA16 textures are untouched. */
+    /* D397: comb/interlace grain on the file-select background + intro
+     * gun-barrel. titleRenderFolderMenuBackgroundLines loads 299 one-pixel
+     * 440-byte I8 rows with gDPLoadTextureBlock(I, 8b) and samples
+     * G_TX_RENDERTILE but never emits gSPSetTile, so the tile's fmt/siz is
+     * whatever the previous screen left (D116 probe: CI/4b -- the
+     * spectrum-screen leftover). fast3d then ran the I8 bytes through
+     * import_texture_ci4 against a 16-entry palette (stale / all-zero)
+     * -> periodic black rows. Route the import through the source's
+     * format, exactly like the D229 mirror case above. Only fires when
+     * the tile format genuinely disagrees with the loaded source (CI or
+     * RGBA tile over an I8 load), so real CI/RGBA textures are untouched. */
+    if (loaded_texture.src_fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b &&
+        (fmt_eff == G_IM_FMT_CI || fmt_eff == G_IM_FMT_RGBA)) {
+        fmt_eff = G_IM_FMT_I;
+        siz_eff = G_IM_SIZ_8b;
+    }
     if (fmt_eff == G_IM_FMT_RGBA && siz == G_IM_SIZ_16b &&
         loaded_texture.src_fmt == G_IM_FMT_CI) {
 #ifdef PORT
