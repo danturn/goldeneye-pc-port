@@ -6501,12 +6501,16 @@ void gunDrawSight(s32 *gdl) {
      * stack as the pointer high word → wild `gdl` write in texSetRenderMode
      * when the player raises the crosshair (right-mouse aim). §A. */
     Gfx *sp54;
-    /* v0.4.0 M2 (D373, rule-2 sign-off PENDING): optional crosshair
-     * hide/tint (video.c). Default is the N64 always-on white:
-     * portCrosshairHide == 0 and portCrosshairTint() is the identity
-     * (0xFF, 0xFF, 0xFF). Non-PORT builds keep the original literals. */
+    /* D373/D381: opt-in hide/colour/size/style. With the defaults the
+     * original red sprite, 16-unit half-size, and N64 combiner are intact.
+     * Non-PORT builds keep the original literals and control flow. */
     extern s32 portCrosshairHide;
     extern void portCrosshairTint(s32 *r, s32 *g, s32 *b);
+    extern void portCrosshairApplyTintCombine(Gfx *envCommand);
+    extern int portCrosshairStyle(void);
+    extern float portCrosshairScale(void);
+    extern struct sImageTableEntry *betacrosshairimage;
+    struct sImageTableEntry *sightimage;
     s32 crosshair_r, crosshair_g, crosshair_b;
 #else
     s32 sp54;
@@ -6519,8 +6523,10 @@ void gunDrawSight(s32 *gdl) {
         if (portCrosshairHide)
             return;
         portCrosshairTint(&crosshair_r, &crosshair_g, &crosshair_b);
+        sightimage = portCrosshairStyle() && betacrosshairimage
+            ? betacrosshairimage : crosshairimage;
         sp54 = *(Gfx **)gdl;
-        texSelect(&sp54, crosshairimage, 4, 0, 0);
+        texSelect(&sp54, sightimage, 4, 0, 0);
 #else
         sp54 = *gdl;
         texSelect(&sp54, crosshairimage, 4, 0, 0);
@@ -6530,6 +6536,12 @@ void gunDrawSight(s32 *gdl) {
         xypos[1] = g_CurrentPlayer->crosshair_angle.f[1];
         halfedxy[0] = 16.0f;
         halfedxy[1] = 16.0f;
+#ifdef PORT
+        /* Opt-in size changes only the sprite footprint, never the aim point,
+         * texture dimensions, or the N64/default display list. */
+        halfedxy[0] *= portCrosshairScale();
+        halfedxy[1] *= portCrosshairScale();
+#endif
 
 #ifdef PORT
         /* D334: native widescreen generalises the N64 16:9 sprite fix
@@ -6547,7 +6559,11 @@ void gunDrawSight(s32 *gdl) {
         halfedxy[1] = halfedxy[1] * g_GunSightAspectRatio;
 #endif
 #ifdef PORT
-        display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, crosshair_r, crosshair_g, crosshair_b, 0x6E, (crosshairimage->level > 0), 0);
+        Gfx *envCommand = sp54;
+        display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, crosshair_r, crosshair_g, crosshair_b, 0x6E, (sightimage->level > 0), 0);
+        /* D379: only recoloured reticles use the texture-alpha silhouette.
+         * Original (the default) keeps the N64 G_CC_FADEA commands. */
+        portCrosshairApplyTintCombine(envCommand);
 #else
         display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, 0xFF, 0xFF, 0xFF, 0x6E, (crosshairimage->level > 0), 0);
 #endif

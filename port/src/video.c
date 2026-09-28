@@ -57,7 +57,6 @@ static int initDone = 0;
 static int cfgVSync         = 1;   /* swap interval: 0 = off, 1 = on            */
 static int cfgFpsCap        = 60;  /* frame cap in fps; 0 = uncapped (vsync); menu only exposes 30/60 */
 static int cfgMSAA          = 2;   /* 1/2/4/8 samples; 2x default is lighter on low-end GPUs */
-static int cfgLowEndMode    = 0;   /* v0.4.0 M5 (D372): 1 = low-end preset active (FpsCap 30 + MSAA x1) */
 static int cfgTexFilter     = 1;   /* 0 = nearest, 1 = bilinear (default), 2 = N64 3-point + trilinear */
 static int cfgFixMipTex     = 1;   /* RC2: clip mip-contaminated texture uploads to base height */
 static int cfgDetailBaseTile = 1;  /* D236: TEXTURETYPE_DETAIL -> sample the base image, not the detail tile */
@@ -103,30 +102,71 @@ s32 portSkipIntro = 0;
  * original damage flash. */
 s32 portNoHitFlash = 0;
 
-/* v0.4.0 M2 (D373, rule-2 sign-off PENDING): in-game crosshair on/off +
- * tint (gunfire.c gunDrawSight, #ifdef PORT). 0 = the N64 always-on
- * white crosshair (default); hide is the opt-in off state. */
+/* v0.4.0 M2 (D373/D379): in-game crosshair on/off + tint
+ * (gunfire.c gunDrawSight, #ifdef PORT). Default keeps the original
+ * authored red sprite; hide is opt-in. */
 s32 portCrosshairHide = 0;
-static int cfgCrosshairColor = 0;   /* 0 = white (identity) .. 6, see kTints */
+static int cfgCrosshairColor = 0;   /* 0 = authored sprite; 1..7 = presets; 8 = custom RGB */
+static int cfgCrosshairRed = 255, cfgCrosshairGreen = 255, cfgCrosshairBlue = 255;
+static int cfgCrosshairSize = 100;  /* 100% retains the original 32x32 drawing */
+static int cfgCrosshairStyle = 0;   /* 0 = original; 1 = unused beta asset */
 
-/* Port-provided crosshair tint for gunfire.c (M2). Index 0 is the
- * N64 white (0xFF, 0xFF, 0xFF) so the default render is untouched. */
+int portCrosshairStyle(void) { return cfgCrosshairStyle; }
+float portCrosshairScale(void) { return cfgCrosshairSize / 100.0f; }
+
+/* Index 0 leaves the authored RED sprite untouched (white env multiplier);
+ * index 7 is actual white via its alpha silhouette. */
+/* The authored RGBA32 reticle is RED (confirmed from the decoded 32x32
+ * IMAGE_CROSSHAIR1 texture). G_CC_FADEA multiplies TEXEL0.rgb by env.rgb;
+ * no amount of blue/cyan tint can recover channels absent from the texture.
+ * For the opt-in colours, substitute a combiner that uses TEXEL0 alpha as
+ * the grayscale reticle mask and ENVIRONMENT for the requested RGB. The
+ * alpha expression is unchanged: texture alpha * env alpha (0x6e).
+ * The call site points at display_image_at_position's env-color command;
+ * its immediately following command is the combine mode. Original/0
+ * skips this rewrite, keeping the original game's DL byte-identical. */
+void portCrosshairApplyTintCombine(Gfx *envCommand)
+{
+    if (cfgCrosshairColor == 0 || !envCommand) return;
+    gDPSetCombineLERP(envCommand + 1,
+        ENVIRONMENT, 0, TEXEL0_ALPHA, 0, TEXEL0, 0, ENVIRONMENT, 0,
+        ENVIRONMENT, 0, TEXEL0_ALPHA, 0, TEXEL0, 0, ENVIRONMENT, 0);
+}
+
 void portCrosshairTint(s32 *r, s32 *g, s32 *b)
 {
-    static const unsigned char kTints[7][3] = {
-        { 0xFF, 0xFF, 0xFF }, /* White (N64) */
+    static const unsigned char kTints[8][3] = {
+        { 0xFF, 0xFF, 0xFF }, /* Original red sprite (identity multiplier) */
         { 0x40, 0xFF, 0x40 }, /* Green */
         { 0xFF, 0x40, 0x40 }, /* Red */
         { 0x40, 0x40, 0xFF }, /* Blue */
         { 0xFF, 0xFF, 0x40 }, /* Yellow */
         { 0x40, 0xFF, 0xFF }, /* Cyan */
         { 0xFF, 0x40, 0xFF }, /* Magenta */
+        { 0xFF, 0xFF, 0xFF }, /* Actual white, through alpha silhouette */
     };
-    if (cfgCrosshairColor < 0 || cfgCrosshairColor > 6)
-        cfgCrosshairColor = 0;
-    *r = (s32)kTints[cfgCrosshairColor][0];
-    *g = (s32)kTints[cfgCrosshairColor][1];
-    *b = (s32)kTints[cfgCrosshairColor][2];
+    if (cfgCrosshairColor == 8) {
+        *r = cfgCrosshairRed;
+        *g = cfgCrosshairGreen;
+        *b = cfgCrosshairBlue;
+        return;
+    }
+    int index = (cfgCrosshairColor >= 0 && cfgCrosshairColor <= 7)
+        ? cfgCrosshairColor : 0;
+    *r = (s32)kTints[index][0];
+    *g = (s32)kTints[index][1];
+    *b = (s32)kTints[index][2];
+}
+
+/* The original sprite is red despite its white identity multiplier. Show a
+ * representative red swatch for it rather than misleadingly showing white. */
+void portCrosshairPreview(s32 *r, s32 *g, s32 *b)
+{
+    if (cfgCrosshairColor == 0) {
+        *r = 255; *g = 40; *b = 40;
+    } else {
+        portCrosshairTint(r, g, b);
+    }
 }
 
 /* D257: Game.AllUnlocked — everything-unlocked goodie, OFF by default
@@ -373,12 +413,16 @@ PD_CONSTRUCTOR static void videoConfigInit(void)
     configRegisterInt("Game.SkipIntro", &portSkipIntro, 0, 1);
     configRegisterInt("Game.NoHitFlash", &portNoHitFlash, 0, 1);
     configRegisterInt("Video.CrosshairHide",  &portCrosshairHide, 0, 1);  /* v0.4.0 M2 (D373) */
-    configRegisterInt("Video.CrosshairColor", &cfgCrosshairColor, 0, 6);  /* v0.4.0 M2 (D373) */
+    configRegisterInt("Video.CrosshairColor", &cfgCrosshairColor, 0, 8);  /* 8 = custom; old ini values unchanged */
+    configRegisterInt("Video.CrosshairRed",   &cfgCrosshairRed,   0, 255);
+    configRegisterInt("Video.CrosshairGreen", &cfgCrosshairGreen, 0, 255);
+    configRegisterInt("Video.CrosshairBlue",  &cfgCrosshairBlue,  0, 255);
+    configRegisterInt("Video.CrosshairSize",  &cfgCrosshairSize, 50, 200);
+    configRegisterInt("Video.CrosshairStyle", &cfgCrosshairStyle, 0, 1);
     configRegisterInt("Game.AllUnlocked", &portAllUnlocked, 0, 1);
     configRegisterInt("Video.VSync",         &cfgVSync,      0, 1);
     configRegisterInt("Video.FpsCap",        &cfgFpsCap,     0, 1000);
     configRegisterInt("Video.MSAA",          &cfgMSAA,       1, 8);
-    configRegisterInt("Video.LowEndMode", &cfgLowEndMode, 0, 1);   /* v0.4.0 M5 (D372) */
     configRegisterInt("Video.TextureFilter", &cfgTexFilter,  0, 2);
     configRegisterInt("Video.FixMipTextures", &cfgFixMipTex, 0, 1);
     configRegisterInt("Video.DetailBaseTile", &cfgDetailBaseTile, 0, 1);
@@ -423,9 +467,13 @@ void videoApplySteamOSDefaults(void)
     cfgLodDistance  = 250;
 }
 
-/* Set by videoRequestLiveConfig() (F10 overlay, host thread); consumed on the
- * scheduler thread in videoStartFrame() where the GL context is bound. */
-static volatile int liveCfgDirty = 0;
+/* D382: record precisely which live video setting changed. Reticle/FOV/
+ * frame cap changes must not reset texture state (a shader/cache clear).
+ * Option writes may arrive on the menu or scheduler thread; apply on the
+ * render thread with the GL context bound, coalesced per frame. */
+enum { VCFG_VSYNC = 1, VCFG_FPS = 2, VCFG_FILTER = 4,
+       VCFG_FOV = 8, VCFG_ANISO = 16, VCFG_CROP = 32 };
+static SDL_atomic_t liveCfgDirty;
 
 /* D211/D212: push the port-only image knobs where they apply. FovScale is a
  * plain float the game re-reads each frame; anisotropy goes to fast3d. */
@@ -450,11 +498,23 @@ static void videoApplyTexFilter(void)
     }
 }
 
-/* Re-apply the live-tunable [Video] knobs (VSync / FpsCap / TextureFilter).
- * MSAA and Fullscreen are FBO/window rebuilds -> "(restart)" in the overlay. */
-void videoRequestLiveConfig(void)
+/* Port-only sprite settings and direct-read world/HUD options are not GL
+ * state. Keep the heavyweight texture reset only for the two texture knobs. */
+void videoRequestLiveConfigForKey(const char *key)
 {
-    liveCfgDirty = 1;
+    int mask = 0;
+    if (!strcmp(key, "Video.VSync"))               mask = VCFG_VSYNC;
+    else if (!strcmp(key, "Video.FpsCap"))          mask = VCFG_FPS;
+    else if (!strcmp(key, "Video.TextureFilter"))   mask = VCFG_FILTER;
+    else if (!strcmp(key, "Video.FovScale"))        mask = VCFG_FOV;
+    else if (!strcmp(key, "Video.Anisotropy"))      mask = VCFG_ANISO;
+    else if (!strcmp(key, "Video.SafeAreaCrop"))    mask = VCFG_CROP;
+    if (mask) {
+        int old;
+        do {
+            old = SDL_AtomicGet(&liveCfgDirty);
+        } while (!SDL_AtomicCAS(&liveCfgDirty, old, old | mask));
+    }
 }
 
 /* --- F10 overlay: window / fullscreen changes, deferred to the host thread ---
@@ -711,15 +771,17 @@ void videoStartFrame(void)
      * created on the host main thread. */
     gfx_sdl_make_context_current();
 
-    if (liveCfgDirty) {
-        liveCfgDirty = 0;
-        wmAPI->set_swap_interval(cfgVSync ? 1 : 0);
-        gfx_set_target_fps(cfgFpsCap);   /* 0 = uncapped */
-        videoApplyTexFilter();
-        videoApplyImageOptions();
-        sysLogPrintf(LOG_INFO, "video: live config applied "
+    int dirty = SDL_AtomicSet(&liveCfgDirty, 0);
+    if (dirty) {
+        if (dirty & VCFG_VSYNC) wmAPI->set_swap_interval(cfgVSync ? 1 : 0);
+        if (dirty & VCFG_FPS) gfx_set_target_fps(cfgFpsCap);
+        if (dirty & VCFG_FILTER) videoApplyTexFilter();
+        if (dirty & VCFG_FOV) portFovScale = (f32)cfgFovScale / 100.0f;
+        if (dirty & VCFG_ANISO) gfx_set_anisotropy_level(cfgAniso);
+        if (dirty & VCFG_CROP) gfx_set_safe_area_crop(cfgSafeAreaCrop);
+        sysLogPrintf(LOG_INFO, "video: live config applied mask=%02x "
                      "(vsync=%d fpscap=%d texfilter=%d fov=%d aniso=%d)",
-                     cfgVSync, cfgFpsCap, cfgTexFilter, cfgFovScale, cfgAniso);
+                     dirty, cfgVSync, cfgFpsCap, cfgTexFilter, cfgFovScale, cfgAniso);
     }
 
     gfx_start_frame();
@@ -754,6 +816,9 @@ void videoPumpEvents(void)
             videoRequestQuit("quit event");
             break;
         case SDL_KEYDOWN:
+            /* D383: host owns SDL key events; the capture modal consumes the
+             * next scancode before F10/ESC can close the UI or navigate. */
+            if (optionsBindingKeyDown(&ev.key)) break;
             /* D145: bare ESC used to exit(0). On the front-end / debrief
              * screens ESC is the natural "back" key, so a player pressing it
              * to page back instead quit the whole game (looked like a crash --
@@ -783,13 +848,15 @@ void videoPumpEvents(void)
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
+            if (optionsBindingMouseDown(&ev.button)) break;
             /* WI-1: a click in the window (re)locks the cursor in
              * click-to-lock mode; a no-op otherwise. */
-            if (!optionsOverlayIsOpen()) {
+            if (!optionsOverlayIsOpen() && !optionsBindingCaptureActive()) {
                 inputNotifyClick();
             }
             break;
         case SDL_MOUSEWHEEL:
+            if (optionsBindingCaptureActive()) break;
             if (optionsOverlayIsOpen()) {
                 optionsOverlayScroll(ev.wheel.y);   /* move the selection */
             } else {

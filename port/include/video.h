@@ -59,9 +59,9 @@ void videoResetTextureCache(void);
 /* Current FPS (measured). */
 float videoGetFPS(void);
 
-/* Re-apply the live-tunable [Video] knobs (VSync / FpsCap / TextureFilter) on
- * the next frame start. Called by the F10 options overlay after an edit. */
-void videoRequestLiveConfig(void);
+/* Apply only the GL/SDL setting named by a changed options row at the next
+ * frame start. Sprite/HUD and direct-read settings need no reconfiguration. */
+void videoRequestLiveConfigForKey(const char *key);
 
 /* F10 options overlay -> window/fullscreen changes. The overlay input handler
  * runs on the scheduler thread; SDL window ops must run on the thread that
