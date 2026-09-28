@@ -15491,4 +15491,7 @@ included; D281 keeps the shipped mitigation + disclosure, zero-saves root cause 
 
 **Verification:** rebuild + user re-check of the front screen owed on the refreshed build (INPUT shows 13 rows + "Input (1/2)", stepping down turns to page 2 with Crouch mode / Reset / Bindings…; `GE_FRONTNAVLOG` logs the page number per step; `GE_FRONTOPTIONS_SECTION=INPUT` logs the gathered row count).
 
+
+**D406b (2026-09-28, same pre-push cycle, user reports from the rebuilt screen):** (1) "X axis look sensitivity (controller)" ran into the fixed 232px slider track (label/track overlap) -- slider bars now start 10px past each row's measured label (rows too long for any track show the value only); drag hit-test and A-hold fraction mapping use the same per-row origin. (2) the subtle "(1/2)" title suffix was not a clear enough page-2 indicator -- replaced with a dim "Page p/N" marker right of the title plus a bottom-row hint ("Down: more rows >" / "Up: previous page <") on pages with room below (full 13-row pages carry the top-right marker only). `GE_FRONTOPTS_WIDTHS` one-shot label-metrics log added. Committed a973922d; redeployed to the Deck over the same directory (fresh-save state preserved).
+
 **Status:** OPEN (implemented 2026-09-28, pre-push; verification pending rebuild).

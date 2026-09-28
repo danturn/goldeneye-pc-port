@@ -155,6 +155,16 @@ static Gfx *inkR(Gfx *DL, s32 xr, s32 y, const char *str, u32 colour)
     return ink(DL, xr - measureW(str), y, str, colour);
 }
 
+/* D406b: per-row slider-bar origin. Long labels ("X axis look sensitivity
+ * (controller)") used to run into the fixed 232px bar and overlap the track;
+ * the bar now starts 10px past the label. Rows whose labels leave less than
+ * 12px of track show the value only. */
+static int rowBarX0(const char *label)
+{
+    int x0 = ROW_X + measureW(label) + 10;
+    return x0 < BAR_X0 ? BAR_X0 : x0;
+}
+
 /* "MOUSE / AIM" -> "Mouse / Aim" (GE's menus use title case). */
 static void titleCase(const char *in, char *out, int n)
 {
@@ -412,6 +422,7 @@ void frontOptionsMenuInterface(void)
                              optionsRowLabel(activeHeader()), optionsRowLabel(i), s_hl);
             playSfx(DOOR_LOCK_SFX);
             int child = optionsRowChildHeader(i);
+            int bx0 = optionsRowIsSlider(i) ? rowBarX0(optionsRowLabel(i)) : BAR_X0;
             if (child >= 0) {
                 optionsResetClear();
                 s_subHeader = child;
@@ -422,9 +433,9 @@ void frontOptionsMenuInterface(void)
                              optionsRowLabel(child), s_level);
                 cursorToItem(0);
                 s_hl = -1;
-            } else if (optionsRowIsSlider(i) && cursor_h_pos >= BAR_X0 - 4 &&
-                cursor_h_pos <= BAR_X1 + 4) {
-                optionsRowSetFraction(i, ((double)cursor_h_pos - BAR_X0) / (BAR_X1 - BAR_X0));
+            } else if (optionsRowIsSlider(i) && bx0 <= BAR_X1 - 12 &&
+                       cursor_h_pos >= bx0 - 4 && cursor_h_pos <= BAR_X1 + 4) {
+                optionsRowSetFraction(i, ((double)cursor_h_pos - bx0) / (BAR_X1 - bx0));
                 s_dragRow = i;
             } else if (optionsRowIsBind(i)) {
                 /* D395: pad A/X may navigate the keyboard/mouse binding
@@ -450,7 +461,8 @@ void frontOptionsMenuInterface(void)
     /* Drag a slider while A is held. */
     if (s_dragRow >= 0) {
         if (joyGetButtons(PLAYER_1, A_BUTTON | Z_TRIG)) {
-            optionsRowSetFraction(s_dragRow, ((double)cursor_h_pos - BAR_X0) / (BAR_X1 - BAR_X0));
+            int bx0 = rowBarX0(optionsRowLabel(s_dragRow));
+            optionsRowSetFraction(s_dragRow, ((double)cursor_h_pos - bx0) / (BAR_X1 - bx0));
         } else {
             optionsRowCommit(s_dragRow);
             s_dragRow = -1;
@@ -595,14 +607,8 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             DL = ink(DL, SEC_X, rowY(k), name, INK);
         }
     } else {
-        char title[48];
+        char title[32];
         titleCase(optionsRowLabel(activeHeader()), title, sizeof(title));
-        /* D406: multi-page sections mark the page in the title. */
-        if (s_rowTotal > ROWS_PER_PAGE) {
-            int pages = (s_rowTotal + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE;
-            snprintf(title + strlen(title), sizeof(title) - strlen(title),
-                     " (%d/%d)", s_pageno + 1, pages);
-        }
         int titleW = measureW(title);
         strcat(title, "\n");
         DL = ink(DL, ROW_X, TITLE_Y, title, INK);
@@ -619,6 +625,15 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             if (f < 0) snprintf(note, sizeof(note), "(none)");
             else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
             DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
+        }
+
+        /* D406b: page marker for sections that span pages -- "Page p/N"
+         * right of the title row, dim, so page 2 is unmistakable. */
+        if (s_rowTotal > ROWS_PER_PAGE) {
+            int pages = (s_rowTotal + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE;
+            char pg[24];
+            snprintf(pg, sizeof(pg), "Page %d/%d", s_pageno + 1, pages);
+            DL = inkR(DL, VAL_R, TITLE_Y, pg, INK_DIM);
         }
 
         /* D356: the top profile row (item 0, not in the row table; the label
@@ -643,6 +658,17 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
 
         for (int k = 0; k < s_rowN; k++) {
             int i = s_rowIdx[k];
+            /* D406b: one-shot label-metrics log (layout diagnostics). */
+            static int widthsLogged = 0;
+            if (!widthsLogged && getenv("GE_FRONTOPTS_WIDTHS")) {
+                widthsLogged = 1;
+                for (int w2 = 0; w2 < s_rowN; w2++) {
+                    int j = s_rowIdx[w2];
+                    sysLogPrintf(LOG_INFO, "frontoptions: '%s' w=%d barx0=%d",
+                                 optionsRowLabel(j), measureW(optionsRowLabel(j)),
+                                 rowBarX0(optionsRowLabel(j)));
+                }
+            }
             /* Content row k is item k+1 (item 0 is the save-file row), so
              * it sits one line below the save row -- rowY() already shifts
              * level-1 items down by one. */
@@ -664,9 +690,12 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             }
 
             if (optionsRowIsSlider(i)) {
-                s32 fx = BAR_X0 + (s32)((BAR_X1 - BAR_X0) * optionsRowFraction(i) + 0.5);
-                DL = microcode_constructor_related_to_menus(DL, BAR_X0, y + 5, BAR_X1, y + 8, 0x00000040);
-                DL = microcode_constructor_related_to_menus(DL, BAR_X0, y + 5, fx, y + 8, 0xA00000C0);
+                int x0 = rowBarX0(optionsRowLabel(i));
+                if (BAR_X1 - x0 >= 12) {
+                    s32 fx = x0 + (s32)((BAR_X1 - x0) * optionsRowFraction(i) + 0.5);
+                    DL = microcode_constructor_related_to_menus(DL, x0, y + 5, BAR_X1, y + 8, 0x00000040);
+                    DL = microcode_constructor_related_to_menus(DL, x0, y + 5, fx, y + 8, 0xA00000C0);
+                }
             } else if (optionsRowNeedsRestart(i)) {
                 DL = ink(DL, BAR_X0, y, "(restart)\n", INK_DIM);
             }
@@ -696,6 +725,16 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
                      optionsBindingCaptureActive()
                          ? "Press key/mouse  B/ESC cancel  DEL clear\n"
                          : "Keys/mouse only  Enter: bind  B: back\n", INK_DIM);
+        } else if (s_rowTotal > ROWS_PER_PAGE && s_rowN <= ROWS_PER_PAGE - 2) {
+            /* D406b: bottom hint on pages with room below (a full 13-row
+             * page has none -- the top-right Page marker covers it). */
+            int last = s_pageno * ROWS_PER_PAGE + s_rowN >= s_rowTotal;
+            int first = s_pageno == 0;
+            DL = ink(DL, ROW_X, rowY(s_rowN + 2),
+                     first ? "Down: more rows >\n"
+                     : last ? "Up: previous page <\n"
+                            : "Up: previous page <   Down: next page >\n",
+                     INK_DIM);
         }
     }
 
