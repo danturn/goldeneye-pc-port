@@ -46,7 +46,7 @@ timeline, and an honest account of what worked and what didn't.
        alt="~24 s gameplay montage from live play sessions">
   <br><em>All in-engine, running in the port — a ~24&nbsp;s gameplay montage
   from live v0.4.0 play sessions, opening on the Runway tank ·
-  <a href="docs/index.md">16 level stills in the project index</a></em>
+  <a href="docs/index.md">12 level stills in the project index</a></em>
 </p>
 
 <table align="center" cellspacing="8" cellpadding="0">

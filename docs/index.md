@@ -91,16 +91,12 @@ without a ROM you already own.
 </p>
 
 <details>
-<summary><strong>Full gallery</strong>: 16 in-engine captures — 12 from a v0.4.0 intro-attract pass (3072×1728 widescreen, Sep 2026) and 4 from the v0.2.0 playtest</summary>
+<summary><strong>Full gallery</strong>: 12 in-engine captures from a v0.4.0 intro-attract pass (3072×1728 widescreen, Sep 2026)</summary>
 
 <p align="center">
   <div style="width:32%;text-align:center;margin:4px">
     <img src="img/shots/shot-01.jpg" width="100%" alt="In-engine: Dam (v0.4.0 intro attract)">
     <div><small>Dam</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-02.jpg" width="100%" alt="In-engine: Facility (v0.2.0)">
-    <div><small>Facility</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
     <img src="img/shots/shot-03.jpg" width="100%" alt="In-engine: Runway (v0.4.0 intro attract)">
@@ -111,24 +107,12 @@ without a ROM you already own.
     <div><small>Surface</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-06.jpg" width="100%" alt="In-engine: Bunker 1 (v0.2.0)">
-    <div><small>Bunker 1</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-07.jpg" width="100%" alt="In-engine: Silo (v0.2.0)">
-    <div><small>Silo</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
     <img src="img/shots/shot-09.jpg" width="100%" alt="In-engine: Frigate (v0.4.0 intro attract)">
     <div><small>Frigate</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
     <img src="img/shots/shot-11.jpg" width="100%" alt="In-engine: Surface 2 (v0.4.0 intro attract)">
     <div><small>Surface 2</small></div>
-  </div>
-  <div style="width:32%;text-align:center;margin:4px">
-    <img src="img/shots/shot-13.jpg" width="100%" alt="In-engine: Bunker 2 (v0.2.0)">
-    <div><small>Bunker 2</small></div>
   </div>
   <div style="width:32%;text-align:center;margin:4px">
     <img src="img/shots/shot-16.jpg" width="100%" alt="In-engine: Statue (v0.4.0 intro attract)">
