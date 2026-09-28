@@ -195,3 +195,7 @@ build-pc-cmd.bat
 
 # v0.4.0 modern-options wave: per-landing sweep capture dirs (capture.sh output)
 tools_pc/sweep-captures/capture-*/
+
+# Stray full CPython install that landed in repo root (2026-09-28);
+# referenced by no project tooling. Never commit.
+/Python/

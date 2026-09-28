@@ -641,7 +641,9 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
                          ((u32)blue << 8) | 0xff);
             }
             if (buf[0]) {
-                u32 col = (strcmp(buf, "On") == 0) ? INK_ON : INK;   /* D346: kOnOff is now title-case */
+                u32 col = (buf[0] == 'O' && buf[1] == 'N') ? INK_ON : INK;
+                /* D346: kOnOff is title-case; M7 (D387) tags the
+                 * experimental AllUnlocked ON value "ON - UNSAFE". */
                 strcat(buf, "\n");
                 DL = inkR(DL, VAL_R, y, buf, col);
             }

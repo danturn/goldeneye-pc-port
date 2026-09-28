@@ -94,6 +94,13 @@ static const int         kMsaaSeq[]   = { 1, 2, 4, 8 };
 /* v0.4.0 modern options wave: value names for the new rows (they land
  * in the functional sections -- Turok standard, D356 -- not a bucket). */
 static const char *const kOnOffRev[]  = { "On", "Off", NULL }; /* 0 = On */
+/* M7 (v0.4.0, D387): AllUnlocked ships as a loudly-documented EXPERIMENTAL,
+ * irreversible option. Enabling it and then saving (even a profile-settings
+ * change) bakes synthetic cheat/completion times into the EEPROM that
+ * switching OFF does not undo; it also breaks audio/aim on a fresh save with
+ * no real save yet (D257/D259/D281). Back up data/ge007.eep before enabling.
+ * Display-only value names; config still stores 0/1. */
+static const char *const kAllUnlocked[] = { "Off", "ON - UNSAFE", NULL };
 /* D379: the authored N64 sprite is red. Original is the identity path;
  * White at index 7 uses the same alpha-mask combiner as other true hues. */
 static const char *const kCrosshairColor[] = {
@@ -281,7 +288,8 @@ static struct Row rows[] = {
      * start it OFF (0) -- the old "default ON" note was stale and is
      * corrected by D356. Consumed at startup by main.c -- applies from the
      * next launch. */
-    { .key="Game.AllUnlocked", .label="All unlocked", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
+    { .key="Game.AllUnlocked", .label="All unlocked (EXPERIMENTAL)",
+      .kind=ROW_TOGGLE, .step=1, .names=kAllUnlocked },
     { .key="__ResetGameplay", .label="Reset to defaults", .kind=ROW_ACTION },
     { .key="__OpenHud", .label="HUD...", .kind=ROW_ACTION },
     /* D293: only quit path used to be the OS window-close / Alt+F4 -- no
@@ -2156,7 +2164,7 @@ Gfx *optionsOverlayEmit(void)
             gdl = drawBody(gdl, bx0, rowY, val, ink);
             gdl = drawBodyR(gdl, o.valueR, rowY, "(restart)", 0x498053ff);
         } else {
-            u32 valueInk = (strcmp(val, "On") == 0 ||
+            u32 valueInk = (strncmp(val, "ON", 2) == 0 ||
                             (isResetRow(r) && strcmp(val, "Confirm") == 0))
                            ? 0xa0ffa0ff : ink;
             gdl = drawBodyR(gdl, o.valueR, rowY, val, valueInk);
