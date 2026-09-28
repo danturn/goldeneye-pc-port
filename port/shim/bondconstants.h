@@ -21,7 +21,21 @@
  * Inert in the N64 build (no -DPORT): pure pass-through.
  */
 #if defined(PORT)
+/* D402 (Linux build): parse the PR base headers first, but tell the PR/ucode.h
+ * shim to defer pc_protos.h for this pass. pc_protos.h reaches bondtypes.h,
+ * which needs the bondconstants.h types (ITEM_IDS, ACT_TYPE, ...) that are only
+ * defined later in src/bondconstants.h. Without this, a TU that includes
+ * <bondconstants.h> before <ultra64.h> re-enters the still-parsing
+ * src/bondconstants.h (guard already set) from bondtypes.h and glibc GCC
+ * rejects the half-defined types (MinGW tolerated it). We finish
+ * src/bondconstants.h below and then pull pc_protos.h so the D38 prototypes
+ * are still seen exactly once. */
+#    define _PORT_DEFER_PC_PROTOS
+#    include <ultra64.h>
+#    undef _PORT_DEFER_PC_PROTOS
+
 #include "src/bondconstants.h"
+#include "pc_protos.h"
 
 /*
  * D38: src/bondconstants.h defines ntohl()/ntohs() as function-like macros

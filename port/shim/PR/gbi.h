@@ -136,5 +136,21 @@ typedef union {
 
 #define Gfx Gfx_le
 
+/*
+ * The gDP* display-list macros in the real gbi.h use _SHIFTL/_SHIFTR, which
+ * the N64 headers define in PR/mbi.h. A port TU that includes <PR/gbi.h>
+ * without <ultra64.h> (e.g. port/src/video.c) never reaches mbi.h; on Linux
+ * no other header in its include chain pulls it in, so the gDP* calls expand
+ * to implicit _SHIFTL()/_SHIFTR() function calls and fail to link (D402).
+ * Define them if absent. Guarded so a TU that also reaches mbi.h keeps
+ * mbi.h's own definitions.
+ */
+#ifndef _SHIFTL
+#    define _SHIFTL(v, s, w) ((u32)(((u32)(v) & ((0x01 << (w)) - 1)) << (s)))
+#endif
+#ifndef _SHIFTR
+#    define _SHIFTR(v, s, w) ((u32)(((u32)(v) >> (s)) & ((0x01 << (w)) - 1)))
+#endif
+
 #endif /* defined(PORT) */
 #endif /* _PORT_SHIM_GBI_H_ */
