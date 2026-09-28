@@ -67,8 +67,9 @@ frame cadence. Fixed at the root; the game now holds a rock-stable 60 fps
 - The front end gained a **PC Options screen** beside the file-select bar,
   and save-file **Copy/Erase** moved into the bottom bar. Long sections
   (Input) page within the screen -- a "Page 1/2" marker plus a bottom hint
-  on every page -- so every row stays on screen and stays reachable.
-  (D343/D406)
+  on every page -- so every row stays on screen and stays reachable; the
+  mouse wheel and W/S also page the list, and the selection clamps at page
+  edges. (D343/D406/D407)
 - Watch-only settings — **Auto-aim**, **Look ahead** and the rest — are now
   editable from the PC options and **persist correctly** (this closes the
   "auto-aim won't stay on" report, issue #103). (D330/D350/D352/D354)
@@ -140,6 +141,10 @@ distances). (D402/D283)
   backwards; the front-end **Nintendo logo and copyright page** render
   correctly. (D308/D307/D403)
 - The **train-intro soldier pose** is correct. (D392)
+- **Tanks** (Runway, Streets) can be boarded and exited again — the new
+  use/reload button split had removed the B-button tap the engine's tank
+  handlers use; B is presented again in tank states, and use keeps its
+  no-reload-fallback semantics everywhere else. (D407)
 - File-select background / gun-barrel comb rendering fixed. (D397)
 - Stale-texture artifacts after level transitions fixed. (D235)
 - Distant-geometry dropout on the biggest open levels (Streets, Egyptian)
