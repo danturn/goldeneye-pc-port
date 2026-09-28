@@ -48,6 +48,14 @@ void optionsOverlayHandleInput(void);
 /* Mouse-wheel notch -> move the selection (host event pump). */
 void optionsOverlayScroll(int dir);
 
+/* D383/D385 keyboard + mouse rebinding modal, shared by both options UIs.
+ * Host event pump hands off one key/button; menu thread commits it. */
+int optionsBindingCaptureActive(void);
+int optionsBindingInputBlocked(void); /* active or captured key still held */
+int optionsBindingKeyDown(const SDL_KeyboardEvent *ev); /* 1 = consumed */
+int optionsBindingMouseDown(const SDL_MouseButtonEvent *ev); /* 1 = consumed */
+int optionsBindingCaptureTick(void); /* 1 = swallow menu nav this tick */
+
 /* Build the overlay's 2D display list for this frame, or return NULL when the
  * overlay is closed. Called by fast3d after running the game DL. */
 Gfx *optionsOverlayEmit(void);
@@ -57,9 +65,13 @@ Gfx *optionsOverlayEmit(void);
  * into the screen's sections. */
 int         optionsRowCount(void);
 int         optionsRowIsHeader(int i);
+int         optionsRowHeaderParent(int i); /* -1 for root sections */
+int         optionsRowChildHeader(int i);  /* -1 unless this row opens a nested section */
 int         optionsRowIsShown(int i);
 const char *optionsRowLabel(int i);
 int         optionsRowIsSlider(int i);
+int         optionsRowIsBind(int i);
+void        optionsRowBeginBind(int i);
 int         optionsRowIsBondChooser(int i); /* D353: the Bond-file chooser row
                                               (front options screen only) */
 /* D356: 1 when this row's value lives in the selected save file (content

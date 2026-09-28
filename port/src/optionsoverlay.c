@@ -80,7 +80,7 @@ extern s16   viGetY(void);
 /* ------------------------------------------------------------------------ */
 
 enum { ROW_TOGGLE, ROW_SLIDER, ROW_ENUM, ROW_MSAA, ROW_RES, ROW_ACTION, ROW_FPSCAP,
-       ROW_HEADER, ROW_BOND_FILE /* explicit chooser (front end only) */ };
+       ROW_HEADER, ROW_BOND_FILE, ROW_BIND /* key / mouse-button capture */ };
 
 /* D346: wording pass -- Nightdive/Turok + PD-port conventions: title-case
  * On/Off, no all-caps value strings. Display-only; config stores 0/1 either way. */
@@ -94,15 +94,13 @@ static const int         kMsaaSeq[]   = { 1, 2, 4, 8 };
 /* v0.4.0 modern options wave: value names for the new rows (they land
  * in the functional sections -- Turok standard, D356 -- not a bucket). */
 static const char *const kOnOffRev[]  = { "On", "Off", NULL }; /* 0 = On */
-/* M2: named crosshair tints; index 0 = the N64 white (no tint applied). */
+/* D379: the authored N64 sprite is red. Original is the identity path;
+ * White at index 7 uses the same alpha-mask combiner as other true hues. */
 static const char *const kCrosshairColor[] = {
-    "White", "Green", "Red", "Blue", "Yellow", "Cyan", "Magenta",
-    NULL,
+    "Original (red)", "Green", "Red", "Blue", "Yellow", "Cyan", "Magenta",
+    "White", "Custom", NULL,
 };
-/* D374: key-layout preset -- 0 = the GEPD layout (the default: it is the
- * natural mouse/FPS layout and the N64 never had a keyboard), 1 = the
- * N64-era keyboard binds (byte-identical to the pre-wave defaults) */
-static const char *const kKeyLayout[] = { "Default", "N64", NULL };
+static const char *const kCrosshairStyle[] = { "Original", "Thin cross", NULL };
 /* D186: the sim's own tick pacemaker is hardcoded to the console's native VI
  * rate (60Hz NTSC / 50Hz PAL, port/src/libultra.c) -- Video.FpsCap can only
  * throttle down from there, never past it, and throttling it below 30
@@ -152,6 +150,10 @@ struct Row {
      * Resolved to hidePtr at init. */
     const char        *hiddenIfOn;
     int               *hidePtr;
+    /* Show RGB sliders only while the colour selector is set to Custom. */
+    const char        *shownWhen;
+    int                shownValue;
+    int               *showPtr;
 
     /* D346: value-text decoration (display only). unit is appended to integer
      * slider values ("%"/"x"); dispDiv>0 divides the raw value before display
@@ -161,14 +163,15 @@ struct Row {
 
     /* D356: 1 = this row's value lives in the selected save file (per-file
      * watch rows). Carries the dim "(per profile)" tag on the only section that
-     * mixes scopes (GAMEPLAY); on headers the flag is recomputed at init to
+     * mixes scopes (GAMEPLAY/HUD); on headers the flag is recomputed at init to
      * mean "this section contains per-file rows" (drives the "(File N)"
      * title annotation in both UIs). */
     int                saveScoped;
+    int                bindSlot; /* D383/D385: selected key/mouse slot, 0..1 */
 };
 
 static struct Row rows[] = {
-    /* D356: Turok-style functional sections in Turok's order (INPUT,
+    /* D356/D388: Turok-style functional categories in order (INPUT,
      * GAMEPLAY, GRAPHICS, AUDIO, VIDEO; docs/dev/D356-SETTINGS-REGROUP-PLAN.md).
      * The D353 "BOND FILE" section -- the one named after WHERE a value is
      * saved -- is gone: its surviving rows split into GAMEPLAY (the per-file
@@ -208,9 +211,35 @@ static struct Row rows[] = {
      * control bindings, so they live in INPUT -- no provenance bucket.
      * D374: the GEPD layout is the default (a mouse FPS layout is the
      * natural default; the N64 had no keyboard); crouch defaults to hold. */
-    { .key="Input.Layout", .label="Key layout", .kind=ROW_ENUM, .step=1, .names=kKeyLayout },
     { .key="Input.CrouchMode", .label="Crouch mode", .kind=ROW_ENUM, .step=1, .names=kHold },
     { .key="__ResetInput", .label="Reset to defaults", .kind=ROW_ACTION },
+    { .key="__OpenBindings", .label="Bindings...", .kind=ROW_ACTION },
+
+    /* D388: nested Input -> Bindings -> two short pages, each with a reset.
+     * Mouse buttons 1-5 share the visible slots with keys; pads stay fixed. */
+    { .key="__HdrBindings", .label="BINDINGS", .kind=ROW_HEADER },
+    { .key="__OpenMoveKeys", .label="Movement...", .kind=ROW_ACTION },
+    { .key="__OpenActionKeys", .label="Actions...", .kind=ROW_ACTION },
+
+    { .key="__HdrMoveKeys", .label="MOVEMENT", .kind=ROW_HEADER },
+    { .key="Input.Bind.Forward", .label="Move forward", .kind=ROW_BIND },
+    { .key="Input.Bind.Back", .label="Move backward", .kind=ROW_BIND },
+    { .key="Input.Bind.StrafeLeft", .label="Strafe left", .kind=ROW_BIND },
+    { .key="Input.Bind.StrafeRight", .label="Strafe right", .kind=ROW_BIND },
+    { .key="Input.Bind.TurnLeft", .label="Turn left", .kind=ROW_BIND },
+    { .key="Input.Bind.TurnRight", .label="Turn right", .kind=ROW_BIND },
+    { .key="__ResetMoveKeys", .label="Reset to defaults", .kind=ROW_ACTION },
+
+    { .key="__HdrActionKeys", .label="ACTIONS", .kind=ROW_HEADER },
+    { .key="Input.Bind.Fire", .label="Fire key", .kind=ROW_BIND },
+    { .key="Input.Bind.Aim", .label="Aim key", .kind=ROW_BIND },
+    { .key="Input.Bind.Action", .label="Action / next weapon", .kind=ROW_BIND },
+    { .key="Input.Bind.Cancel", .label="Use / back", .kind=ROW_BIND },
+    { .key="Input.Bind.LeanLeft", .label="Lean left", .kind=ROW_BIND },
+    { .key="Input.Bind.Start", .label="Pause / start", .kind=ROW_BIND },
+    { .key="Input.Bind.Reload", .label="Reload", .kind=ROW_BIND },
+    { .key="Input.Bind.Crouch", .label="Crouch", .kind=ROW_BIND },
+    { .key="__ResetActionKeys", .label="Reset to defaults", .kind=ROW_ACTION },
 
     { .key="__HdrGameplay", .label="GAMEPLAY", .kind=ROW_HEADER },
     /* D356 exposure filter (menu surface only, the D181/D216/D304 pattern --
@@ -219,20 +248,15 @@ static struct Row rows[] = {
      *                    (stacking both is a double-negation trap);
      *   Bond.AimControl  collides with Input.AimMode (two rows fighting over
      *                    the same N64-vs-PC aim model).
-     * The four surviving per-file toggles move here from the D353 BOND FILE
-     * section and carry .saveScoped (dim "(per profile)" tag, the only mixed-scope
-     * section). */
+     * Two gameplay/profile toggles stay here; HUD-specific save rows move
+     * under Gameplay -> HUD. Both pages carry their own reset. */
     /* { .key="Bond.Look", .label="Look up/down (watch; stacks)", .kind=ROW_TOGGLE,
        .names=kReverse, .found=1, .uiMax=1, .cfgMax=1 }, */
     { .key="Bond.AutoAim", .label="Auto-aim", .kind=ROW_TOGGLE,
       .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
     /* { .key="Bond.AimControl", .label="Aim control", .kind=ROW_TOGGLE,
        .names=kHold, .found=1, .uiMax=1, .cfgMax=1 }, */
-    { .key="Bond.Sight", .label="Sight on screen", .kind=ROW_TOGGLE,
-      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
     { .key="Bond.LookAhead", .label="Look ahead", .kind=ROW_TOGGLE,
-      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
-    { .key="Bond.Ammo", .label="Ammo on screen", .kind=ROW_TOGGLE,
       .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
     /* D216/Game.SkipIntro: user report (v0.2.1 testing) that it breaks audio
      * -- pulled from the menu until root-caused. Not exposed to players; the
@@ -248,15 +272,31 @@ static struct Row rows[] = {
      * corrected by D356. Consumed at startup by main.c -- applies from the
      * next launch. */
     { .key="Game.AllUnlocked", .label="All unlocked", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
-    /* D226: scales the ammo counter, pickup / status messages and dialogue
-     * about their screen anchors. 100% = original, nothing emitted. */
-    { .key="Game.HudScale", .label="HUD scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
     { .key="__ResetGameplay", .label="Reset to defaults", .kind=ROW_ACTION },
+    { .key="__OpenHud", .label="HUD...", .kind=ROW_ACTION },
     /* D293: only quit path used to be the OS window-close / Alt+F4 -- no
      * discoverable in-game way to exit, a real gap on Deck/controller-only
      * setups. Not config-backed (like __Resolution); activating it exits
      * the same way video.c's SDL_QUIT/Alt+F4 handlers already do. */
     { .key="__QuitToDesktop", .label="Quit to desktop", .kind=ROW_ACTION },
+
+    /* D388: Gameplay -> HUD collects both profile HUD visibility and global
+     * crosshair/scale controls. Its reset honours each row's own scope. */
+    { .key="__HdrHUD", .label="HUD", .kind=ROW_HEADER },
+    { .key="Bond.Sight", .label="Sight on screen", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
+    { .key="Bond.Ammo", .label="Ammo on screen", .kind=ROW_TOGGLE,
+      .names=kOnOff, .found=1, .uiMax=1, .cfgMax=1, .saveScoped=1 },
+    /* D226: scales the ammo counter, pickup/status text and dialogue. */
+    { .key="Game.HudScale", .label="HUD scale", .kind=ROW_SLIDER, .step=5, .unit="%" },
+    { .key="Video.CrosshairHide", .label="Show crosshair", .kind=ROW_TOGGLE, .step=1, .names=kOnOffRev },
+    { .key="Video.CrosshairColor", .label="Crosshair colour", .kind=ROW_ENUM, .step=1, .names=kCrosshairColor },
+    { .key="Video.CrosshairRed", .label="Red", .kind=ROW_SLIDER, .step=1, .shownWhen="Video.CrosshairColor", .shownValue=8 },
+    { .key="Video.CrosshairGreen", .label="Green", .kind=ROW_SLIDER, .step=1, .shownWhen="Video.CrosshairColor", .shownValue=8 },
+    { .key="Video.CrosshairBlue", .label="Blue", .kind=ROW_SLIDER, .step=1, .shownWhen="Video.CrosshairColor", .shownValue=8 },
+    { .key="Video.CrosshairSize", .label="Crosshair size", .kind=ROW_SLIDER, .step=5, .unit="%" },
+    { .key="Video.CrosshairStyle", .label="Crosshair style", .kind=ROW_ENUM, .step=1, .names=kCrosshairStyle },
+    { .key="__ResetHUD", .label="Reset to defaults", .kind=ROW_ACTION },
 
     { .key="__HdrGraphics", .label="GRAPHICS", .kind=ROW_HEADER },
     { .key="Video.MSAA", .label="Anti-aliasing", .kind=ROW_MSAA, .restart=1 },
@@ -273,12 +313,6 @@ static struct Row rows[] = {
      * Legacy AutoFov ini keys remain supported but no longer hide sliders. */
     { .key="Video.DrawDistance", .label="Draw distance", .kind=ROW_SLIDER, .step=25, .uiMin=100, .uiMax=400 },
     { .key="Video.LodDistance", .label="LOD distance", .kind=ROW_SLIDER, .step=25, .uiMin=100, .uiMax=400 },
-    /* v0.4.0 M2 (D373, rule-2 sign-off PENDING): in-game crosshair
-     * on/off + tint (gunfire.c gunDrawSight, #ifdef PORT). 0/white =
-     * the N64 always-on crosshair (default); off and the tints are
-     * opt-in. */
-    { .key="Video.CrosshairHide", .label="Crosshair", .kind=ROW_TOGGLE, .step=1, .names=kOnOffRev },
-    { .key="Video.CrosshairColor", .label="Crosshair colour", .kind=ROW_ENUM, .step=1, .names=kCrosshairColor },
     /* D304: the per-mode aim/turn-sensitivity sliders and the "Link" toggle
      * that papered over their decoupling risk were pulled from the menu
      * (user feedback after the D304 widening); the ONE master
@@ -315,9 +349,6 @@ static struct Row rows[] = {
     { .key="__Resolution", .label="Resolution", .kind=ROW_RES },
     { .key="Video.VSync", .label="VSync", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.FpsCap", .label="Frame rate cap", .kind=ROW_FPSCAP },
-    /* v0.4.0 M5 (D372): one-row low-end preset -- writes FpsCap 30 +
-     * MSAA x1 (restart). OFF restores the compiled defaults (60/2). */
-    { .key="Video.LowEndMode", .label="Low-end mode (restart)", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="Video.DisplayFPS", .label="Show FPS", .kind=ROW_TOGGLE, .step=1, .names=kOnOff },
     { .key="__ResetVideo", .label="Reset to defaults", .kind=ROW_ACTION },
     /* D356: the D353 BOND FILE header + "Edit file" chooser row are retired --
@@ -327,6 +358,38 @@ static struct Row rows[] = {
     /* { .key="__BondFile", .label="Edit file", .kind=ROW_BOND_FILE, .found=1 }, */
 };
 #define NUM_ROWS ((int)(sizeof(rows) / sizeof(rows[0])))
+
+static int rowIndexByKey(const char *key)
+{
+    for (int i = 0; i < NUM_ROWS; i++)
+        if (strcmp(rows[i].key, key) == 0) return i;
+    return -1;
+}
+
+/* D388: one shared page tree, used by both the front and F10 surfaces.
+ * ROW_HEADER still delimits each section's reset range; link actions only
+ * navigate and must never be treated as settings or the Quit action. */
+int optionsRowHeaderParent(int i)
+{
+    if (i < 0 || i >= NUM_ROWS || rows[i].kind != ROW_HEADER) return -1;
+    const char *key = rows[i].key;
+    if (!strcmp(key, "__HdrBindings")) return rowIndexByKey("__HdrInput");
+    if (!strcmp(key, "__HdrMoveKeys") || !strcmp(key, "__HdrActionKeys"))
+        return rowIndexByKey("__HdrBindings");
+    if (!strcmp(key, "__HdrHUD")) return rowIndexByKey("__HdrGameplay");
+    return -1;
+}
+
+int optionsRowChildHeader(int i)
+{
+    if (i < 0 || i >= NUM_ROWS) return -1;
+    const char *key = rows[i].key;
+    if (!strcmp(key, "__OpenBindings")) return rowIndexByKey("__HdrBindings");
+    if (!strcmp(key, "__OpenMoveKeys")) return rowIndexByKey("__HdrMoveKeys");
+    if (!strcmp(key, "__OpenActionKeys")) return rowIndexByKey("__HdrActionKeys");
+    if (!strcmp(key, "__OpenHud")) return rowIndexByKey("__HdrHUD");
+    return -1;
+}
 
 static int  s_inited = 0;
 static volatile int s_open = 0;
@@ -341,6 +404,127 @@ static int  s_visIdx[NUM_ROWS];
 static int  s_visN = 0;
 static int  s_scroll = 0;
 static SDL_atomic_t s_wheelPending;   /* D314: host-thread wheel notches */
+
+/* D383: SDL_KEYDOWN belongs to videoPumpEvents (host), while both menu
+ * controllers consume it on their own threads. Only the one-shot scancode
+ * crosses threads; binding strings/row state remain menu-thread owned. */
+static SDL_atomic_t s_bindCaptureActive;
+static SDL_atomic_t s_bindPadCancelHold; /* swallow B until released after cancel */
+static SDL_SpinLock s_bindCaptureLock;
+static int s_bindPending = -1, s_bindCaptureRow = -1, s_bindError = 0;
+static SDL_atomic_t s_bindHold; /* captured key/mouse button, shared with pad poll */
+
+static void bindingBegin(struct Row *r)
+{
+    if (!r || !r->found || r->kind != ROW_BIND) return;
+    SDL_AtomicLock(&s_bindCaptureLock);
+    s_bindPending = -1;
+    SDL_AtomicUnlock(&s_bindCaptureLock);
+    s_bindCaptureRow = (int)(r - rows);
+    s_bindError = 0;
+    SDL_AtomicSet(&s_bindPadCancelHold, 0);
+    SDL_AtomicSet(&s_bindHold, SDL_SCANCODE_UNKNOWN);
+    SDL_AtomicSet(&s_bindCaptureActive, 1);
+}
+
+int optionsBindingCaptureActive(void)
+{
+    return SDL_AtomicGet(&s_bindCaptureActive) != 0;
+}
+
+int optionsBindingInputBlocked(void)
+{
+    if (optionsBindingCaptureActive()) return 1;
+    int code = SDL_AtomicGet(&s_bindHold);
+    if (code > SDL_NUM_SCANCODES && code <= INPUT_BIND_MOUSE(5))
+        return (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(code - SDL_NUM_SCANCODES)) != 0;
+    return code > SDL_SCANCODE_UNKNOWN && code < SDL_NUM_SCANCODES &&
+           SDL_GetKeyboardState(NULL)[code];
+}
+
+/* Called before F10/ESC/screenshot handling on the SDL event host thread.
+ * Do not bind reserved system shortcuts or gamepad events. */
+int optionsBindingKeyDown(const SDL_KeyboardEvent *ev)
+{
+    if (!optionsBindingCaptureActive()) return 0;
+    if ((ev->keysym.sym == SDLK_F4 && (ev->keysym.mod & KMOD_ALT))) return 0;
+    if (ev->repeat) return 1;
+    SDL_Scancode sc = ev->keysym.scancode;
+    if (sc == SDL_SCANCODE_F10 || sc == SDL_SCANCODE_F12 ||
+        sc == SDL_SCANCODE_UNKNOWN) return 1;
+    SDL_AtomicLock(&s_bindCaptureLock);
+    if (s_bindPending < 0) s_bindPending = (int)sc;
+    SDL_AtomicUnlock(&s_bindCaptureLock);
+    return 1;
+}
+
+/* Keep menu clicking and click-to-lock out of a mouse-binding capture. */
+int optionsBindingMouseDown(const SDL_MouseButtonEvent *ev)
+{
+    if (!optionsBindingCaptureActive()) return 0;
+    if (ev->button >= 1 && ev->button <= 5) {
+        SDL_AtomicLock(&s_bindCaptureLock);
+        if (s_bindPending < 0) s_bindPending = INPUT_BIND_MOUSE(ev->button);
+        SDL_AtomicUnlock(&s_bindCaptureLock);
+    }
+    return 1;
+}
+
+/* The capturing screen calls this once per input tick. Return 1 while the
+ * modal is active and through the captured key's release, so it cannot
+ * simultaneously trigger menu navigation or a second action. */
+int optionsBindingCaptureTick(void)
+{
+    /* D395: capture only accepts keyboard/mouse. A controller B must be
+     * able to cancel a modal entered with a keyboard/mouse; swallow B until
+     * release so that the same press cannot also back out of the page. */
+    if (SDL_AtomicGet(&s_bindPadCancelHold)) {
+        if (!inputPadButton(0, SDL_CONTROLLER_BUTTON_B))
+            SDL_AtomicSet(&s_bindPadCancelHold, 0);
+        return 1;
+    }
+    if (optionsBindingCaptureActive()) {
+        if (inputPadButton(0, SDL_CONTROLLER_BUTTON_B)) {
+            SDL_AtomicLock(&s_bindCaptureLock);
+            s_bindPending = -1;
+            SDL_AtomicUnlock(&s_bindCaptureLock);
+            SDL_AtomicSet(&s_bindCaptureActive, 0);
+            SDL_AtomicSet(&s_bindPadCancelHold, 1);
+            return 1;
+        }
+        SDL_AtomicLock(&s_bindCaptureLock);
+        int sc = s_bindPending;
+        s_bindPending = -1;
+        SDL_AtomicUnlock(&s_bindCaptureLock);
+        if (sc >= 0) {
+            struct Row *r = &rows[s_bindCaptureRow];
+            if (sc != SDL_SCANCODE_ESCAPE) {
+                int chosen = sc == SDL_SCANCODE_DELETE
+                    ? SDL_SCANCODE_UNKNOWN : sc;
+                if (!inputBindingSetSlot(r->key, r->bindSlot, chosen)) {
+                    s_bindError = 1; /* oversized name: leave ini unchanged */
+                } else {
+                    configSave();
+                    sysLogPrintf(LOG_INFO, "bind capture: %s slot %d = %s",
+                                 r->key, r->bindSlot + 1,
+                                 inputBindingSlot(r->key, r->bindSlot));
+                }
+            }
+            SDL_AtomicSet(&s_bindHold, sc);
+            SDL_AtomicSet(&s_bindCaptureActive, 0);
+        }
+        return 1;
+    }
+    int hold = SDL_AtomicGet(&s_bindHold);
+    if (hold != SDL_SCANCODE_UNKNOWN) {
+        const Uint8 *ks = SDL_GetKeyboardState(NULL);
+        if (hold > SDL_NUM_SCANCODES && hold <= INPUT_BIND_MOUSE(5)) {
+            if (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(hold - SDL_NUM_SCANCODES)) return 1;
+        } else if (hold > SDL_SCANCODE_UNKNOWN && hold < SDL_NUM_SCANCODES && ks[hold]) return 1;
+        SDL_AtomicSet(&s_bindHold, SDL_SCANCODE_UNKNOWN);
+    }
+    return 0;
+}
 
 /* D213: optional on-screen FPS readout (PD parity: Video.DisplayFPS).
  * Drawn top-right whenever enabled, independent of the F10 panel. */
@@ -379,6 +563,8 @@ static void fpsTick(void)
  * values are right-aligned to the panel edge to survive the wide font. */
 #define OV_TOP   8
 #define OV_LINE  16
+#define OV_FOOTER_HEIGHT 38 /* two help lines, including gap below content */
+#define OV_FOOTER_LINE 13
 /* Dark 2D watch-style overlay; the in-stage watch's 3D model is not loaded
  * here. All rendering AND hit-testing take coordinates from this layout;
  * 320x240 stages and 440x330 front screens share the same geometry. */
@@ -402,15 +588,15 @@ static struct OvLayout overlayLayout(void)
     o.valueR = o.right - 12;
     o.barX1 = o.right - 65;
     o.barX0 = o.barX1 - 74;
-    o.maxRows = (h - 6 - o.contentY - 24) / OV_LINE;
+    o.maxRows = (h - 6 - o.contentY - OV_FOOTER_HEIGHT) / OV_LINE;
     if (o.maxRows < 4) o.maxRows = 4;
     /* Root has five categories. A section's title/Back sits in its own
      * pinned band; only the content rows consume this scrollable area. */
     int contentN = s_visN - (s_section >= 0 ? 1 : 0);
     int drawn = contentN < o.maxRows ? contentN : o.maxRows;
-    o.bottom = o.contentY + drawn * OV_LINE + 24;
+    o.bottom = o.contentY + drawn * OV_LINE + OV_FOOTER_HEIGHT;
     if (o.bottom > h - 6) o.bottom = h - 6;
-    o.footerY = o.bottom - 15;
+    o.footerY = o.bottom - 29;
     return o;
 }
 
@@ -425,21 +611,49 @@ static void sliderBarSpan(s32 *x0, s32 *x1)
 }
 
 /* Visible position or -1. Match the rendered [s_scroll, pLast] window
- * exactly (D304: never hit the invisible row below Quit) and centre the
- * hit band on the drawn row (D316). The section title has its own pinned
- * hit band and is always the selectable Back row, even while scrolling. */
-static int overlayRowAtY(double oy)
+ * exactly (D304: never hit the invisible row below Quit). D391: the text
+ * baseline is BELOW rowY: measured glyph pixels occupy rowY+3..+9 at
+ * 320x240, so the former symmetric [rowY-8,rowY+8) hit band assigned
+ * the bottom of a visible label to the NEXT row. Leave a small dead zone
+ * between rows instead of guessing which adjacent item was intended. */
+static int overlayRowAtY(double ox, double oy)
 {
     struct OvLayout o = overlayLayout();
-    if (s_section >= 0 && oy >= o.sectionY - OV_LINE / 2 &&
-        oy < o.sectionY + OV_LINE / 2) return 0; /* pinned Back/title */
+    if (ox < o.left + 3 || ox >= o.right - 3) return -1;
+    if (s_section >= 0 && oy >= o.sectionY - 2 &&
+        oy < o.sectionY + 12) return 0; /* pinned Back/title */
     int pLast = s_scroll + o.maxRows - 1;
     if (pLast >= s_visN) pLast = s_visN - 1;
     for (int p = s_scroll; p <= pLast; p++) {
-        double top = o.contentY + (p - s_scroll) * OV_LINE - OV_LINE / 2;
-        if (oy >= top && oy < top + OV_LINE) return p;
+        double y = o.contentY + (p - s_scroll) * OV_LINE;
+        if (oy >= y - 2 && oy < y + 12) return p;
     }
     return -1;
+}
+
+/* Opt-in geometry check on both the first and last scroll windows. The
+ * visible glyph ink occupies approximately y+3..y+9, so both ends must
+ * select the drawn row, with a dead zone after it and no off-card hit. */
+static int overlayHitCheck(void)
+{
+    struct OvLayout o = overlayLayout();
+    int first = s_section >= 0 ? 1 : 0;
+    int lastScroll = s_visN - first > o.maxRows ? s_visN - o.maxRows : first;
+    int saved = s_scroll, bad = 0;
+    for (int scroll = first; scroll <= lastScroll; scroll += lastScroll - first ? lastScroll - first : 1) {
+        s_scroll = scroll;
+        int last = scroll + o.maxRows < s_visN ? scroll + o.maxRows : s_visN;
+        for (int p = scroll; p < last; p++) {
+            double y = o.contentY + (p - scroll) * OV_LINE;
+            if (overlayRowAtY(o.labelX, y + 3) != p ||
+                overlayRowAtY(o.labelX, y + 9) != p ||
+                overlayRowAtY(o.labelX, y + 12) != -1 ||
+                overlayRowAtY(o.left - 1, y + 9) != -1) bad++;
+        }
+        if (first && overlayRowAtY(o.labelX, o.sectionY + 9) != 0) bad++;
+    }
+    s_scroll = saved;
+    return bad;
 }
 
 /* Rebuild the visible-row list and keep the selection in range. */
@@ -454,16 +668,18 @@ static void overlayUpdateVisible(void)
 {
     s_visN = 0;
     for (int i = 0; i < NUM_ROWS; i++) {
-        /* Category list: only headers. Section: its header serves as Back,
-         * followed by its settings. The file chooser belongs to the front. */
+        /* Root: only top-level headers. Nested sections are opened through
+         * link rows in Input/Bindings and Gameplay. Section header = Back. */
         if (s_section < 0) {
-            if (rows[i].kind == ROW_HEADER) s_visIdx[s_visN++] = i;
+            if (rows[i].kind == ROW_HEADER && optionsRowHeaderParent(i) < 0)
+                s_visIdx[s_visN++] = i;
         } else if (i == s_section) {
             s_visIdx[s_visN++] = i; /* Back */
         } else if (i > s_section) {
             if (rows[i].kind == ROW_HEADER) break;
             if (rows[i].kind != ROW_BOND_FILE &&
-                !(rows[i].hidePtr && *rows[i].hidePtr))
+                !(rows[i].hidePtr && *rows[i].hidePtr) &&
+                (!rows[i].showPtr || *rows[i].showPtr == rows[i].shownValue))
                 s_visIdx[s_visN++] = i;
         }
     }
@@ -508,6 +724,41 @@ static void overlayUpdateScroll(void)
         s_scroll = s_sel - (maxV - 1);
     }
     if (s_scroll > s_visN - maxV) s_scroll = s_visN - maxV;
+}
+
+static void overlayOpenHeader(int hdr)
+{
+    s_section = hdr;
+    s_sel = 1;
+    s_scroll = 0;
+    optionsResetClear();
+    overlayUpdateVisible();
+    overlayUpdateScroll();
+    sysLogPrintf(LOG_INFO, "optionsoverlay: opened %s", rows[hdr].label);
+}
+
+static void overlayBackOne(void)
+{
+    int child = s_section;
+    if (child < 0) return;
+    s_section = optionsRowHeaderParent(child);
+    s_sel = 0;
+    s_scroll = 0;
+    optionsResetClear();
+    overlayUpdateVisible();
+    /* Re-select the link that opened this child (or the root category).
+     * This works for both keyboard and pointer navigation. */
+    for (int p = 0; p < s_visN; p++) {
+        int i = s_visIdx[p];
+        if ((s_section < 0 && i == child) ||
+            (s_section >= 0 && optionsRowChildHeader(i) == child)) {
+            s_sel = p;
+            break;
+        }
+    }
+    overlayUpdateScroll();
+    sysLogPrintf(LOG_INFO, "optionsoverlay: back from %s to %s",
+                 rows[child].label, s_section < 0 ? "categories" : rows[s_section].label);
 }
 
 /* The close box brackets the title row at the panel's right edge. */
@@ -567,14 +818,14 @@ static void overlayInit(void)
     /* Resolve the hidden-while-on sources (manual % rows vs their auto
      * toggles), then build the initial visible list. */
     for (int i = 0; i < NUM_ROWS; i++) {
-        if (!rows[i].hiddenIfOn) {
-            continue;
-        }
         for (int j = 0; j < NUM_ROWS; j++) {
-            if (strcmp(rows[j].key, rows[i].hiddenIfOn) == 0 && rows[j].found) {
+            if (!rows[j].found) continue;
+            if (rows[i].hiddenIfOn &&
+                strcmp(rows[j].key, rows[i].hiddenIfOn) == 0)
                 rows[i].hidePtr = rows[j].ptr;
-                break;
-            }
+            if (rows[i].shownWhen &&
+                strcmp(rows[j].key, rows[i].shownWhen) == 0)
+                rows[i].showPtr = rows[j].ptr;
         }
     }
     /* D356: on a header row, saveScoped means "this section contains
@@ -590,6 +841,67 @@ static void overlayInit(void)
         rows[i].saveScoped = has;
     }
     overlayUpdateVisible();
+
+    /* D388: opt-in in-memory walk of the real F10 page tree. No settings,
+     * binds or profile bytes are written; restore the UI state afterward. */
+    if (getenv("GE_OPTIONTREEPROBE")) {
+        int oldSection = s_section, oldSel = s_sel, oldScroll = s_scroll;
+        int bad = 0;
+        static const char *const roots[] = {
+            "__HdrInput", "__HdrGameplay", "__HdrGraphics", "__HdrAudio", "__HdrVideo"
+        };
+        s_section = -1; s_sel = 0; s_scroll = 0;
+        overlayUpdateVisible();
+        bad += overlayHitCheck();
+        if (s_visN != 5) bad++;
+        for (int p = 0; p < 5 && p < s_visN; p++)
+            if (strcmp(rows[s_visIdx[p]].key, roots[p])) bad++;
+        static const struct { const char *page, *childA, *childB; int maxRows; } pages[] = {
+            { "__HdrInput", "__OpenBindings", NULL, 14 },
+            { "__HdrBindings", "__OpenMoveKeys", "__OpenActionKeys", 14 },
+            { "__HdrMoveKeys", "Input.Bind.Forward", "__ResetMoveKeys", 14 },
+            { "__HdrActionKeys", "Input.Bind.Fire", "__ResetActionKeys", 14 },
+            { "__HdrGameplay", "__OpenHud", "__ResetGameplay", 14 },
+            { "__HdrHUD", "Video.CrosshairColor", "__ResetHUD", 14 },
+            { "__HdrVideo", "Video.FpsCap", "__ResetVideo", 14 },
+        };
+        for (size_t k = 0; k < sizeof(pages) / sizeof(pages[0]); k++) {
+            int hdr = rowIndexByKey(pages[k].page), gotA = 0, gotB = 0;
+            overlayOpenHeader(hdr);
+            bad += overlayHitCheck();
+            if (s_visN - 1 > pages[k].maxRows) bad++;
+            for (int p = 1; p < s_visN; p++) {
+                gotA |= !strcmp(rows[s_visIdx[p]].key, pages[k].childA);
+                if (pages[k].childB)
+                    gotB |= !strcmp(rows[s_visIdx[p]].key, pages[k].childB);
+                if (!strcmp(rows[s_visIdx[p]].key, "Video.LowEndMode")) bad++;
+            }
+            if (!gotA || (pages[k].childB && !gotB)) bad++;
+            overlayBackOne();
+            int parent = optionsRowHeaderParent(hdr);
+            if (s_section != parent) bad++;
+        }
+        int hud = rowIndexByKey("__HdrHUD");
+        overlayOpenHeader(hud);
+        static const char *const hudKeys[] = {
+            "Bond.Sight", "Bond.Ammo", "Game.HudScale"
+        };
+        for (size_t k = 0; k < sizeof(hudKeys) / sizeof(hudKeys[0]); k++) {
+            int seen = 0;
+            for (int p = 1; p < s_visN; p++)
+                seen |= !strcmp(rows[s_visIdx[p]].key, hudKeys[k]);
+            if (!seen) bad++;
+        }
+        if (optionsRowChildHeader(rowIndexByKey("__OpenHud")) != hud ||
+            optionsRowHeaderParent(hud) != rowIndexByKey("__HdrGameplay") ||
+            optionsRowHeaderParent(rowIndexByKey("__HdrMoveKeys")) !=
+                rowIndexByKey("__HdrBindings")) bad++;
+        s_section = oldSection; s_sel = oldSel; s_scroll = oldScroll;
+        overlayUpdateVisible();
+        sysLogPrintf(bad ? LOG_ERROR : LOG_INFO,
+                     "GE_OPTIONTREEPROBE: %s (5 roots, nested links/back, two bind pages, HUD, row caps, no M5)",
+                     bad ? "FAIL" : "PASS");
+    }
 
     /* Build the windowed-resolution preset list: presets that fit the desktop,
      * plus the current window size snapped to the nearest surviving entry. */
@@ -619,22 +931,62 @@ static void overlayInit(void)
     const char *e = getenv("GE_OPTIONSOVERLAY");
     if (e && atoi(e) != 0) {
         s_open = 1;
-        /* Diagnostic screenshots: 1 = category root, 2..6 = the five
-         * sections. This is only a boot probe; normal F10 always opens
-         * at the category root. */
+        /* Diagnostic screenshots: 1 = root, 2..6 = five categories;
+         * GE_OPTIONSOVERLAY_SECTION=__HdrHUD etc. targets nested pages. */
         int page = atoi(e) - 2;
-        if (page >= 0 && page < 5) {
+        if (page >= 0) {
             int found = 0;
             for (int i = 0; i < NUM_ROWS; i++) {
-                if (rows[i].kind == ROW_HEADER && found++ == page) {
-                    s_section = i;
-                    s_sel = 1;
+                if (rows[i].kind == ROW_HEADER && optionsRowHeaderParent(i) < 0 &&
+                    found++ == page) {
+                    overlayOpenHeader(i);
                     break;
                 }
             }
-            overlayUpdateVisible();
         }
+        /* Isolated screenshot/probe of a nested page, never a menu mode. */
+        const char *section = getenv("GE_OPTIONSOVERLAY_SECTION");
+        int nested = section ? rowIndexByKey(section) : -1;
+        if (nested >= 0 && rows[nested].kind == ROW_HEADER)
+            overlayOpenHeader(nested);
+        /* Screenshot-only selection state for checking the pinned Back
+         * row against a normal selected setting on the same page. */
+        if (s_section >= 0 && getenv("GE_OPTIONSOVERLAY_SELECTBACK"))
+            s_sel = 0;
         sysLogPrintf(LOG_INFO, "optionsoverlay: auto-opened (GE_OPTIONSOVERLAY=%s)", e);
+        /* D383 isolated host->menu smoke probe. Only with explicit opt-in;
+         * test data dir must be private because capture persists the key. */
+        const char *probe = getenv("GE_BINDCAPTUREPROBE");
+        if (probe && *probe) {
+            SDL_Scancode sc = !SDL_strcasecmp(probe, "ESC") ? SDL_SCANCODE_ESCAPE :
+                              !SDL_strcasecmp(probe, "DEL") ? SDL_SCANCODE_DELETE :
+                              SDL_SCANCODE_F2;
+            const char *bindKey = getenv("GE_BINDCAPTUREACTION");
+            if (!bindKey || !*bindKey) bindKey = "Input.Bind.Fire";
+            for (int i = 0; i < NUM_ROWS; i++) {
+                if (!strcmp(rows[i].key, bindKey) && rows[i].kind == ROW_BIND) {
+                    bindingBegin(&rows[i]);
+                    sysLogPrintf(LOG_INFO, "GE_BINDCAPTUREPROBE: %s found=%d active=%d",
+                                 bindKey, rows[i].found, optionsBindingCaptureActive());
+                    SDL_Event ev = {0};
+                    if (!SDL_strcasecmp(probe, "MOUSE5")) {
+                        ev.button.type = SDL_MOUSEBUTTONDOWN;
+                        ev.button.state = SDL_PRESSED;
+                        ev.button.button = SDL_BUTTON_X2;
+                    } else {
+                        ev.key.type = SDL_KEYDOWN;
+                        ev.key.state = SDL_PRESSED;
+                        ev.key.repeat = 0;
+                        ev.key.keysym.scancode = sc;
+                        ev.key.keysym.sym = SDL_GetKeyFromScancode(sc);
+                        ev.key.keysym.mod = KMOD_NONE;
+                    }
+                    int sent = SDL_PushEvent(&ev);
+                    sysLogPrintf(LOG_INFO, "GE_BINDCAPTUREPROBE: queued=%d (%s)", sent, SDL_GetError());
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -698,12 +1050,8 @@ static double rowValueAtFraction(const struct Row *r, double f)
 
 static struct Row *rowByKey(const char *key)
 {
-    for (int i = 0; i < NUM_ROWS; i++) {
-        if (strcmp(rows[i].key, key) == 0) {
-            return &rows[i];
-        }
-    }
-    return NULL;
+    int i = rowIndexByKey(key);
+    return i < 0 ? NULL : &rows[i];
 }
 
 static int s_linkDepth = 0;   /* re-entrancy guard for the sens link below */
@@ -742,38 +1090,18 @@ static void rowSetCommit(struct Row *r, double v, int commit)
     default: return;
     }
 
-    /* Live-apply the video knobs that need a fast3d/SDL call. Everything else
-     * is read straight off the pointer by its owner every frame/poll. */
+    /* D382: only the specific live GL/SDL knob that changed needs a render-
+     * thread apply. Reticle, draw/LOD, widescreen and HUD settings are read
+     * directly; rebuilding textures for every RGB/FOV detent caused hitches. */
     if (strcmp(r->key, "Video.Fullscreen") == 0) {
         videoRequestFullscreen((int)lround(v));
-    } else if (strncmp(r->key, "Video.", 6) == 0 && !r->restart &&
-               strcmp(r->key, "Video.DrawDistance") != 0 &&
-               strcmp(r->key, "Video.LodDistance") != 0) {
-        /* These two distance knobs are read directly by the render path.
-         * Reapplying VSync/texture/GL image state every drag detent only
-         * stalls frames; they do not need videoStartFrame's config pass. */
-        videoRequestLiveConfig();
+    } else if (strncmp(r->key, "Video.", 6) == 0 && !r->restart) {
+        videoRequestLiveConfigForKey(r->key);
     }
 
-    /* v0.4.0 M3: key-layout preset / crouch mode -- re-derive the binds
-     * (inputRebuildBinds via inputLayoutApply; also drops the crouch latch).
-     * Safe at scheduler-thread commit time; a mid-poll rebuild can only
-     * drop/add one scancode for one frame (D214 thread-pairing). */
-    if (strcmp(r->key, "Input.Layout") == 0 ||
-        strcmp(r->key, "Input.CrouchMode") == 0) {
-        inputLayoutApply();
-    }
-
-    /* v0.4.0 M5 (D372): low-end perf preset -- one row, two writes:
-     * cap the frame rate at 30 (half the sim tick rate, D186) and drop
-     * MSAA to x1. OFF restores the compiled defaults (60 / 2) rather
-     * than remembering per-user pre-preset values (the defaults ARE
-     * the N64-original setting; simpler and predictable). */
-    if (strcmp(r->key, "Video.LowEndMode") == 0) {
-        int on = (int)lround(v) != 0;
-        rowSet(rowByKey("Video.FpsCap"), on ? 30 : 60);
-        rowSet(rowByKey("Video.MSAA"),   on ? 1  : 2);
-    }
+    /* Crouch mode drops the latch; future bind-capture rows can call the
+     * same rebuild hook. */
+    if (strcmp(r->key, "Input.CrouchMode") == 0) inputBindingsApply();
 
     /* Linked aim/turn sensitivity (Input.SensLink, default on): moving either
      * knob scales the other to hold the stock default ratio -- AimModeSens 38
@@ -860,7 +1188,11 @@ static void rowAdjust(struct Row *r, int dir)
         videoRequestWindowSize(kResList[i][0], kResList[i][1]);
         break;
     }
+    case ROW_BIND:
+        r->bindSlot = (r->bindSlot + dir + INPUT_BIND_SLOTS) % INPUT_BIND_SLOTS;
+        break;
     case ROW_ACTION:
+        if (optionsRowChildHeader((int)(r - rows)) >= 0) break; /* link, not a Quit or value */
         /* D356: reset rows arm/confirm through the shared activation
          * contract (edge-triggered by their callers: fresh key press / fresh
          * click / A-press -- the held-repeat paths below never re-fire them).
@@ -920,11 +1252,9 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Input.PadLookInvertY",    0 },   /* = 0 */
     { "Input.PadDeadzone",       7000 },/* = STICK_DEADZONE (7000) */
     { "Input.PadTriggerPct",     23 },  /* = 23 */
-    { "Input.Layout",            0 },   /* = 0 (GEPD default layout, D374) */
     { "Input.CrouchMode",        0 },   /* = 0 (hold) */
     /* GRAPHICS (port/src/video.c initializers) */
     { "Video.MSAA",                 2 },   /* = 2 */
-    { "Video.LowEndMode",           0 },   /* = 0 (preset off) */
     { "Video.TextureFilter",        1 },   /* = 1 (bilinear) */
     { "Video.Anisotropy",           4 },   /* = 4 */
     { "Video.FovScale",            100 },  /* = 100 */
@@ -934,7 +1264,12 @@ static const struct { const char *key; double def; } kResetDefaults[] = {
     { "Video.DrawDistance",        250 },  /* midpoint: 50/100 */
     { "Video.LodDistance",         250 },  /* midpoint: 50/100 */
     { "Video.CrosshairHide",      0 },   /* = 0 (on, N64) */
-    { "Video.CrosshairColor",   0 },   /* = 0 (white) */
+    { "Video.CrosshairColor",   0 },   /* = 0 (authored red sprite) */
+    { "Video.CrosshairRed",   255 },
+    { "Video.CrosshairGreen", 255 },
+    { "Video.CrosshairBlue",  255 },
+    { "Video.CrosshairSize",  100 },   /* = 100% */
+    { "Video.CrosshairStyle",   0 },   /* = 0 (original) */
     /* GAMEPLAY ini rows (port/src/video.c initializers) */
     { "Game.SkipIntro",   0 },   /* = 0 */
     { "Game.NoHitFlash",  0 },   /* = 0 */
@@ -974,11 +1309,16 @@ static void rowResetSection(int iReset)
     }
     int end = hdr + 1;
     while (end < NUM_ROWS && rows[end].kind != ROW_HEADER) end++;
-    int nWatch = 0, nIni = 0;
+    int nWatch = 0, nIni = 0, nBinds = 0;
     for (int j = hdr + 1; j < end; j++) {
         struct Row *r = &rows[j];
         if (r->kind == ROW_ACTION) continue;             /* reset rows, Quit */
         if (strcmp(r->key, "__Resolution") == 0) continue;  /* documented exclusion */
+        if (r->kind == ROW_BIND) {
+            nBinds += inputBindingResetKey(r->key);
+            r->bindSlot = 0;
+            continue;
+        }
         int field = watchSettingsFieldForKey(r->key);
         if (field >= 0) {
             watchSettingsSet((enum WatchSettingField)field,
@@ -991,8 +1331,9 @@ static void rowResetSection(int iReset)
             nIni++;
         }
     }
-    sysLogPrintf(LOG_INFO, "optionsoverlay: section reset '%s': %d file row(s), %d ini row(s)",
-                 rows[hdr].label, nWatch, nIni);
+    if (nBinds) inputBindingsApply();
+    sysLogPrintf(LOG_INFO, "optionsoverlay: section reset '%s': %d file row(s), %d ini row(s), %d key row(s)",
+                 rows[hdr].label, nWatch, nIni, nBinds);
 }
 
 /* Arm (first edge) or confirm (second edge within RESET_ARM_US). Callers
@@ -1044,6 +1385,7 @@ void optionsOverlayToggle(void)
 {
     overlayInit();
     if (s_open) {
+        if (optionsBindingCaptureActive()) return; /* Escape cancels modal */
         int pending = SDL_AtomicSet(&s_dragWatchField, 0);
         if (pending > 0) watchSettingsCommit(pending - 1);
     }
@@ -1136,7 +1478,7 @@ static int overlayControlSpan(int i, s32 *x0, s32 *x1);
 
 void optionsOverlayHandleInput(void)
 {
-    static int prevUp, prevDn, prevLf, prevRt, prevLmb, prevRmb;
+    static int prevUp, prevDn, prevLf, prevRt, prevLmb, prevRmb, prevPadBack;
     /* D347: hold-to-repeat state (18/4-frame cadence, same as the options
      * screen's D345(e)/(f) blocks). */
     static int navDir = 0, navTimer = 0, adjDir = 0, adjTimer = 0;
@@ -1161,6 +1503,7 @@ void optionsOverlayHandleInput(void)
     /* The overlay owns the mouse while it is open: force the OS cursor free +
      * visible (a stage poll would otherwise leave it locked/hidden). */
     inputSuspendForOverlay();
+    if (optionsBindingCaptureTick()) return;
 
     /* D361: regression probe on the ACTUAL joyPoll/F10 thread (not the
      * game-thread GE_WSPROBE_FRONT hook). A front-end write used to block
@@ -1183,13 +1526,7 @@ void optionsOverlayHandleInput(void)
     overlayUpdateVisible();
     if (SDL_AtomicSet(&s_backPending, 0)) {
         if (s_section >= 0) {
-            int hdr = s_section;
-            s_section = -1;
-            overlayUpdateVisible();
-            s_sel = 0;
-            while (s_sel + 1 < s_visN && s_visIdx[s_sel] != hdr) s_sel++;
-            s_scroll = 0;
-            optionsResetClear();
+            overlayBackOne();
         } else {
             optionsOverlayToggle();
             return;
@@ -1207,15 +1544,10 @@ void optionsOverlayHandleInput(void)
     int lmb = (mb & SDL_BUTTON(SDL_BUTTON_LEFT))  ? 1 : 0;
     int rmb = (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) ? 1 : 0;
 
-    /* Gamepad navigation (controller-only machines, e.g. Steam Deck): the
-     * D-pad or left stick moves the selection; A/X step forward (the Enter
-     * equivalent), B/Y step back; Start closes. OR-ed into the same edge
-     * logic as the keyboard, so repeat/clamp/scroll behaviour is identical.
-     * input.c swallows the pad while we are open, so none of this reaches
-     * the game. (Select also closes -- handled in input.c's toggle, which
-     * runs before this one.)
-     * D347: D-pad left/right and stick-X join A/X/B/Y as value adjust --
-     * the standard controller convention; A/X/B/Y keep working. */
+    /* D396: B backs out one F10 page (closes from root); A/X accept/toggle
+     * on an edge, not slider adjustment. Only D-pad/left-stick X (or keyboard
+     * left/right) adjust sliders, with hold-repeat. The pad is swallowed by
+     * input.c while the overlay owns it. Start/Select still close it. */
     int gUp = inputPadButton(0, SDL_CONTROLLER_BUTTON_DPAD_UP)
            || inputPadAxis(0, SDL_CONTROLLER_AXIS_LEFTY) < -12000;
     int gDn = inputPadButton(0, SDL_CONTROLLER_BUTTON_DPAD_DOWN)
@@ -1226,21 +1558,32 @@ void optionsOverlayHandleInput(void)
             || inputPadAxis(0, SDL_CONTROLLER_AXIS_LEFTX) > 12000;
     int up = ks[SDL_SCANCODE_UP]    || ks[SDL_SCANCODE_KP_8] || gUp;
     int dn = ks[SDL_SCANCODE_DOWN]  || ks[SDL_SCANCODE_KP_2] || gDn;
-    int lf = ks[SDL_SCANCODE_LEFT]  || ks[SDL_SCANCODE_KP_4]
-          || gLf
-          || inputPadButton(0, SDL_CONTROLLER_BUTTON_B)
-          || inputPadButton(0, SDL_CONTROLLER_BUTTON_Y);
-    int rt = ks[SDL_SCANCODE_RIGHT] || ks[SDL_SCANCODE_KP_6]
-          || ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER]
-          || gRt
-          || inputPadButton(0, SDL_CONTROLLER_BUTTON_A)
-          || inputPadButton(0, SDL_CONTROLLER_BUTTON_X);
+    int lf = ks[SDL_SCANCODE_LEFT] || ks[SDL_SCANCODE_KP_4] || gLf;
+    int rightNav = ks[SDL_SCANCODE_RIGHT] || ks[SDL_SCANCODE_KP_6] || gRt;
+    int accept = ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER] ||
+                 inputPadButton(0, SDL_CONTROLLER_BUTTON_A) ||
+                 inputPadButton(0, SDL_CONTROLLER_BUTTON_X);
+    int rt = rightNav || accept;
+    int padBack = inputPadButton(0, SDL_CONTROLLER_BUTTON_B);
 
     static int prevStart = 0;   /* not reset while closed: a Start held across
                                   close must not re-close on the next open */
     int startNow = inputPadButton(0, SDL_CONTROLLER_BUTTON_START);
-    if (startNow && !prevStart) optionsOverlayToggle();   /* Start closes */
+    if (startNow && !prevStart) {
+        prevStart = startNow;
+        optionsOverlayToggle();   /* Start closes */
+        return;
+    }
     prevStart = startNow;
+    if (padBack && !prevPadBack) {
+        prevPadBack = padBack;
+        navDir = adjDir = 0;
+        prevUp = up; prevDn = dn; prevLf = lf; prevRt = rt;
+        if (s_section >= 0) overlayBackOne();
+        else optionsOverlayToggle();
+        return;
+    }
+    prevPadBack = padBack;
 
     /* ---- keyboard / D-pad nav (clamped at the ends; scroll follows).
      * D347: hold-to-repeat so a controller (and held keys) can traverse the
@@ -1268,22 +1611,34 @@ void optionsOverlayHandleInput(void)
             adjDir = dir;
             adjTimer = 18;
             if (s_section < 0) {
-                s_section = s_visIdx[s_sel];
-                s_sel = 1;
-                s_scroll = 0;
-                overlayUpdateVisible();
+                overlayOpenHeader(s_visIdx[s_sel]);
                 adjDir = 0;
             } else if (s_sel == 0) {
-                int hdr = s_section;
-                s_section = -1;
-                overlayUpdateVisible();
-                s_sel = 0;
-                while (s_sel + 1 < s_visN && s_visIdx[s_sel] != hdr) s_sel++;
-                s_scroll = 0;
-                optionsResetClear();
+                overlayBackOne();
                 adjDir = 0;
             } else {
-                rowAdjust(&rows[s_visIdx[s_sel]], dir);
+                int child = optionsRowChildHeader(s_visIdx[s_sel]);
+                if (child >= 0) {
+                    if (dir > 0) overlayOpenHeader(child);
+                    adjDir = 0;
+                } else {
+                struct Row *r = &rows[s_visIdx[s_sel]];
+                int keyConfirm = ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER];
+                if (r->kind == ROW_BIND && dir > 0 && keyConfirm) {
+                    bindingBegin(r);
+                    adjDir = 0;
+                } else if (r->kind == ROW_BIND && dir > 0 && accept && !rightNav) {
+                    /* Pad accept does nothing on keyboard-only binding rows;
+                     * D-pad/stick right still changes the displayed slot. */
+                    adjDir = 0;
+                } else if (r->kind == ROW_SLIDER && dir > 0 && accept && !rightNav) {
+                    /* Accept never moves a slider; left/right own detents. */
+                    adjDir = 0;
+                } else {
+                    rowAdjust(r, dir);
+                    if (accept && !rightNav) adjDir = 0; /* one-shot toggles */
+                }
+                }
             }
         } else if ((rt || lf) && adjDir != 0) {
             if (--adjTimer <= 0) {
@@ -1312,7 +1667,26 @@ void optionsOverlayHandleInput(void)
     if (rw > 0 && rh > 0) {
         double ox = (double)(mx - rx) * (double)viGetX() / rw;
         double oy = (double)(my - ry) * (double)viGetY() / rh;
-        int hoverVis = overlayRowAtY(oy);
+        int hoverVis = overlayRowAtY(ox, oy);
+        /* Opt-in diagnostic for D391: distinguish hit-band/scroll errors
+         * from logical SDL mouse coords vs GL drawable pixel coords. */
+        static int pointerLog = -1, pointerSamples = 0;
+        if (pointerLog < 0) pointerLog = getenv("GE_OVPOINTERMAP") != NULL;
+        if (pointerLog && ((lmb && !prevLmb) || ++pointerSamples == 120)) {
+            if (pointerSamples >= 120) pointerSamples = 0;
+            int winW = 0, winH = 0, drawW = 0, drawH = 0;
+            SDL_Window *win = SDL_GetMouseFocus();
+            if (!win) win = SDL_GetKeyboardFocus();
+            if (win) {
+                SDL_GetWindowSize(win, &winW, &winH);
+                SDL_GL_GetDrawableSize(win, &drawW, &drawH);
+            }
+            sysLogPrintf(LOG_INFO, "ovpointer: mouse=%d,%d window=%d,%d drawable=%d,%d rect=%d,%d,%d,%d vi=%d,%d logical=%.1f,%.1f section=%d scroll=%d sel=%d hit=%d key=%s click=%d",
+                         mx, my, winW, winH, drawW, drawH, rx, ry, rw, rh,
+                         viGetX(), viGetY(), ox, oy, s_section, s_scroll, s_sel,
+                         hoverVis, hoverVis >= 0 ? rows[s_visIdx[hoverVis]].key : "-",
+                         lmb && !prevLmb);
+        }
         int onClose  = overlayInCloseBox(ox, oy);
 
         /* No hover-to-highlight: merely moving the mouse must not move the
@@ -1331,13 +1705,10 @@ void optionsOverlayHandleInput(void)
                 s_sel = hoverVis;         /* explicit click -> select */
                 overlayUpdateScroll();
                 if (rows[s_visIdx[hoverVis]].kind == ROW_HEADER) {
-                    int hdr = s_visIdx[hoverVis];
-                    if (s_section < 0) { s_section = hdr; s_sel = 1; }
-                    else { s_section = -1; s_sel = 0; optionsResetClear(); }
-                    s_scroll = 0;
-                    overlayUpdateVisible();
-                    if (s_section < 0)
-                        while (s_sel + 1 < s_visN && s_visIdx[s_sel] != hdr) s_sel++;
+                    if (s_section < 0) overlayOpenHeader(s_visIdx[hoverVis]);
+                    else overlayBackOne();
+                } else if (optionsRowChildHeader(s_visIdx[hoverVis]) >= 0) {
+                    overlayOpenHeader(optionsRowChildHeader(s_visIdx[hoverVis]));
                 } else {
                     int i = s_visIdx[hoverVis];
                     s32 x0, x1;
@@ -1349,6 +1720,8 @@ void optionsOverlayHandleInput(void)
                             s_dragRow = i;
                             int field = watchSettingsFieldForKey(r->key);
                             SDL_AtomicSet(&s_dragWatchField, field + 1);
+                        } else if (r->kind == ROW_BIND) {
+                            bindingBegin(r); /* mouse selects slot via arrows; click captures */
                         } else {
                             rowAdjust(r, +1);   /* toggle / cycle forward (wraps) */
                         }
@@ -1426,12 +1799,31 @@ static void valueText(int i, char *out, int n)
         return;
     }
     if (r->kind == ROW_ACTION) {
-        if (isResetRow(r)) {
+        if (optionsRowChildHeader(i) >= 0) {
+            /* PD's selectable submenu rows use a title such as "Stick
+             * Settings...", not a second "Open >" value. The link label
+             * above carries that same affordance on both GE PC menus. */
+            if (n > 0) out[0] = 0;
+        } else if (isResetRow(r)) {
             /* D356: the label is the button; the value column shows the
              * armed state so the confirm step is discoverable. */
             snprintf(out, n, s_resetArmedRow == i ? "Confirm" : "");
         } else {
             snprintf(out, n, "[ENTER]");
+        }
+        return;
+    }
+    if (r->kind == ROW_BIND) {
+        if (optionsBindingCaptureActive() && i == s_bindCaptureRow)
+            snprintf(out, n, "Key/mouse...");
+        else if (s_bindError && i == s_bindCaptureRow)
+            snprintf(out, n, "Binding too long");
+        else {
+            static const char *const kSlotName[INPUT_BIND_SLOTS] = {
+                "Primary", "Secondary",
+            };
+            snprintf(out, n, "%s: %s", kSlotName[r->bindSlot],
+                     inputBindingSlot(r->key, r->bindSlot));
         }
         return;
     }
@@ -1470,6 +1862,13 @@ static void valueText(int i, char *out, int n)
         int normalized = (int)lround((v - 100.0) / 3.0);
         if (normalized < 0) normalized = 0; /* legacy LOD ini < 100 */
         snprintf(out, n, "%d/100", normalized);
+        return;
+    }
+    /* RGB channels are 8-bit values; show their endpoint in both UIs. */
+    if (strcmp(r->key, "Video.CrosshairRed") == 0 ||
+        strcmp(r->key, "Video.CrosshairGreen") == 0 ||
+        strcmp(r->key, "Video.CrosshairBlue") == 0) {
+        snprintf(out, n, "%d/255", (int)lround(v));
         return;
     }
     /* D346: integer sliders -- optional raw->display divide + unit suffix. */
@@ -1662,11 +2061,21 @@ Gfx *optionsOverlayEmit(void)
                    1, 9, 7, 235);
     gdl = fillRect(gdl, o.left + 8, o.footerY - 5, o.right - 8, o.footerY - 4,
                    55, 102, 68, 170);
-    /* No row panels or control boxes. Selection is the brighter text in
-     * pass 2; only a slider's actual track/knob gets a background. */
+    /* Selection is the brighter text in pass 2; sliders and the reticle
+     * colour's tiny preview swatch are the only controls with a fill. */
     for (int p = s_scroll; p <= pLast; p++) {
         const struct Row *r = &rows[s_visIdx[p]];
         s32 rowY = o.contentY + (p - s_scroll) * OV_LINE;
+        if (strcmp(r->key, "Video.CrosshairColor") == 0 && r->found) {
+            extern void portCrosshairPreview(s32 *, s32 *, s32 *);
+            char val[48];
+            s32 red, green, blue;
+            valueText(s_visIdx[p], val, sizeof(val));
+            portCrosshairPreview(&red, &green, &blue);
+            s32 x = o.valueR - bodyWidth(val) - 17;
+            gdl = fillRect(gdl, x, rowY, x + 10, rowY + 10,
+                           red, green, blue, 255);
+        }
         if (r->kind == ROW_SLIDER && r->found) {
             double f = rowFractionAt(r, rowGet(r));
             s32 by = rowY + 3; /* INSIDE the row's hit band, not the next row */
@@ -1684,13 +2093,15 @@ Gfx *optionsOverlayEmit(void)
 
     gdl = drawBody(gdl, o.left + 10, o.top + 8, "PC OPTIONS", 0xa0ffa0ff);
     gdl = drawBodyR(gdl, o.right - 14, o.top + 8, "X", 0xa0ffa0ff);
-    if (s_section < 0) {
-        gdl = drawMeta(gdl, o.labelX, o.sectionY, "SELECT A CATEGORY", 0x829e91ff);
-    } else {
+    if (s_section >= 0) {
         const struct Row *hdr = &rows[s_section];
-        gdl = drawBody(gdl, o.left + 12, o.sectionY, "< BACK", 0xa0ffa0ff);
+        /* The pinned Back row is a real selection (s_visIdx[0]), not an
+         * always-bright title decoration. Give it the same selected/dimmed
+         * ink as content rows so Up from the first setting has feedback. */
+        gdl = drawBody(gdl, o.left + 12, o.sectionY, "< BACK",
+                       s_sel == 0 ? 0xa0ffa0ff : 0x66ca77ff);
         s32 titleX = o.left + 80;
-        gdl = drawBody(gdl, titleX, o.sectionY, hdr->label, 0xa0ffa0ff);
+        gdl = drawBody(gdl, titleX, o.sectionY, hdr->label, 0x829e91ff);
         if (hdr->saveScoped) {
             int f = watchSettingsActiveFolder();
             char note[24];
@@ -1698,9 +2109,6 @@ Gfx *optionsOverlayEmit(void)
             else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
             gdl = drawBody(gdl, titleX + bodyWidth(hdr->label) + 5,
                            o.sectionY, note, 0x829e91ff);
-        } else if (!strcmp(hdr->key, "__HdrInput")) {
-            gdl = drawBody(gdl, titleX + bodyWidth(hdr->label) + 5,
-                           o.sectionY, "(50 = default)", 0x829e91ff);
         }
     }
 
@@ -1717,11 +2125,12 @@ Gfx *optionsOverlayEmit(void)
         valueText(s_visIdx[p], val, sizeof(val));
         s32 valueW = bodyWidth(val);
         s32 labelEnd = r->kind == ROW_SLIDER ? bx0 : o.valueR - valueW - 7;
+        if (strcmp(r->key, "Video.CrosshairColor") == 0) labelEnd -= 17;
         if (r->restart) labelEnd = bx0 - 6;
         gdl = drawBodyFit(gdl, o.labelX, rowY, labelEnd - o.labelX,
                           r->label, ink);
-        /* Only GAMEPLAY mixes profile and global values. Its four profile
-         * toggles have space for a real, subdued word; AUDIO is wholly
+        /* GAMEPLAY and HUD mix profile and global values. Their profile
+         * toggles have space for a subdued word; AUDIO is wholly
          * profile-scoped and says so in its section title. */
         if (r->saveScoped && sectionIsMixedScope(s_section)) {
             s32 tagX = o.labelX + bodyWidth(r->label) + 4;
@@ -1742,10 +2151,52 @@ Gfx *optionsOverlayEmit(void)
             gdl = drawBodyR(gdl, o.valueR, rowY, val, valueInk);
         }
     }
+    /* Keep the help inside the card at 320x240. The old single long line
+     * started after CONTROLS: and ran under / beyond the right edge. Reserve
+     * two lines in overlayLayout so the footer never covers the last row. */
+    const char *help1, *help2;
+    if (optionsBindingCaptureActive()) {
+        help1 = "PRESS KEY/MOUSE 1-5";
+        help2 = "B/ESC CANCEL   DEL CLEAR";
+    } else if (s_section < 0) {
+        help1 = "A/ENTER SELECT";
+        help2 = "B/F10 CLOSE";
+    } else if (!strcmp(rows[s_section].key, "__HdrMoveKeys") ||
+               !strcmp(rows[s_section].key, "__HdrActionKeys")) {
+        help1 = "KEY/MOUSE ONLY   LEFT/RIGHT SLOT";
+        help2 = "ENTER BIND   B/ESC BACK";
+    } else {
+        help1 = "A SELECT   LEFT/RIGHT CHANGE";
+        help2 = "B/ESC BACK   F10 CLOSE";
+    }
+    s32 helpX = o.left + 16 + metaWidth("CONTROLS:");
+    s32 helpRight = o.right - 10;
+    static int footerProbe = -1;
+    if (footerProbe < 0) footerProbe = getenv("GE_FOOTERPROBE") != NULL;
+    if (footerProbe) {
+        static int reported;
+        if (!reported++) {
+            static const char *const lines[][2] = {
+                { "PRESS KEY/MOUSE 1-5", "ESC CANCEL   DEL CLEAR" },
+                { "A/ENTER SELECT", "B/F10 CLOSE" },
+                { "KEY/MOUSE ONLY   LEFT/RIGHT SLOT", "ENTER BIND   B/ESC BACK" },
+                { "A SELECT   LEFT/RIGHT CHANGE", "B/ESC BACK   F10 CLOSE" },
+            };
+            for (size_t k = 0; k < sizeof(lines) / sizeof(lines[0]); k++) {
+                s32 a = bodyWidth(lines[k][0]), b = bodyWidth(lines[k][1]);
+                s32 avail1 = helpRight - helpX;
+                s32 avail2 = helpRight - (o.left + 16);
+                sysLogPrintf(a > avail1 || b > avail2 ? LOG_ERROR : LOG_INFO,
+                             "footerprobe: variant %d widths %d/%d available %d/%d %s",
+                             (int)k, a, b, avail1, avail2,
+                             a > avail1 || b > avail2 ? "OVERFLOW" : "FIT");
+            }
+        }
+    }
     gdl = drawMeta(gdl, o.left + 11, o.footerY, "CONTROLS:", 0xa6baaaff);
-    gdl = drawBody(gdl, o.left + 16 + metaWidth("CONTROLS:"), o.footerY,
-                   s_section < 0 ? "ENTER SELECT   F10 CLOSE" :
-                   "RIGHT: CHANGE   ESC BACK   F10 CLOSE", 0x829e91ff);
+    gdl = drawBody(gdl, helpX, o.footerY, help1, 0x829e91ff);
+    gdl = drawBody(gdl, o.left + 16, o.footerY + OV_FOOTER_LINE,
+                   help2, 0x829e91ff);
     if (s_visN - (s_section >= 0 ? 1 : 0) > o.maxRows)
         gdl = drawBodyR(gdl, o.right - 10, o.sectionY,
                         s_scroll > (s_section >= 0 ? 1 : 0) ? "^ v" : "v",
@@ -1790,6 +2241,7 @@ int optionsRowIsShown(int i)
 {
     struct Row *r = rowAt(i);
     return r && r->found && !(r->hidePtr && *r->hidePtr) &&
+           (!r->showPtr || *r->showPtr == r->shownValue) &&
            (r->kind != ROW_BOND_FILE || current_menu == MENU_PC_OPTIONS);
 }
 
@@ -1803,6 +2255,17 @@ int optionsRowIsSlider(int i)
 {
     struct Row *r = rowAt(i);
     return r && r->kind == ROW_SLIDER && rowHi(r) > rowLo(r);
+}
+
+int optionsRowIsBind(int i)
+{
+    struct Row *r = rowAt(i);
+    return r && r->kind == ROW_BIND;
+}
+
+void optionsRowBeginBind(int i)
+{
+    bindingBegin(rowAt(i));
 }
 
 /* D353: the explicit Bond-file chooser row (front options screen only). */
@@ -1894,7 +2357,7 @@ void optionsRowAdjust(int i, int dir)
 /* second file's bytes unchanged (scope isolation).                        */
 /* ------------------------------------------------------------------------ */
 
-#define PROBE_MAX_SECTIONS 8
+#define PROBE_MAX_SECTIONS 8 /* reset-owning sections including HUD and bind leaves */
 static int probeSectionIdxs[PROBE_MAX_SECTIONS];
 static int probeSectionN = 0;
 static int probeResSelBefore = -2;
@@ -2059,7 +2522,7 @@ void optionsResetProbeDispatchStage(void)
     }
     int q = watchSettingsQueueCount();
     if (q < 6) {
-        sysLogPrintf(LOG_WARNING, "wsresetprobe: stage dispatch: queue depth %d, want >= 6 (4 GAMEPLAY + 2 AUDIO watch rows)", q);
+        sysLogPrintf(LOG_WARNING, "wsresetprobe: stage dispatch: queue depth %d, want >= 6 (2 GAMEPLAY + 2 HUD + 2 AUDIO watch rows)", q);
     } else {
         sysLogPrintf(LOG_INFO, "wsresetprobe: stage dispatch: %d command(s) queued (game thread drains next tick)", q);
     }

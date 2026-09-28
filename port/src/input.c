@@ -19,15 +19,13 @@
  * GE's default "1.1" control style: analog stick = move/strafe, the four
  * C-buttons = aim/turn/look (DIGITAL on N64), R = aim mode, Z = fire.
  *
- * Keyboard + mouse (controller 0):
- *   W/S/A/D or arrows .. analog stick  (move / strafe)
- *   mouse motion ....... aim           (mode-aware -- see MOUSE-LOOK below)
- *   left mouse / LCtrl . Z trigger     (fire)
- *   right mouse / LShift R trigger     (aim mode)
- *   Space / Z / E ...... A button      (action / use)
- *   X / R / F ......... B button       (reload / cancel)
- *   Q ................. L trigger
- *   Enter / Tab ....... Start
+ * Keyboard + mouse (controller 0, migrated PC defaults):
+ *   W/S/A/D or arrows .. movement / strafe
+ *   mouse motion ....... look (mode-aware -- see MOUSE-LOOK below)
+ *   left mouse ......... fire; right mouse / LShift .. aim
+ *   Q .................. next weapon; E .. dedicated use
+ *   R .................. dedicated reload; LCtrl .. independent crouch
+ *   Enter / Tab ........ Start
  *
  * Xbox / SDL_GameController (controller 0 merges pad 0 with kbd/mouse;
  * pads 1-3 -> controllers 1-3):
@@ -35,12 +33,14 @@
  *   right stick ....... C-buttons      (digital, 50% threshold -- aim)
  *   right trigger ..... Z trigger      (fire)
  *   left trigger ...... R trigger      (aim mode)
- *   A / X ............. A button
- *   B / Y ............. B button
- *   LB ............... L trigger
- *   RB ............... B button        (reload)
+ *   A ................. use/interact (in-game); accept (menus)
+ *   X ................. reload (in-game); accept (menus)
+ *   B ................. cycle inventory gadgets (in-game); cancel (menus)
+ *   Y ................. next weapon (in-game); cancel (menus)
+ *   stick clicks ...... crouch (in-game)
+ *   LB ................ aim (alternate to LT); RB reserved (no HD assets)
  *   D-pad ............ N64 D-pad
- *   Start ............ Start
+ *   Start ............ Start; Back opens the PC options overlay
  *
  * MOUSE-LOOK (mode-aware, no src/ changes)
  *   GE's aim model (bondview2.c bondviewProcessInput / MoveData) is
@@ -86,10 +86,18 @@
  * Game header pulled in through the same shim path every other compiled game
  * file uses; we only READ vv_theta/vv_verta/speedtheta/speedverta/aspect. */
 #include "player.h"
+#include "gun.h"  /* native weapon flags + dedicated reload entry points */
+#include "bondinv.h" /* inventory list for the Xbox-style gadget cycle */
 
 /* D194 spazz diagnosis: game ticks batched into the current poll (lv.h).
  * Read-only; declared locally to avoid pulling lv.h's wider dependency set. */
 extern s32 g_ClockTimer;
+extern s32 lvlGetControlsLockedFlag(void); /* same gate as bondviewProcessInput */
+extern int gameScriptedCameraActive(void);
+extern bool bond_interact_object(void); /* chrprop.c: use target, no reload fallback */
+/* gun.c: native weapon-switch entry points (not exposed in gun.h). */
+extern ITEM_IDS get_next_weapon_in_cycle_for_hand(GUNHAND hand, s32 direction);
+extern void gunRequestHandWeaponChange(enum GUNHAND hand, s32 nextWeapon, s32 cycleDirection);
 
 /* N64 button bits (from PR/os.h -- duplicated here to avoid pulling os.h,
  * whose `u8 errno;` field collides with <errno.h>'s macro). */
@@ -279,7 +287,8 @@ static int numControllers = 1;
 static int connectedMask   = 0x1;   /* controller 0 always present */
 
 static SDL_GameController *pads[MAX_PADS];
-static int padShoulderPrev[MAX_PADS];   /* LB/RB edge state for weapon cycling */
+static int padBPrev[MAX_PADS];          /* B/Y edges; track through menus too */
+static int padYPrev[MAX_PADS];
 static int padSelectPrev = 0;           /* Select (BACK) edge: overlay toggle */
 
 static int mouseEnabled   = 1;
@@ -600,7 +609,9 @@ static void inputOpenPads(void)
  * LEFT RIGHT CUP CDOWN CLEFT CRIGHT) pulse for INPUTSCRIPT_PULSE controller
  * reads from <frame>. Analog-stick tokens (SUP SDOWN SLEFT SRIGHT) are
  * SUSTAINED: the stick stays deflected until a later entry changes it; SNONE
- * re-centres it. "Frame" = count of controller-0 reads since launch (roughly
+ * re-centres it. CHOLD/CREL hold/release GEPD crouch (D377);
+ * UHOLD/UREL and RELOADHOLD/RELOADREL exercise dedicated use/reload (D378).
+ * "Frame" = count of controller-0 reads since launch (roughly
  * 2 per rendered frame -- watch GE_INPUTLOG to calibrate). Unset env => no
  * effect; when set it is the ONLY controller-0 input source. */
 #define INPUTSCRIPT_MAX     64
@@ -608,7 +619,9 @@ static void inputOpenPads(void)
 
 struct scriptEntry { long frame; unsigned mask; int sx, sy; int hasStick;
                      int hasMouse, mdx, mdy; int hasHold, hold;    /* D337 mouse/aim tokens */
-                     int hasZHold, zhold; };                        /* D207: sustained fire */
+                     int hasZHold, zhold;                          /* D207: sustained fire */
+                     int hasCrouch, crouch;                       /* D377: free-crouch QA */
+                     int hasUse, use, hasReload, reload; };        /* D378: split-action QA */
 static struct scriptEntry scriptEntries[INPUTSCRIPT_MAX];
 static int  scriptCount   = -1;   /* -1 = not parsed yet, 0 = parsed empty */
 static long scriptFrame   = 0;
@@ -649,6 +662,12 @@ static void scriptApplyToken(struct scriptEntry *e, const char *s, int n)
      * independent of RHOLD so aim + fire can be held together. */
     if (n == 5 && SDL_strncasecmp("ZHOLD", s, 5) == 0) { e->hasZHold = 1; e->zhold = 1; return; }
     if (n == 4 && SDL_strncasecmp("ZREL", s, 4) == 0)  { e->hasZHold = 1; e->zhold = 0; return; }
+    if (n == 5 && SDL_strncasecmp("CHOLD", s, 5) == 0) { e->hasCrouch = 1; e->crouch = 1; return; }
+    if (n == 4 && SDL_strncasecmp("CREL", s, 4) == 0)  { e->hasCrouch = 1; e->crouch = 0; return; }
+    if (n == 5 && SDL_strncasecmp("UHOLD", s, 5) == 0) { e->hasUse = 1; e->use = 1; return; }
+    if (n == 4 && SDL_strncasecmp("UREL", s, 4) == 0)  { e->hasUse = 1; e->use = 0; return; }
+    if (n == 10 && SDL_strncasecmp("RELOADHOLD", s, 10) == 0) { e->hasReload = 1; e->reload = 1; return; }
+    if (n == 9 && SDL_strncasecmp("RELOADREL", s, 9) == 0) { e->hasReload = 1; e->reload = 0; return; }
     e->hasStick = 1;
     if (n == 3 && SDL_strncasecmp("SUP", s, 3) == 0)      { e->sy =  STICK_MAX; return; }
     if (n == 5 && SDL_strncasecmp("SDOWN", s, 5) == 0)    { e->sy = -STICK_MAX; return; }
@@ -683,6 +702,8 @@ static void scriptParse(void)
         e->hasMouse = e->mdx = e->mdy = 0;
         e->hasHold = e->hold = 0;
         e->hasZHold = e->zhold = 0;
+        e->hasCrouch = e->crouch = 0;
+        e->hasUse = e->use = e->hasReload = e->reload = 0;
         while (*p && *p != ';') {
             const char *tok = p;
             while (*p && *p != ',' && *p != ';') ++p;
@@ -710,10 +731,10 @@ static int scriptIsActive(void)
  * Returns the scripted button mask for the current frame; advances the frame
  * counter (call exactly once per controller-0 read). */
 /* D337: current sustained scripted mouse delta / aim hold (latest entry). */
-static int s_scriptMouseOn = 0, s_scriptMDX = 0, s_scriptMDY = 0, s_scriptHold = 0, s_scriptZHold = 0;
+static int s_scriptMouseOn = 0, s_scriptMDX = 0, s_scriptMDY = 0, s_scriptHold = 0, s_scriptZHold = 0, s_scriptCrouch = 0, s_scriptUse = 0, s_scriptReload = 0;
 static void scriptPreMouse(void)
 {
-    long bestM = -1, bestH = -1, bestZ = -1;
+    long bestM = -1, bestH = -1, bestZ = -1, bestC = -1, bestU = -1, bestR = -1;
     for (int i = 0; i < scriptCount; ++i) {
         long d = scriptFrame - scriptEntries[i].frame;
         if (d < 0) continue;
@@ -730,6 +751,18 @@ static void scriptPreMouse(void)
         if (scriptEntries[i].hasZHold && scriptEntries[i].frame > bestZ) {
             bestZ = scriptEntries[i].frame;
             s_scriptZHold = scriptEntries[i].zhold;
+        }
+        if (scriptEntries[i].hasCrouch && scriptEntries[i].frame > bestC) {
+            bestC = scriptEntries[i].frame;
+            s_scriptCrouch = scriptEntries[i].crouch;
+        }
+        if (scriptEntries[i].hasUse && scriptEntries[i].frame > bestU) {
+            bestU = scriptEntries[i].frame;
+            s_scriptUse = scriptEntries[i].use;
+        }
+        if (scriptEntries[i].hasReload && scriptEntries[i].frame > bestR) {
+            bestR = scriptEntries[i].frame;
+            s_scriptReload = scriptEntries[i].reload;
         }
     }
 }
@@ -762,9 +795,13 @@ static unsigned scriptApply(unsigned button)
 }
 
 static void inputRebuildBinds(void);   /* D214; defined below with keyDown() */
+static void inputMigrateBinds(void);   /* D380; after configLoad */
+static void inputBindingProbe(void);   /* D383/D384; opt-in, restores ini state */
+static void pcOptionsKeyboardPad(const Uint8 *ks, Uint32 mb, int blocked,
+                                 unsigned *button, int *sx, int *sy);
 
-static int keyLayout = 0;    /* v0.4.0 D374: 0 = GEPD (the default), 1 = N64 layout */
-static int crouchMode = 0;   /* 0 = hold, 1 = toggle (latched B) */
+static int bindsVersion = 0; /* D380/D386: versioned migration of effective ini binds */
+static int crouchMode = 0;   /* 0 = hold, 1 = toggle (latched crouch input) */
 
 int inputInit(void)
 {
@@ -780,10 +817,12 @@ int inputInit(void)
     }
     inputOpenPads();
 
+    inputMigrateBinds();  /* D380: materialise effective GEPD defaults once */
     inputRebuildBinds();   /* D214: parse [Bind] now that configLoad() has run */
+    if (getenv("GE_BINDPROBE")) inputBindingProbe();
 
-    sysLogPrintf(LOG_INFO, "input: layout %s, crouch mode %s (rebuild after configLoad, D214/D374)",
-                 keyLayout ? "N64" : "GEPD (default)", crouchMode ? "toggle" : "hold");
+    sysLogPrintf(LOG_INFO, "input: PC bindings, crouch mode %s",
+                 crouchMode ? "toggle" : "hold");
 
     /* Relative mouse mode for mouse-look. Click-to-lock: we start released
      * and wait for a click in the window (video.c -> inputNotifyClick). */
@@ -870,15 +909,13 @@ static int keyDown(const Uint8 *ks, SDL_Scancode sc)
  * (as printed by SDL_GetScancodeName: "W", "Up", "Left Ctrl", "Space", ...).
  * The defaults reproduce the previously-hardcoded FPS layout exactly, so a
  * fresh or [Bind]-less ini changes nothing. Parsed once in inputInit(), after
- * configLoad(). Mouse buttons (fire = LMB, aim = RMB) stay hardwired.
+ * configLoad(). D385: buttons 1..5 share these slots with keyboard keys.
  * ---------------------------------------------------------------------- */
 enum {
     IA_FORWARD, IA_BACK, IA_STRAFE_L, IA_STRAFE_R, IA_TURN_L, IA_TURN_R,
     IA_FIRE, IA_AIM, IA_ACTION, IA_CANCEL, IA_LEAN_L, IA_START,
-    /* v0.4.0 M3 (modern options wave): GEPD-layout actions. Both map to
-     * the N64 B button -- the game's own B-context logic
-     * (bond_interact_object) picks reload (tap, gun in hand, no
-     * interact target) vs crouch (held) exactly as on the N64. */
+    /* Reload and crouch use the port's dedicated action/stance paths in
+     * playable stages; the native B/C-down buttons have other meanings. */
     IA_RELOAD, IA_CROUCH, IA_COUNT
 };
 
@@ -899,20 +936,17 @@ static const struct { const char *key; const char *def; } kBindDefs[IA_COUNT] = 
     [IA_CROUCH]   = { "Input.Bind.Crouch",      ""              },
 };
 
-/* v0.4.0 M3 (D371) / D374: the GEPD key-layout preset -- now the DEFAULT
- * layout (docs/dev/notes/GEPORT-REFERENCE-DEEPDIVE.md section 7.1: Q = A
- * button (accept/next weapon), E = B button (use/cancel/crouch/reload),
+/* Legacy pre-D380 N64 defaults (kBindDefs above) are only a migration
+ * signature. The single PC layout is the GEPD/mouse default: Q = A
+ * button (accept/next weapon), E = B button (use/cancel/reload),
  * R = dedicated reload, Ctrl = crouch). The preset is the effective default
- * for any action the user has not EXPLICITLY overridden in [Input.Bind];
- * an ini value equal to the N64-layout default (the migration pass writes
- * every key on clean exit) counts as "unset", so a pre-wave ini file gets
- * the preset, not its stale persisted defaults (D374: the stale
- * Fire=Left Ctrl persisted default is exactly what made Ctrl fire the gun
- * in the first GEPD playtest). Fire loses its Left Ctrl key (LMB fires,
- * RMB aims; Ctrl is crouch); LeanLeft is unbound (lean is GEPD-removed).
- * NULL entries keep the N64 default. */
+ * for a one-time ini conversion only. On disk, every Bind key now stores
+ * its actual effective value; `NONE` explicitly unbinds even a preset key.
+ * Fire loses its Left Ctrl key (Mouse 1 fires; Ctrl crouches), LeanLeft unbound.
+ * NULL entries retain their old defaults (movement etc.). */
 static const char *const kGepdPreset[IA_COUNT] = {
-    [IA_FIRE]   = "",
+    [IA_FIRE]   = "Mouse 1",
+    [IA_AIM]    = "Mouse 3,Left Shift",
     [IA_ACTION] = "Q",
     [IA_CANCEL] = "E",
     [IA_LEAN_L] = "",
@@ -921,10 +955,100 @@ static const char *const kGepdPreset[IA_COUNT] = {
 };
 static int s_crouchLatch = 0;
 static int s_crouchHeldPrev = 0;
+static int s_crouchApplied = 0; /* port-owned stance; not the native C-down crouch */
+static struct player *s_crouchPlayer = NULL;
+static int s_useHeldPrev = 0, s_reloadHeldPrev = 0;
 
-#define BIND_MAX_KEYS 4
+/* GEPD-style crouch operates on the game's existing stance field, without
+ * holding the aim button. The game interpolates ducking_height_offset from
+ * crouchpos (bondview2.c:7038-7074). Only undo a stance we applied; preserve
+ * auto-crouch in tight spaces (autocrouchpos is a separate minimum). */
+static void inputDropCrouch(void)
+{
+    /* The engine can take over the stance (tank, respawn, etc.) between
+     * polls; do not undo its new value or write into a different player. */
+    if (s_crouchApplied && g_CurrentPlayer == s_crouchPlayer &&
+        g_CurrentPlayer->crouchpos == CROUCH_SQUAT)
+        g_CurrentPlayer->crouchpos = CROUCH_STAND;
+    s_crouchApplied = 0;
+    s_crouchPlayer = NULL;
+}
+
+#define BIND_MAX_KEYS INPUT_BIND_SLOTS
 static char         g_bindStr[IA_COUNT][64];
-static SDL_Scancode g_bind[IA_COUNT][BIND_MAX_KEYS];
+static int          s_legacyBindWarned[IA_COUNT];
+static int g_bind[IA_COUNT][BIND_MAX_KEYS];
+
+/* Formerly LMB/RMB were unconditional, even for a NONE keyboard bind. Move
+ * that effective behaviour into the two visible slots on first v2 load.
+ * If both slots are already occupied, preserve both user keys and log the
+ * mouse default that could not fit; never keep an invisible active third. */
+static void migrateMouseDefault(int a, int button)
+{
+    char old[sizeof(g_bindStr[0])];
+    snprintf(old, sizeof(old), "%s", g_bindStr[a]);
+    char name[16];
+    snprintf(name, sizeof(name), "Mouse %d", button);
+    if (strstr(old, name)) return;
+    const char *first = old;
+    const char *comma = strchr(old, ',');
+    if (comma && strchr(comma + 1, ',')) {
+        sysLogPrintf(LOG_WARNING, "input: %s has extra legacy keys; cannot add %s in two slots",
+                     kBindDefs[a].key, name);
+        return;
+    }
+    if (comma && strncmp(old, "NONE,", 5) != 0 &&
+        SDL_strcasecmp(comma + 1, "NONE") != 0) {
+        sysLogPrintf(LOG_WARNING, "input: %s already has two keys; rebind a slot to restore %s",
+                     kBindDefs[a].key, name);
+        return;
+    }
+    if (SDL_strcasecmp(first, "NONE") == 0 || !*old) first = "";
+    else if (comma && strncmp(old, "NONE,", 5) == 0) first = comma + 1;
+    else if (comma) {
+        /* A trailing NONE slot is empty; preserve the first key. */
+        char *end = strchr(old, ',');
+        *end = 0;
+        first = old;
+    }
+    if (strlen(name) + (*first ? 1 + strlen(first) : 0) >= sizeof(g_bindStr[a])) {
+        sysLogPrintf(LOG_WARNING, "input: %s too long to add %s; unchanged",
+                     kBindDefs[a].key, name);
+        return;
+    }
+    strcpy(g_bindStr[a], name);
+    if (*first) {
+        strcat(g_bindStr[a], ",");
+        strcat(g_bindStr[a], first);
+    }
+}
+
+static void inputMigrateBinds(void)
+{
+    if (bindsVersion >= 3) return;
+    if (bindsVersion == 2) {
+        /* D386: D385 called SDL button 2 "right" in its default, but SDL
+         * button 2 is middle; button 3 is right. Only fix the exact old
+         * default, never overwrite a user's custom Aim assignment. */
+        if (strcmp(g_bindStr[IA_AIM], "Mouse 2,Left Shift") == 0)
+            snprintf(g_bindStr[IA_AIM], sizeof(g_bindStr[IA_AIM]),
+                     "Mouse 3,Left Shift");
+    }
+    if (bindsVersion == 0) {
+        for (int a = 0; a < IA_COUNT; a++) {
+            const char *preset = kGepdPreset[a];
+            if (preset && strcmp(g_bindStr[a], kBindDefs[a].def) == 0)
+                snprintf(g_bindStr[a], sizeof(g_bindStr[a]), "%s", preset);
+        }
+    }
+    if (bindsVersion < 2) {
+        migrateMouseDefault(IA_FIRE, SDL_BUTTON_LEFT);
+        migrateMouseDefault(IA_AIM, SDL_BUTTON_RIGHT);
+    }
+    bindsVersion = 3;
+    configSave();
+    sysLogPrintf(LOG_INFO, "input: migrated binds to visible PC keyboard/mouse slots");
+}
 
 static void inputRebuildBinds(void)
 {
@@ -932,86 +1056,289 @@ static void inputRebuildBinds(void)
         for (int k = 0; k < BIND_MAX_KEYS; k++) {
             g_bind[a][k] = SDL_SCANCODE_UNKNOWN;
         }
-        /* v0.4.0 D374: resolve the effective string for this action.
-         * Precedence: an EXPLICIT per-key [Input.Bind] value (non-empty and
-         * different from the N64-layout default, or an explicit unbind of a
-         * bound-by-default action) wins over everything. Otherwise the
-         * layout preset is the effective default: GEPD (Input.Layout=0, the
-         * shipped default) or the N64-layout kBindDefs defaults (Layout=1,
-         * byte-identical to the pre-wave binds). A persisted ini value that
-         * merely equals the N64 default counts as "unset" -- the config
-         * migration writes every key on clean exit, so without this rule a
-         * pre-wave ini would mask the preset with its stale defaults. */
-        const char *src = NULL;
-        if (g_bindStr[a][0] != 0) {
-            if (strcmp(g_bindStr[a], kBindDefs[a].def) != 0)
-                src = g_bindStr[a];   /* explicit user bind */
-        } else if (kBindDefs[a].def[0] != 0) {
-            src = g_bindStr[a];       /* explicit unbind of a default-bound action */
-        }
-        const char *def;
-        if (src) {
-            def = src;
-        } else if (keyLayout == 1) {
-            def = kBindDefs[a].def;   /* N64 layout */
-        } else {
-            const char *preset = kGepdPreset[a];
-            def = preset ? preset : kBindDefs[a].def;
+        /* D380: ini values ARE the effective bindings, not hidden defaults.
+         * NONE is an explicit unbind (PD-port convention). */
+        const char *def = SDL_strcasecmp(g_bindStr[a], "NONE") == 0 ? "" : g_bindStr[a];
+        /* D384: do not silently activate invisible 3rd/4th keys in the
+         * two-slot UI. Preserve the old ini text until the user edits this
+         * particular action, at which point only its visible pair is saved. */
+        const char *second = strchr(def, ',');
+        if (second && strchr(second + 1, ',') && !s_legacyBindWarned[a]) {
+            s_legacyBindWarned[a] = 1;
+            sysLogPrintf(LOG_WARNING, "input: %s has legacy extra keys (ignored; edit this action to remove)",
+                         kBindDefs[a].key);
         }
         char buf[64];
         strncpy(buf, def, sizeof(buf) - 1);
         buf[sizeof(buf) - 1] = 0;
-        /* Warn only for an explicitly-provided string (g_bindStr) that
-         * yields no valid keys; intentionally-empty preset/default strings
-         * (GEPD Fire, unbound Reload/Crouch in the N64 layout) are silent. */
+        /* An empty bind or NONE is intentionally unbound, not a typo. */
         int hadInput = (def == g_bindStr[a] && g_bindStr[a][0] != 0);
 
-        int n = 0;
+        int n = 0, valid = 0;
         for (char *tok = strtok(buf, ","); tok && n < BIND_MAX_KEYS; tok = strtok(NULL, ",")) {
             while (*tok == ' ' || *tok == '\t') tok++;
             char *end = tok + strlen(tok);
             while (end > tok && (end[-1] == ' ' || end[-1] == '\t')) *--end = 0;
             if (!*tok) continue;
-            SDL_Scancode sc = SDL_GetScancodeFromName(tok);
+            /* Explicit NONE preserves an empty slot before later keys. */
+            if (SDL_strcasecmp(tok, "NONE") == 0) { n++; continue; }
+            int sc;
+            if (!SDL_strncasecmp(tok, "Mouse ", 6) &&
+                tok[6] >= '1' && tok[6] <= '5' && tok[7] == 0) {
+                sc = INPUT_BIND_MOUSE(tok[6] - '0');
+            } else if (!strncmp(tok, "SC:", 3)) {
+                char *endnum;
+                long id = strtol(tok + 3, &endnum, 10);
+                sc = *endnum == 0 && id > 0 && id < SDL_NUM_SCANCODES
+                    ? (SDL_Scancode)id : SDL_SCANCODE_UNKNOWN;
+            } else {
+                sc = SDL_GetScancodeFromName(tok);
+            }
             if (sc == SDL_SCANCODE_UNKNOWN) {
-                sysLogPrintf(LOG_WARNING, "input: %s: unknown key name '%s'",
+                sysLogPrintf(LOG_WARNING, "input: %s: unknown binding '%s'",
                              kBindDefs[a].key, tok);
                 continue;
             }
             g_bind[a][n++] = sc;
+            valid++;
         }
         /* v0.4.0 M3: an intentionally-empty string (a preset or default
          * that leaves an action unbound, e.g. GEPD Fire) is silent --
          * only a non-empty string that produced no valid keys warns. */
-        if (n == 0 && hadInput) {
+        if (valid == 0 && hadInput) {
             sysLogPrintf(LOG_WARNING, "input: %s has no valid keys; action unbound",
                          kBindDefs[a].key);
         }
     }
 }
 
-/* v0.4.0 M3: re-derive the binds after an F10 change to Input.Layout /
- * Input.CrouchMode (optionsoverlay rowSetCommit hook, scheduler thread).
+/* Re-derive binds after an F10 input option or future key capture
+ * (optionsoverlay rowSetCommit hook, scheduler thread).
  * g_bind is read per-frame by the game thread's actHeld(): a mid-poll
  * rebuild can at worst drop or add one scancode for one frame (the
  * D214 startup-rebuild is the same thread-pairing, just at boot).
- * Also drops the crouch latch so a latched crouch never carries B into
- * a menu (where B = back/cancel). */
-void inputLayoutApply(void)
+ * Also drops the crouch latch on a layout/mode change. */
+void inputBindingsApply(void)
 {
     s_crouchLatch = 0;
     s_crouchHeldPrev = 0;
+    inputDropCrouch();
     inputRebuildBinds();
-    sysLogPrintf(LOG_INFO, "input: key layout %s, crouch %s applied",
-                 keyLayout ? "N64" : "GEPD (default)", crouchMode ? "toggle" : "hold");
+    sysLogPrintf(LOG_INFO, "input: PC bindings, crouch %s applied",
+                 crouchMode ? "toggle" : "hold");
+}
+
+/* D384/D385: the UI edits two honest keyboard/mouse slots. Legacy extra ini tokens
+ * remain unmodified on disk until this action is explicitly edited; they
+ * cannot fire invisibly while only two slots are displayed. */
+static int bindingAction(const char *key)
+{
+    if (!key) return -1;
+    for (int a = 0; a < IA_COUNT; a++)
+        if (!strcmp(kBindDefs[a].key, key)) return a;
+    return -1;
+}
+
+const char *inputBindingSlot(const char *key, int slot)
+{
+    int a = bindingAction(key);
+    if (a < 0 || slot < 0 || slot >= BIND_MAX_KEYS ||
+        g_bind[a][slot] == SDL_SCANCODE_UNKNOWN) return "NONE";
+    if (g_bind[a][slot] > SDL_NUM_SCANCODES &&
+        g_bind[a][slot] <= INPUT_BIND_MOUSE(5)) {
+        static const char *names[] = { "Mouse 1", "Mouse 2", "Mouse 3", "Mouse 4", "Mouse 5" };
+        return names[g_bind[a][slot] - INPUT_BIND_MOUSE(1)];
+    }
+    const char *name = SDL_GetScancodeName((SDL_Scancode)g_bind[a][slot]);
+    if (name && *name && !strchr(name, ',')) return name;
+    /* Rare SDL names contain commas (e.g. keypad comma), which the ini
+     * treats as separators. The stable numeric fallback remains bindable. */
+    static _Thread_local char fallback[16];
+    snprintf(fallback, sizeof(fallback), "SC:%d", (int)g_bind[a][slot]);
+    return fallback;
+}
+
+int inputBindingSetSlot(const char *key, int slot, int sc)
+{
+    int a = bindingAction(key);
+    if (a < 0 || slot < 0 || slot >= BIND_MAX_KEYS ||
+        sc < SDL_SCANCODE_UNKNOWN || sc == SDL_NUM_SCANCODES ||
+        sc > INPUT_BIND_MOUSE(5)) return 0;
+    int slots[BIND_MAX_KEYS];
+    memcpy(slots, g_bind[a], sizeof(slots));
+    if (sc != SDL_SCANCODE_UNKNOWN) {
+        for (int i = 0; i < BIND_MAX_KEYS; i++)
+            if (i != slot && slots[i] == sc) slots[i] = SDL_SCANCODE_UNKNOWN;
+    }
+    slots[slot] = sc;
+    char buf[sizeof(g_bindStr[0])] = {0};
+    int used = 0;
+    for (int i = 0; i < BIND_MAX_KEYS; i++) {
+        if (slots[i] == SDL_SCANCODE_UNKNOWN) {
+            /* Only serialize holes before a later bound slot. */
+            int later = 0;
+            for (int j = i + 1; j < BIND_MAX_KEYS; j++)
+                if (slots[j] != SDL_SCANCODE_UNKNOWN) later = 1;
+            if (!later) continue;
+            if (used + 5 + (used != 0) >= (int)sizeof(buf)) return 0;
+            if (used) buf[used++] = ',';
+            memcpy(buf + used, "NONE", 4);
+            used += 4;
+            buf[used] = 0;
+            continue;
+        }
+        const char *name;
+        char fallback[32];
+        if (slots[i] > SDL_NUM_SCANCODES) {
+            snprintf(fallback, sizeof(fallback), "Mouse %d", slots[i] - SDL_NUM_SCANCODES);
+            name = fallback;
+        } else name = SDL_GetScancodeName((SDL_Scancode)slots[i]);
+        if (!name || !*name || strchr(name, ',')) {
+            snprintf(fallback, sizeof(fallback), "SC:%d", (int)slots[i]);
+            name = fallback;
+        }
+        int len = (int)strlen(name);
+        if (used + len + (used != 0) >= (int)sizeof(buf)) return 0;
+        if (used) buf[used++] = ',';
+        memcpy(buf + used, name, len);
+        used += len;
+        buf[used] = 0;
+    }
+    snprintf(g_bindStr[a], sizeof(g_bindStr[a]), "%s", used ? buf : "NONE");
+    inputBindingsApply();
+    return 1;
+}
+
+int inputBindingResetKey(const char *key)
+{
+    int a = bindingAction(key);
+    if (a < 0) return 0;
+    const char *def = kGepdPreset[a] ? kGepdPreset[a] : kBindDefs[a].def;
+    snprintf(g_bindStr[a], sizeof(g_bindStr[a]), "%s", def);
+    return 1;
+}
+
+/* Isolated boot probe: validate multi-slot persistence without writing ini.
+ * The entire original binding is restored before gameplay begins. */
+static void inputBindingProbe(void)
+{
+    const char *key = "Input.Bind.Crouch";
+    int a = bindingAction(key), ok = a >= 0;
+    char saved[sizeof(g_bindStr[0])];
+    if (!ok) return;
+    memcpy(saved, g_bindStr[a], sizeof(saved));
+    ok &= inputBindingSetSlot(key, 1, SDL_SCANCODE_KP_COMMA);
+    ok &= g_bind[a][1] == SDL_SCANCODE_KP_COMMA;
+    ok &= inputBindingSetSlot(key, 0, SDL_SCANCODE_UNKNOWN);
+    ok &= g_bind[a][0] == SDL_SCANCODE_UNKNOWN && g_bind[a][1] == SDL_SCANCODE_KP_COMMA;
+    ok &= strstr(g_bindStr[a], "NONE,") == g_bindStr[a];
+    ok &= inputBindingSetSlot(key, 1, SDL_SCANCODE_UNKNOWN);
+    ok &= strcmp(g_bindStr[a], "NONE") == 0;
+    memcpy(g_bindStr[a], saved, sizeof(saved));
+    inputBindingsApply();
+    /* Mouse buttons are real, serializable bindings; duplicate assignment
+     * clears the other visible slot rather than leaving a hidden action. */
+    key = "Input.Bind.Fire";
+    a = bindingAction(key);
+    memcpy(saved, g_bindStr[a], sizeof(saved));
+    ok &= inputBindingSetSlot(key, 0, INPUT_BIND_MOUSE(5));
+    ok &= strcmp(inputBindingSlot(key, 0), "Mouse 5") == 0;
+    ok &= inputBindingSetSlot(key, 1, INPUT_BIND_MOUSE(5));
+    ok &= g_bind[a][0] == 0 && g_bind[a][1] == INPUT_BIND_MOUSE(5);
+    ok &= strcmp(g_bindStr[a], "NONE,Mouse 5") == 0;
+    memcpy(g_bindStr[a], saved, sizeof(saved));
+    inputBindingsApply();
+    Uint8 keys[SDL_NUM_SCANCODES] = {0};
+    unsigned menuButton = 0;
+    int menuX = 0, menuY = 0;
+    keys[SDL_SCANCODE_A] = keys[SDL_SCANCODE_D] = keys[SDL_SCANCODE_C] = 1;
+    pcOptionsKeyboardPad(keys, 0, 0, &menuButton, &menuX, &menuY);
+    ok &= !menuButton && !menuX && !menuY; /* gameplay keys cannot steer editor */
+    keys[SDL_SCANCODE_LEFT] = keys[SDL_SCANCODE_RETURN] = 1;
+    pcOptionsKeyboardPad(keys, 0, 0, &menuButton, &menuX, &menuY);
+    ok &= menuX == -STICK_MAX && !menuY && menuButton == GE_CONT_A;
+    pcOptionsKeyboardPad(keys, 0, 1, &menuButton, &menuX, &menuY);
+    ok &= !menuButton && !menuX && !menuY;
+    sysLogPrintf(ok ? LOG_INFO : LOG_ERROR,
+                 "GE_BINDPROBE: %s (2 slots, mouse 1-5, sparse/comma, A/D/C ignored, arrows/Enter, modal isolation; ini restored)",
+                 ok ? "PASS" : "FAIL");
 }
 
 static int actHeld(const Uint8 *ks, int act)
 {
+    /* Front-end mouse clicks stay fixed UI controls. Click-to-lock while
+     * playing cannot fire a newly rebound button until the grab succeeds. */
+    Uint32 mb = mouseEnabled && mouseGrabbed &&
+                current_menu == GE_MENU_RUN_STAGE && !optionsOverlayIsOpen()
+              ? SDL_GetMouseState(NULL, NULL) : 0;
     for (int k = 0; k < BIND_MAX_KEYS; k++) {
-        if (keyDown(ks, g_bind[act][k])) return 1;
+        int code = g_bind[act][k];
+        if (code > SDL_NUM_SCANCODES && code <= INPUT_BIND_MOUSE(5)) {
+            if (mb & SDL_BUTTON(code - SDL_NUM_SCANCODES)) return 1;
+        } else if (code > SDL_SCANCODE_UNKNOWN && code < SDL_NUM_SCANCODES &&
+                   keyDown(ks, (SDL_Scancode)code)) return 1;
     }
     return 0;
+}
+
+/* PC settings use immutable keyboard navigation, independent of gameplay
+ * bindings (which are being edited here). Do not consume A/D/C as controls. */
+static void pcOptionsKeyboardPad(const Uint8 *ks, Uint32 mb, int blocked,
+                                 unsigned *button, int *sx, int *sy)
+{
+    *button = 0;
+    *sx = *sy = 0;
+    if (blocked) return;
+    if (ks[SDL_SCANCODE_UP] || ks[SDL_SCANCODE_KP_8]) *sy = STICK_MAX;
+    if (ks[SDL_SCANCODE_DOWN] || ks[SDL_SCANCODE_KP_2]) *sy = -STICK_MAX;
+    if (ks[SDL_SCANCODE_LEFT] || ks[SDL_SCANCODE_KP_4]) *sx = -STICK_MAX;
+    if (ks[SDL_SCANCODE_RIGHT] || ks[SDL_SCANCODE_KP_6]) *sx = STICK_MAX;
+    if (ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER]) *button |= GE_CONT_A;
+    if (ks[SDL_SCANCODE_ESCAPE]) *button |= GE_CONT_B;
+    if (mb & SDL_BUTTON(SDL_BUTTON_LEFT)) *button |= GE_CONT_A;
+    if (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) *button |= GE_CONT_B;
+}
+
+/* Direct use/reload and modern face buttons share the same game-state gate.
+ * In watch, pause, tank, front end or scripted cameras use native menu bits. */
+static int inputCanUseGameplayActions(int menuMode)
+{
+    return !menuMode && g_CurrentPlayer && !g_CurrentPlayer->bonddead &&
+           g_CurrentPlayer->outside_watch_menu && !g_CurrentPlayer->pause_state &&
+           !g_CurrentPlayer->mpmenuon && !g_PlayerIsInTank &&
+           !lvlGetControlsLockedFlag() && !gameScriptedCameraActive();
+}
+
+/* D394: the Xbox B gadget cycle has no N64 button equivalent (native A
+ * deliberately skips IDs >= ITEM_BOMBCASE). Select the next owned,
+ * equippable inventory gadget using the game's normal weapon-switch path;
+ * never conjure a missing item or touch the N64 game logic. The first press
+ * from a gun selects the lowest gadget; the next press wraps the list. */
+static void inputCycleGadget(void)
+{
+    struct player *p = g_CurrentPlayer;
+    if (!p || !p->ptr_inventory_first_in_cycle) return;
+
+    int current = get_next_weapon_in_cycle_for_hand(GUNRIGHT, 1);
+    int first = -1, next = -1;
+    InvItem *head = p->ptr_inventory_first_in_cycle;
+    InvItem *item = head;
+    do {
+        if (item->type == INV_ITEM_WEAPON) {
+            int id = item->type_inv_item.type_weap.weapon;
+            if (id >= ITEM_BOMBCASE && id <= ITEM_WATCHMAGNETATTRACT) {
+                if (first < 0 || id < first) first = id;
+                if (id > current && (next < 0 || id < next)) next = id;
+            }
+        }
+        item = item->next;
+    } while (item && item != head);
+
+    if (next < 0) next = first;
+    if (next >= 0 && next != current) {
+        gunRequestHandWeaponChange(GUNRIGHT, next, 1);
+        gunRequestHandWeaponChange(GUNLEFT, ITEM_UNARMED, 1);
+    }
 }
 
 /* Fill button mask + stick for controller idx. Returns the 16-bit mask. */
@@ -1019,6 +1346,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
 {
     unsigned button = 0;
     int sx = 0, sy = 0;
+    int crouchNow = 0;
 
     /* D194/D238: self-correcting every poll -- cheap (plain field writes,
      * see options.c cur_player_set_control_type), and re-asserts itself if
@@ -1041,6 +1369,16 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
      * overlay instead. Mirrors the WI-1 "cursor free in a stage -> withhold
      * input" pattern. Controllers 1-3 are untouched. */
     if (idx == 0 && optionsOverlayIsOpen()) {
+        const Uint8 *overlayKs = SDL_GetKeyboardState(NULL);
+        s_useHeldPrev = actHeld(overlayKs, IA_CANCEL) ||
+            (pads[0] && SDL_GameControllerGetButton(pads[0], SDL_CONTROLLER_BUTTON_A));
+        s_reloadHeldPrev = actHeld(overlayKs, IA_RELOAD) ||
+            (pads[0] && SDL_GameControllerGetButton(pads[0], SDL_CONTROLLER_BUTTON_X));
+        s_crouchLatch = 0;
+        s_crouchHeldPrev = 0;
+        inputDropCrouch();
+        padBPrev[0] = pads[0] ? SDL_GameControllerGetButton(pads[0], SDL_CONTROLLER_BUTTON_B) : 0;
+        padYPrev[0] = pads[0] ? SDL_GameControllerGetButton(pads[0], SDL_CONTROLLER_BUTTON_Y) : 0;
         /* Select closes the overlay. padSelectPrev is tracked on this path
          * and the open path below alike, so a button held across the
          * transition cannot immediately re-toggle it. */
@@ -1138,9 +1476,9 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         if (actHeld(ks, IA_TURN_R))   sx =  STICK_MAX;
         if (sx) s_aimDevMouse = 0;   /* D337: keyboard stick turn is the active aim device */
 
-        if ((mb & SDL_BUTTON(SDL_BUTTON_LEFT)) || actHeld(ks, IA_FIRE))
+        if (actHeld(ks, IA_FIRE))
             button |= GE_CONT_G;
-        /* aimButton = the physical RMB / Aim bind (emits the game's R);
+        /* aimButton = the Aim bind (emits the game's R);
          * aimHeld = "the game is in aim mode" for routing the mouse. D337: the
          * game's aim buttons in 1.1/1.2 are L|R (bondview2.c aimButtons), so Q
          * ("LeanLeft", sends L) is a second aim button -- it used to leave the
@@ -1148,8 +1486,7 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
          * found. Routing also follows the game's own insightaimmode, which
          * covers the Aim Control "Toggle" option and gamepad aim. The R emit
          * stays tied to the physical button so Toggle still sees edges. */
-        int aimButton = (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0 ||
-                        actHeld(ks, IA_AIM);
+        int aimButton = actHeld(ks, IA_AIM);
         int aimHeld = aimButton || actHeld(ks, IA_LEAN_L) ||
                       (g_CurrentPlayer != NULL && g_CurrentPlayer->insightaimmode);
         int aimRisingEdgeAim = aimHeld && !s_aimHeldPrev;
@@ -1209,27 +1546,33 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             button |= GE_CONT_A | GE_CONT_G;
             wheelBack--;
         }
-        if (actHeld(ks, IA_CANCEL))     /* D145: Escape is in the default Cancel bind */
+        /* D378/D393: GE's B tap calls bond_interact_object(), then reloads
+         * only when no target was found (lv.c:796). E and pad A use the same
+         * interaction with NO fallback; R and pad X only reload. Their
+         * combined edges prevent a held input from repeatedly using a door.
+         * In menus/watch/tank the pad keeps native accept/cancel buttons. */
+        int padUse = pads[0] && SDL_GameControllerGetButton(pads[0], SDL_CONTROLLER_BUTTON_A);
+        int padReload = pads[0] && SDL_GameControllerGetButton(pads[0], SDL_CONTROLLER_BUTTON_X);
+        int useNow = scriptIsActive() ? s_scriptUse : (actHeld(ks, IA_CANCEL) || padUse);
+        int reloadNow = scriptIsActive() ? s_scriptReload : (actHeld(ks, IA_RELOAD) || padReload);
+        int playable = inputCanUseGameplayActions(menuMode);
+        if (playable) {
+            if (useNow && !s_useHeldPrev) {
+                bool empty = bond_interact_object();
+                if (configGetInputLog()) sysLogPrintf(LOG_NOTE, "GE_INPUTLOG dedicated use (no target=%d)", empty);
+            }
+        } else if (scriptIsActive() ? s_scriptUse : actHeld(ks, IA_CANCEL)) {
+            /* A on the pad is still native accept outside playable stages. */
             button |= GE_CONT_B;
-        /* v0.4.0 M3: reload (B tap, same as any B press). Unbound in the
-         * N64 layout (no-op out of the box). */
-        if (actHeld(ks, IA_RELOAD))
-            button |= GE_CONT_B;
-        /* D375: crouch = C-DOWN while in aim (insight) mode -- that is
-         * what bondview2.c reads (crouchDown = insightaimmode && D-bit,
-         * lines 5318/5579); the B button is NOT the crouch input. S
-         * (IA_BACK, also C-down) crouches while aiming exactly as on
-         * N64. Hold, or latched toggle; a latch is never carried into
-         * a menu. */
-        int crouchNow = actHeld(ks, IA_CROUCH);
-        if (crouchMode == 1) {
-            if (crouchNow && !s_crouchHeldPrev) s_crouchLatch ^= 1;
-            if (menuMode) s_crouchLatch = 0;  /* never carry C-down into a menu */
-            if (s_crouchLatch) button |= GE_CONT_D;
-            s_crouchHeldPrev = crouchNow;
-        } else if (crouchNow) {
-            button |= GE_CONT_D;
         }
+        if (reloadNow && !s_reloadHeldPrev && playable) {
+            attempt_reload_item_in_hand(GUNRIGHT);
+            attempt_reload_item_in_hand(GUNLEFT);
+            if (configGetInputLog()) sysLogPrintf(LOG_NOTE, "GE_INPUTLOG dedicated reload (no use)");
+        }
+        s_useHeldPrev = useNow;
+        s_reloadHeldPrev = reloadNow;
+        crouchNow = actHeld(ks, IA_CROUCH);
         if (actHeld(ks, IA_LEAN_L))
             button |= GE_CONT_L;
         if (actHeld(ks, IA_START))
@@ -1506,6 +1849,14 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             if (mb & SDL_BUTTON(SDL_BUTTON_LEFT))  button |= GE_CONT_A;
             if (mb & SDL_BUTTON(SDL_BUTTON_RIGHT)) button |= GE_CONT_B;
         }
+        /* D384: the PC settings editor MUST NOT navigate using live game
+         * binds. Otherwise capturing A/D/C instantly turns that held key
+         * into C-left/right or stick input, cycling the selected bind slot
+         * and chasing the menu cursor (user repro, bind log). Physical arrow
+         * keys and Enter/Escape are fixed menu controls; mouse/pad still
+         * work. Scripted QA input remains the sole source when active. */
+        if (current_menu == MENU_PC_OPTIONS && !scriptIsActive())
+            pcOptionsKeyboardPad(ks, mb, optionsBindingInputBlocked(), &button, &sx, &sy);
         menuPrevActive = menuMode;
         s_menuPointerLive = (menuMode && mouseEnabled && !mouseGrabbed) ? 1 : 0;
 
@@ -1576,31 +1927,29 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
         if (SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > trigPt)
             button |= GE_CONT_R;
 
-        /* Modern dual-stick layout (Xbox re-release style; the Steam Deck
-         * target). A/X = action/use/reload (the game's context-sensitive A
-         * line), B/Y = crouch, and LB/RB rising edges cycle weapons.
-         * In-game cycling is an A edge (forward) or A+Z held on the same tick
-         * (backward -- bondview2.c weaponForwardOffset/weaponBackOffset, the
-         * same trick the mouse wheel uses above); emit for exactly one poll
-         * so holding RB cannot latch invButtons and block firing. */
-        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
-            SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_X))
-            button |= GE_CONT_A;
-        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B) ||
-            SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_Y))
-            button |= GE_CONT_B;
-        {
-            int lbNow = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-            int rbNow = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-            int *prev = &padShoulderPrev[idx];
-            /* Track edge state in menus too: a shoulder held across the
-             * menu->game transition must not fire a cycle on entry. */
-            if (!padMenuMode) {
-                if (rbNow && !(*prev & 1)) button |= GE_CONT_A;            /* next weapon */
-                if (lbNow && !(*prev & 2)) button |= GE_CONT_A | GE_CONT_G; /* prev weapon */
-            }
-            *prev = (rbNow ? 1 : 0) | (lbNow ? 2 : 0);
+        /* Xbox 1.1 Jinx-style gameplay: A=use, X=reload (handled by the
+         * keyboard action gate), B=gadgets, Y=weapons, stick clicks=crouch,
+         * LB=aim. RB's remaster HD toggle is unavailable in the N64 port.
+         * Menus/watch/tank retain native accept/cancel mappings. */
+        int padA = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A);
+        int padX = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_X);
+        int padB = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B);
+        int padY = SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_Y);
+        int facePlayable = idx == 0 && inputCanUseGameplayActions(padMenuMode);
+        if (facePlayable) {
+            if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_LEFTSTICK) ||
+                SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_RIGHTSTICK))
+                crouchNow = 1;
+            if (padB && !padBPrev[idx]) inputCycleGadget();
+            if (padY && !padYPrev[idx]) button |= GE_CONT_A;
+        } else {
+            if (padA || padX) button |= GE_CONT_A;
+            if (padB || padY) button |= GE_CONT_B;
         }
+        padBPrev[idx] = padB;
+        padYPrev[idx] = padY;
+        if (facePlayable && SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_LEFTSHOULDER))
+            button |= GE_CONT_R;
         if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_START))
             button |= GE_CONT_START;
         if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))
@@ -1620,6 +1969,51 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             /* D343: not on the PC options screen (one options UI at a time). */
             if (selNow && !padSelectPrev && !frontOptionsBlocksOverlay()) optionsOverlayToggle();
             padSelectPrev = selNow;
+        }
+    }
+
+    if (idx == 0 && scriptIsActive()) crouchNow = s_scriptCrouch;
+
+    /* The GEPD preset's crouch key is independent of aim. Do not turn it
+     * into C-down: outside aim C-down moves backwards in 1.2, and inside
+     * aim it also zooms on weapons that disable crouch. This is a PC input
+     * adapter writing the same stance field the native game adjusts, not
+     * a change to the N64 game logic. */
+    if (idx == 0) {
+        int stage = current_menu == GE_MENU_RUN_STAGE || current_menu == GE_MENU_INVALID;
+        if (!stage) s_crouchLatch = 0;
+        if (crouchMode == 1) {
+            if (stage && crouchNow && !s_crouchHeldPrev) s_crouchLatch ^= 1;
+            s_crouchHeldPrev = crouchNow;
+            crouchNow = s_crouchLatch;
+        }
+        struct player *p = g_CurrentPlayer;
+        int canCrouch = stage && p && !p->bonddead && p->outside_watch_menu &&
+                        !p->pause_state && !p->mpmenuon && !g_PlayerIsInTank &&
+                        !lvlGetControlsLockedFlag() &&
+                        !gameScriptedCameraActive() &&
+                        !bondwalkItemCheckBitflags(getCurrentPlayerWeaponId(GUNRIGHT),
+                                                   WEAPONSTATBITFLAG_DISABLE_CROUCH);
+        if (canCrouch && crouchNow) {
+            /* In aim mode the native crouchUp branch runs every tick without
+             * C-down, undoing the port stance by one step. Feed the native
+             * axis ONLY while aiming; hipfire still crouches by stance alone. */
+            if (p->insightaimmode || (button & (GE_CONT_R | GE_CONT_L)))
+                button |= GE_CONT_D;
+            p->crouchpos = CROUCH_SQUAT;
+            if (!s_crouchApplied && configGetInputLog())
+                sysLogPrintf(LOG_NOTE, "GE_INPUTLOG free crouch applied (aim=%d)", p->insightaimmode);
+            s_crouchApplied = 1;
+            s_crouchPlayer = p;
+        } else if (!(canCrouch && (button & GE_CONT_D) && p->insightaimmode)) {
+            /* If native C-down is still held in aim, let the game retain its
+             * own crouch on this tick rather than force a stand. */
+            if (s_crouchApplied && configGetInputLog())
+                sysLogPrintf(LOG_NOTE, "GE_INPUTLOG free crouch released");
+            inputDropCrouch();
+        } else {
+            s_crouchApplied = 0;
+            s_crouchPlayer = NULL;
         }
     }
 
@@ -2008,7 +2402,6 @@ static int hipDirectCompute(double dxPx, double dyLook)
      * directly, bypassing that dispatch entirely. Reuses the same
      * scripted-camera test D243's clamps use (bondview2.c, gameScriptedCameraActive,
      * formerly d243mCutsceneActive -- renamed since this isn't D243-specific). */
-    extern int gameScriptedCameraActive(void);
     if (gameScriptedCameraActive())
         return 0;
 
@@ -2102,16 +2495,16 @@ PD_CONSTRUCTOR static void inputConfigInit(void)
     configRegisterInt("Input.PadDeadzone", &padDeadzone, 0, 30000);
     configRegisterInt("Input.PadTriggerPct", &padTriggerPct, 1, 99);
     configRegisterInt("Input.PadLookInvertY", &padLookInvertY, 0, 1);
-    /* v0.4.0 M3 (modern options wave): key-layout preset + crouch bind
-     * mode; both default to the N64-original FPS layout / hold. */
-    configRegisterInt("Input.Layout",     &keyLayout,  0, 1);
+    /* D380: single PC layout. Old Input.Layout is ignored and removed on
+     * configSave; BindingsVersion marks the one-time stale-default migration. */
+    configRegisterInt("Input.BindingsVersion", &bindsVersion, 0, 3);
     configRegisterInt("Input.CrouchMode", &crouchMode, 0, 1);
 
-    /* D214: keyboard rebinding. Seed each buffer with its default so the knob
-     * is visible/editable in a fresh ge007.ini; configLoad() overwrites any the
-     * user set, then inputInit() calls inputRebuildBinds(). */
+    /* Seed fresh ini files with the REAL PC binding strings. Older ini
+     * values are migrated at inputInit after configLoad, exactly once. */
     for (int a = 0; a < IA_COUNT; a++) {
-        strncpy(g_bindStr[a], kBindDefs[a].def, sizeof(g_bindStr[a]) - 1);
+        const char *def = kGepdPreset[a] ? kGepdPreset[a] : kBindDefs[a].def;
+        strncpy(g_bindStr[a], def, sizeof(g_bindStr[a]) - 1);
         configRegisterString(kBindDefs[a].key, g_bindStr[a], sizeof(g_bindStr[a]));
     }
 }
