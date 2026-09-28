@@ -4,8 +4,9 @@
 That doc is a hand-curated table of every `GE_*` env probe -- var, file:line,
 what it does, live/dead. It was last snapshotted by a manual grep and drifts
 as probes are added/removed. This script does NOT regenerate the prose (the
-curation is the value); it re-greps the live `getenv("GE_...")` sites and
-reports:
+curation is the value); it re-greps the live env-read sites — bare `getenv("GE_...")` plus the
+`GE_ENVFLAG("GE_...")` / `GE_ENVSTR("GE_...")` wrappers from
+`port/include/envflag.h` — and reports:
   * NEW  -- a var with live sites that the doc never names
   * GONE -- a var the doc names that has no live site any more
   * a fresh var -> file:line site map (paste into the doc's File:line cells)
@@ -23,7 +24,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DOC = ROOT / "docs" / "dev" / "GE-ENV-PROBES.md"
 SCAN_DIRS = ["src", "port"]
-GETENV_RE = re.compile(r'getenv\(\s*"(GE_[A-Z0-9_]+)"\s*\)')
+# envflag.h's GE_ENVFLAG/GE_ENVSTR are the cached-env wrappers most port code
+# uses; matching only bare getenv() reported every wrapper-read var as GONE.
+GETENV_RE = re.compile(
+    r'(?:getenv|GE_ENVFLAG|GE_ENVSTR)\(\s*"(GE_[A-Z0-9_]+)"\s*\)')
 
 
 def live_sites() -> dict[str, list[str]]:
