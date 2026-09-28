@@ -96,6 +96,8 @@ extern s32 g_ClockTimer;
 extern s32 lvlGetControlsLockedFlag(void); /* same gate as bondviewProcessInput */
 extern int gameScriptedCameraActive(void);
 extern bool bond_interact_object(void); /* chrprop.c: use target, no reload fallback */
+extern s32 g_PlayerIsInTank;            /* bondview.c: tank state (D407) */
+extern s32 g_BondCanEnterTank;          /* bondview.c: tank board gate (D407) */
 /* gun.c: native weapon-switch entry points (not exposed in gun.h). */
 extern ITEM_IDS get_next_weapon_in_cycle_for_hand(GUNHAND hand, s32 direction);
 extern void gunRequestHandWeaponChange(enum GUNHAND hand, s32 nextWeapon, s32 cycleDirection);
@@ -1343,8 +1345,8 @@ static void pcOptionsKeyboardPad(const Uint8 *ks, Uint32 mb, int blocked,
     *button = 0;
     *sx = *sy = 0;
     if (blocked) return;
-    if (ks[SDL_SCANCODE_UP] || ks[SDL_SCANCODE_KP_8]) *sy = STICK_MAX;
-    if (ks[SDL_SCANCODE_DOWN] || ks[SDL_SCANCODE_KP_2]) *sy = -STICK_MAX;
+    if (ks[SDL_SCANCODE_UP] || ks[SDL_SCANCODE_KP_8] || ks[SDL_SCANCODE_W]) *sy = STICK_MAX;
+    if (ks[SDL_SCANCODE_DOWN] || ks[SDL_SCANCODE_KP_2] || ks[SDL_SCANCODE_S]) *sy = -STICK_MAX;
     if (ks[SDL_SCANCODE_LEFT] || ks[SDL_SCANCODE_KP_4]) *sx = -STICK_MAX;
     if (ks[SDL_SCANCODE_RIGHT] || ks[SDL_SCANCODE_KP_6]) *sx = STICK_MAX;
     if (ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER]) *button |= GE_CONT_A;
@@ -1617,6 +1619,18 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
             }
         } else if (scriptIsActive() ? s_scriptUse : actHeld(ks, IA_CANCEL)) {
             /* A on the pad is still native accept outside playable stages. */
+            button |= GE_CONT_B;
+        }
+        /* D407: on the N64 the B bit also drives bondview2.c's tank
+         * handlers (board when g_BondCanEnterTank, exit while
+         * g_PlayerIsInTank). The D378/D393 split above routes E/pad A to a
+         * dedicated interact call without presenting B, which left tank
+         * board/exit dead on PC (the tank blocks movement but can never be
+         * entered -- Runway, Streets). Present B only in the tank states so
+         * E keeps its no-reload-fallback semantics everywhere else. */
+        if (useNow && !s_useHeldPrev
+            && (g_PlayerIsInTank == 1 || g_BondCanEnterTank != 0))
+        {
             button |= GE_CONT_B;
         }
         if (reloadNow && !s_reloadHeldPrev && playable) {
@@ -1910,7 +1924,21 @@ unsigned inputComputePad(int idx, signed char *stick_x, signed char *stick_y)
          * keys and Enter/Escape are fixed menu controls; mouse/pad still
          * work. Scripted QA input remains the sole source when active. */
         if (current_menu == MENU_PC_OPTIONS && !scriptIsActive())
+        {
             pcOptionsKeyboardPad(ks, mb, optionsBindingInputBlocked(), &button, &sx, &sy);
+            /* D407(b): on this screen the mouse wheel scrolls the row list
+             * (wheel down = step down). Front-end menus otherwise leave the
+             * wheel queue unconsumed in menu mode -- clear it here so a
+             * scroll can't leak into the next stage's weapon cycle (D223). */
+            if (!optionsBindingInputBlocked())
+            {
+                int wheel = 0;
+                if (wheelBack > 0)          { wheel = +1; wheelBack = 0; }
+                else if (wheelFwd > 0)      { wheel = -1; wheelFwd = 0; }
+                if (wheel != 0)
+                    sy = (wheel < 0) ? STICK_MAX : -STICK_MAX;
+            }
+        }
         menuPrevActive = menuMode;
         s_menuPointerLive = (menuMode && mouseEnabled && !mouseGrabbed) ? 1 : 0;
 

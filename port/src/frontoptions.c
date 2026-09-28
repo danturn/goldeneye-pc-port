@@ -393,6 +393,16 @@ void frontOptionsMenuInterface(void)
                     break;
                 }
             }
+            /* D407(b): past the top/bottom edge of the visible rows, clamp
+             * the highlight to the edge row instead of dropping it (a
+             * mouse-only user keeps a row selected at the page edge; wheel
+             * / S then turns the page). */
+            if (s_hl < 0 && itemCount() > 0) {
+                if (cursor_v_pos < (f32)rowY(0))
+                    s_hl = 0;
+                else if (cursor_v_pos <= (f32)(rowY(itemCount() - 1) + ROW_DY))
+                    s_hl = itemCount() - 1;
+            }
         }
     }
 
