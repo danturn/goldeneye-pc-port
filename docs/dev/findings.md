@@ -633,7 +633,7 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D345 | **Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select `setCursorPOSforMode(0)`, front.c:2516; every `MENU_PC_OPTIONS` page hop), and the options screen's keyboard navigation was missing/mis-modelled (2026-09-27).** — full `## D345` entry at file tail | Port-only, user-verified (parts a–g): (a) `input.c` re-assert window on menu change; (b) `cursorToItem` skips its snap while the pointer is live; (d) W/S emit stick in menus under NaturalPitch; (e/f) F10-style discrete row stepping + arrow left/right value adjust replace raw drift (first pass shipped broken, fixed); (g) screen-placed cursor parks in the left gutter, off the row text. Game-side one-liner deferred: physical-controller pass was good, no Rule-2 sign-off sought. |
 | D346 | **PC-settings wording pass: option labels/values aligned to Nightdive/Turok + PD-port conventions (title-case On/Off, "Frame rate cap", "Anti-aliasing"/"None", units in values not labels, self-explanatory auto-FOV toggles); VIEW section merged into VIDEO (2026-09-27).** — full `## D346` entry at file tail | Port-only display change landed (`optionsoverlay.c` rows[]/valueText + one colour match in `frontoptions.c`); both UIs (F10 overlay + options screen) share the table. Config keys/values untouched. Deadzone % display uses raw-step grid (cosmetic follow-up noted). |
 | D347 | **F10 overlay controller: left/right did nothing (only A/Y adjusted values) and no input had hold-to-repeat (2026-09-27).** — full `## D347` entry at file tail | FIXED (port-only, `optionsoverlay.c`): D-pad left/right + stick-X wired into value adjust (A/X/B/Y kept); 18/4-frame hold-to-repeat on adjust and up/down nav, matching the options screen's D345(e)/(f) cadence. User validated physical-controller pass. |
-| D348 | **File-select "PC Options" label: no settings icon exists in the game art (mainfolderimages = copy/del/select-arrow/X/check/dot only) -- a mini slider glyph is drawn instead (2026-09-27).** — full `## D348` entry at file tail | Port-only (`frontoptions.c`): three menu-box tracks + offset knobs in the LABEL_GAP left of the label, INK_DIM/label-ink colours, hot region extended. PCDUMP pixel-verified (135 knob px vs 9 paper); visual feel-check owed. |
+| D348 | **File-select "PC Options" label: no settings icon exists in the game art (mainfolderimages = copy/del/select-arrow/X/check/dot only) -- a mini slider glyph is drawn instead (2026-09-27).** — full `## D348` entry at file tail | SUPERSEDED by D398 (glyph replaced with the IMG_DOT texture; no new art). PCDUMP pixel-verified when shipped (135 knob px vs 9 paper). |
 | D349 | **GE watch settings are not normally saved to the Bond file: erase is the only caller of the settings serializer, and stage start reloads the file's old values.** — full `## D349` entry at file tail | ANALYZED (static decomp audit): maintainer approved PC-UI-only per-file persistence with explicit chooser, stored controller-type preservation and release-only slider writes; watch UI stays session-only. Erase cross-file edge noted. See `docs/dev/WATCH-SETTINGS-PLAN.md`. |
 | D350 | **Watch-backed PC options: shared front/F10 Bond-file rows, explicit chooser, game-thread F10 bridge and field-scoped PC-only persistence.** — full `## D350` entry at file tail | PARTIAL (implemented; user reports tests good, review pending): headless front + F10 write/reload probes, NTSC build/golden 3/3, save CRC/control-style preserved; two-file targeting checked. Detailed edge-case coverage not specified by user. |
 | D351 | **Existing D346 value/unit rows had positional initializers shifted into `hidePtr`: %/x rows hidden or formatted without units.** — full `## D351` entry at file tail | FIXED (port-only): designated row initializers restore unit, deadzone divisor and hide-if-auto fields; build clean, headless smoke clean. Manual settings visual check owed. |
@@ -659,7 +659,33 @@ covers D24–D69; the log continues in §H (D32 procedure, D70–D121).
 | D372 | **Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).** full `## D372` entry at file tail | FIXED (headless-verified; awaiting user live accept): one-row `Video.LowEndMode` in F10 VIDEO; ON writes FpsCap 30 + MSAA x1 (restart), OFF restores compiled defaults (60/2). Registered key persists through orderly exit. |
 | D373 | **In-game crosshair on/off + colour (v0.4.0 modern options wave M2, 2026-09-27).** full `## D373` entry at file tail | FIXED (user live-tested; rule-2 sign-off recorded 2026-09-27): `Video.CrosshairHide` (0 = on, N64) + `Video.CrosshairColor` (7 tints, 0 = white) in F10 GRAPHICS; #ifdef PORT hook in gunfire.c gunDrawSight (the wave's only rule-2 item). |
 | D374 | **GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27).** full `## D374` entry at file tail | FIXED (headless + user live-tested): GEPD playtest found Ctrl fired the gun (stale persisted [Input.Bind] Fire=Left Ctrl masked the preset) and the FPS default made no sense for a mouse FPS. D374: GEPD is now Input.Layout=0 (the default; N64 layout = 1); only EXPLICIT per-key overrides beat the preset. One-off ini flip: pre-D374 `Layout = 1` (ex-GEPD) is now 0. |
-| D375 | **Crouch wired to the wrong pad bit: B is not the crouch input (v0.4.0 M3 playtest, 2026-09-27).** full `## D375` entry at file tail | FIXED (in tree, build clean; user re-test owed): `IA_CROUCH`/latch now emit C-down (`GE_CONT_D`); the engine's crouch is `insightaimmode && D_CBUTTONS` (bondview2.c 5318/5579) -- crouch only works while aiming, same as N64 Z + C-down. |
+| D375 | **Crouch wired to the wrong pad bit: B is not the crouch input (v0.4.0 M3 playtest, 2026-09-27).** full `## D375` entry at file tail | PARTIAL; single-controller keyboard fixed, but gamepad B/Y still emitted B (D376). |
+| D376 | **Crouch follow-up + modern-options spot check (2026-09-27).** full `## D376` entry at file tail | PARTIAL: gamepad B/Y mapping corrected, but aim gate was inappropriate for GEPD-style free crouch; superseded by D377. |
+| D377 | **GEPD independent crouch (2026-09-27).** full `## D377` entry at file tail | FIXED (scripted stance verified; user says live crouch was good; pad/hold-vs-toggle specifics owed): Ctrl/B/Y now drive game stance from the port with no aim requirement. |
+| D378 | **GEPD use/reload separation (2026-09-27).** full `## D378` entry at file tail | FIXED (headless edges tested; user says E/R seemed good; targeted door/partial-mag cases owed): R reload only, E interaction only in gameplay, menu/watch/tank retains B. |
+| D379 | **Crosshair colour: authored texture is red (2026-09-27).** full `## D379` entry at file tail | FIXED (cyan frame capture; live yellow/blue recheck owed): nonwhite tints use alpha silhouette instead of multiplying red RGB; default unchanged. |
+| D380 | **One PC keyboard layout; PD-style rebind design (2026-09-27).** full `## D380` entry at file tail | FIXED (follow-up D383): one PC layout and migration remain; keyboard capture UI is implemented separately, with live acceptance owed. |
+| D381 | **RULE-2-SIGNOFF: opt-in RGB, size and Beta crosshair (2026-09-27).** full `## D381` entry at file tail | PARTIAL (scripted captures + informal user report crosshair looks good; specific size/colour/style and visual gate owed): default drawing unchanged; RGB sliders, 50–200% size, Beta style, colour swatches, CROSSHAIR page in both UIs. |
+| D382 | **Crosshair menu placement and slider hitches (2026-09-27).** full `## D382` entry at file tail | PARTIAL (NTSC build + isolated boot; user thinks slider performance fixed; no timing measurement): moved CROSSHAIR beside GAMEPLAY, functional labels/values; selective live GL/SDL apply avoids cache/shader rebuilds for crosshair and FOV drags; batch audio probes opt-in. |
+| D383 | **PD-style keyboard rebinding in both options UIs (2026-09-27).** full `## D383` entry at file tail | PARTIAL (user found A/D/C front-menu regression, D384 repair pending live retest): keyboard-only capture and persistence work; original four-slot UI superseded by Primary/Secondary. |
+| D384 | **Front PC Options key-bind navigation feedback + two-slot UI (2026-09-27).** full `## D384` entry at file tail | PARTIAL (NTSC build, isolated probes, user said fresh-settings retest looks good; visual gate owed): fixed menu arrows/Enter/Escape independent of game binds, Primary/Secondary only; old extra keys preserved on disk but ignored until that action is edited. |
+| D385 | **Real mouse 1–5 action rebinding in the two-slot editor (2026-09-27).** full `## D385` entry at file tail | PARTIAL (NTSC build + isolated probes; user spotted wrong Aim default, D386): Mouse 1–5 are actual bindings; fixed menu clicking and mouse wheel unchanged. |
+| D386 | **Correct Aim default from SDL middle (Mouse 2) to right (Mouse 3) (2026-09-27).** full `## D386` entry at file tail | PARTIAL (NTSC build and isolated ini migration test; live acceptance owed): version-2 default Aim safely migrates to Mouse 3; custom Aim binds stay untouched. |
+| D387 | **M7 AllUnlocked's read-time fake unlocks leak into saved EEPROM (2026-09-27).** full `## D387` entry at file tail | OPEN (isolated user-data-copy save/untoggle repro; no fix): a profile-settings save persists fake cheats/0x3FF times; OFF does not undo them. Rotating writes and cheat-award suppression make simple write masking unsafe. |
+| D388 | **Nest functional binding/HUD menus and remove redundant M5 toggle (2026-09-27).** full `## D388` entry at file tail | PARTIAL (NTSC build, isolated nested navigation/reset/capture probes; physical UI acceptance and visual release gate owed): five root sections, Input → Bindings → Movement/Actions; Gameplay → HUD; independent FPS/MSAA remain exposed and unchanged by removing Low-end mode. |
+| D389 | **F10 footer clipping and ambiguous submenu links (2026-09-27).** full `## D389` entry at file tail | PARTIAL (NTSC build + measured 320-wide footer variants; visual/user review owed): two-line help strip with reserved height, no default-scale title note, PD-style ellipses in place of "Open >". |
+| D390 | **F10 pinned Back selection did not visibly change (2026-09-27).** full `## D390` entry at file tail | PARTIAL (NTSC build + isolated page/tree probes; human visual check owed): Back now uses row-selected colour only when selected, title uses neutral ink; keep mixed-scope HUD under Gameplay, not Video. |
+| D391 | **F10 click at glyph bottom could select next row (2026-09-27).** full `## D391` entry at file tail | PARTIAL (pixel-bound measurement, NTSC build, isolated hit probes; real pointer UX owed): root header hint removed; hit bands follow rendered glyph baselines, leave a dead zone and reject clicks outside card. |
+| D392 | **Train intro soldier hunched; hand intersects torso vs 1964** — firing-table float-offset alias across an 8-byte pointer union. Full `## D392` entry at file tail. | FIXED (`#ifdef PORT` ABI/layout in `chraction.c`); Train aim-angle probe confirms correction; user visually verified the soldier looks fixed against 1964. |
+| D393 | **Controller B/Y both crouch; no in-game use button** — gameplay pad face map conflated modern buttons and native N64 A/B. Full `## D393` entry at file tail. | FIXED + user live-tested A use / X reload / Y weapon cycle. D394 supersedes B crouch and shoulder cycling to match the user-supplied Xbox 1.1 chart. |
+| D394 | **Xbox 1.1 Jinx controller parity** — user supplied the Xbox 1.1–1.4 control table; B is gadgets, stick clicks crouch, LB aim, RB HD toggle (not weapon cycling). | PARTIAL (port 1.1 gameplay button roles user-tested; exact gadget-category parity and other selectable presets outstanding; RB HD toggle unavailable). |
+| D395 | **Controller trapped in keyboard/mouse-only binding capture** — pad could enter the binding modal but could not finish or cancel without keyboard. | PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; NTSC build linked, controller-only retest owed). |
+| D396 | **F10 pad B/A used as slider decrement/increment, not back/select** — B/Y fed Left and A/X fed Right on every row. | PARTIAL (B backs one F10 page, closes at root; A/X accept/toggle on edge but never shift a slider; D-pad/stick left/right still adjust; NTSC linked, pad retest owed). |
+| D397 | **SELECT FILE background + intro gun-barrel show an interlaced/comb look** — D182(2) family, but present on FIRST display, not only after re-entry (2026-09-27). Full `## D397` entry at file tail. | OPEN (re-scoped: D159 odd-row swap no-op'd (not cause); D183 pitch shear disproven; needs a live GE_PCDUMP capture + ROM ground-truth decode of the gun-barrel RLE image to settle ground-truth dither vs GL artifact. No blind fix made). |
+| D398 | **PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).** Full `## D398` entry at file tail. | SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 `textMeasure` arg-swap bug was found and fixed there). |
+| D399 | **File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).** Full `## D399` entry at file tail. | LANDED (port-only, D343 class): `selectpos.f[0]` 110→95 (new `#ifdef PORT` in front.c), Copy 200/222→185/207, Erase 282/304→267/289 (D343 PORT block), `LABEL_X` 358→343 (`frontoptions.c`); hit bounds recompute from the shifted positions. Clean build, PCDUMP frame 195 no overlaps; by-eye check owed. |
+| D400 | **File-select "PC Options" label: icon removed, text-only; fixed a swapped textMeasure() arg bug and a 7px vertical misalignment vs Copy/Erase (user sign-off 2026-09-27).** Full `## D400` entry at file tail. | LANDED (port-only, `frontoptions.c`): D398's dot icon dropped on user instruction ("most straightforward design"); label now a plain `textRender` word, GAP 28 after Erase. Two measurement bugs fixed: (1) `textMeasure(textheight, textwidth)` args passed swapped -> label 35px above the bar, hot band transposed; (2) bare-label height measures 0 (vs 14 for newline-terminated Copy/Erase) -> 7px lower tops; fixed by restoring the `kLabelNL` height measure. PCDUMP frame 195: tops aligned 279.8 vs 279.3, 31px clearance from Erase; by-eye check owed. |
+
 
 Phase 2 replaced the Phase-1 demo loop with the real `mainproc()` on real OS
 threads, compiled GE's real `src/sched.c`, and brought in PD's fast3d software
@@ -14494,3 +14520,757 @@ in aim (insight) mode** -- holding RMB/Left Shift + Left Ctrl. On release
 re-test (aim + Ctrl, both hold and F10 Toggle mode). Cross-tag: the D373
 entry's "emits B" wording was superseded by D375 (reload still emits B;
 crouch no longer does).
+
+## D376 — Crouch follow-up: control-style axis and pad mapping (2026-09-27)
+
+**Diagnosis:** The 1-controller branch in `bondview2.c:5579` reads C-down
+for BOTH 1.1/HONEY and 1.2/SOLITARE. The stick-Y crouch at 5318 is the
+**two-controller** branch; it does not apply to the port's single-controller
+layout. The existing gamepad B/Y mapping in `port/src/input.c` still sent B
+in stages (never crouch). Also D375's keyboard C-down was emitted in menus
+and outside aim, where it can navigate or move backwards instead.
+
+**Fix (port only):** keyboard Ctrl and pad B/Y feed one hold/toggle latch;
+in-stage, while aiming, send C-down for both single-controller schemes.
+Do not emit crouch/navigation input in menus or outside aim; B/Y retain
+B/cancel in menus. Drop the latch at menu/overlay transitions. No game-code
+edits. The engine still *requires aim* for crouching; releasing aim before
+releasing crouch may leave the posture down until aim resumes (N64
+constraint, not a promise that Ctrl alone crouches). Some weapons disable
+crouch and use down for zoom instead.
+
+**Spot check of M2/M3/M5:** M2 hide/tint hook defaults to the original white
+render and keeps the non-PORT branch unchanged (`gunfire.c:gunDrawSight`);
+M3 E and R both send context-sensitive B, **not** a guaranteed
+interaction-free reload (deferred v2 reload gate in the plan); D374
+preset layering treats N64-default strings as unset, which also means an
+explicit custom binding *equal to* the N64 default cannot override GEPD;
+for the default-empty Reload/Crouch keys, an empty string likewise cannot
+express an intentional unbind of the GEPD preset (the ini writer stores
+empty for both "unset" and "explicitly unbound"). This needs a separate
+config migration/presence design before promising full rebind semantics.
+M5 low-end row writes 30fps/MSAA 1 on selection and restores 60/2 on
+deselection (does not remember custom values); the individual settings
+are stored separately, so `LowEndMode` describes the last preset selection,
+not an enforced invariant after subsequent ini edits. No other code fix
+made in this spot check.
+
+**Verification:** touched object compiles (two pre-existing warnings);
+linked alternate `build-pc/ge007.review.exe` because the normal exe was
+locked by a running process. Scripted `-level_33` boot via
+`GE_INPUTSCRIPT='60:RHOLD;90:CDOWN'` with `GE_INPUTLOG=1` observed
+`btn=0014` (R+C-down) during pulses, normal self-quit at frame 140.
+This tests native pad delivery, **not** live SDL keyboard or physical
+pad input. **Superseded by D377:** user confirmed GEPD freely crouches
+without aim; the aim gate here was wrong for the GEPD preset and prevented
+the requested feature from working as advertised.
+
+
+## D377 — GEPD independent crouch via native player stance (2026-09-27)
+
+**User correction:** GEPD Ctrl crouches freely without aim. D375/D376
+mistook N64's controller chord (aim + C-down) for the GEPD *input injector's*
+dedicated crouch behavior. `docs/dev/GEPD-INPUT-PLAN.md` WI-6 had already
+identified the GEPD mechanism: port-side stance flag write, not a pad bit.
+The source is no longer vendored here (GPL stub in `reference/mouse-injector/`),
+so no injector code is copied into the port.
+
+**Diagnosis:** `bondview2.c:5579` gates native C-down crouch on
+`insightaimmode`; `5969–5975` updates `g_CurrentPlayer->crouchpos` via
+`currentPlayerAdjustCrouchPos`; `bondview.c:1543–1560` clamps it to
+`CROUCH_SQUAT..CROUCH_STAND`; `bondview2.c:7038–7074` interpolates
+`ducking_height_offset` from `currentPlayerGetCrouchPos()` (minimum of
+`crouchpos` and `autocrouchpos`). No pad bit can request independent crouch
+without the game's aim gate. This is a PC control feature, not an N64
+game-code divergence: implement in the port, no rule-2 game edit.
+
+**Fix (`port/src/input.c`):** the Ctrl and gamepad B/Y hold/toggle latch
+now writes `g_CurrentPlayer->crouchpos = CROUCH_SQUAT` while active and
+restores `CROUCH_STAND` on release; the game continues to animate the
+height offset itself and automatic crouch still works via its separate
+`autocrouchpos`. While already aiming, the port also feeds native C-down
+so the game's per-tick `crouchUp` branch cannot undo the held stance; without
+aim, no C-down is needed. The adapter does not force stand after a native
+C-down crouch, and the native game path remains unchanged. No effect in
+menus, watch, pause, death, tank, scripted camera,
+or on weapons whose flags disable crouching; no B action is emitted in a
+stage from pad B/Y. `GE_INPUTSCRIPT` gained CHOLD/CREL for headless stance
+checks. Holding a bind through a menu/overlay drops the latch.
+
+**Verification:** compiled and linked `build-pc/ge007.review.exe` (normal
+exe still locked). On `-level_09`, `GE_INPUTSCRIPT='30:START;300:CHOLD;600:CREL'`
+with `GE_INPUTLOG=1 GE_QUITFRAME=780` logged **free crouch applied
+(aim=0)** and **free crouch released**, with normal self-quit. The same
+run with simultaneous RHOLD/CHOLD also applied and released the stance.
+A Dam `-level_33` control run kept the scripted-camera gate closed during
+its intro, as intended. User later said crouch was good in live testing; which of hold/toggle and
+pad B/Y were tried was not specified, so those specific checks remain open.
+
+
+## D378 — GEPD E/R were both B (use/reload separation, 2026-09-27)
+
+**User report:** R opens doors; question whether E is use-only. **Confirmed:**
+D371 mapped `IA_RELOAD` *and* `IA_CANCEL` (GEPD E) to `GE_CONT_B` in
+`port/src/input.c`. `bondview2.c:5642/5712` sets `field_D0` on a B tap;
+`lv.c:796` calls `bond_interact_object()` and reloads both hands via
+`attempt_reload_item_in_hand()` only if the interaction found no target.
+Therefore **R opens doors and E reloads with no nearby target**. The M3
+plan's "we get it for free" premise was incorrect: the B context alone
+cannot implement two separate actions. Native single-button B stays intact
+for N64 controls; this is a PC input feature, not an N64 game-code bug.
+
+**Fix (`port/src/input.c` only):** with GEPD layout in a playable stage,
+E's rising edge calls the existing `bond_interact_object()` (its return
+value is ignored: no fallback reload), while R's rising edge calls the
+existing `attempt_reload_item_in_hand(GUNRIGHT/GUNLEFT)` without B/door
+interaction. During front menus, watch, tank, pause/cutscenes, E retains
+native B/cancel; R does not fire while controls are unavailable. Gamepad
+B/Y still drives crouch in stages and B/cancel in menus (D377).
+Use/reload edges are tracked across polls and the F10 overlay to avoid
+held-key repeat or action leaks. **Caveat:** input sampling runs before
+`lv.c`'s original after-`propsTick` interaction site, so the port call can
+use the previous frame's on-screen prop list. A real door/terminal playtest
+is needed to check for a one-frame targeting discrepancy; no `src/game`
+behavior edits were made. Special N64 B combos (e.g. remote-mine A+B)
+are not promised on GEPD's dedicated E key.
+
+**Verification:** touched object compiled (only pre-existing warnings),
+`build-pc/ge007.review.exe` linked (normal exe can be locked by a running
+playtest). Headless Bunker1 `-level_09` with
+`GE_INPUTSCRIPT='30:START;300:UHOLD;315:UREL;450:RELOADHOLD;465:RELOADREL'`
+logged exactly one `dedicated use (no target=1)` and one `dedicated reload
+(no use)`; exit clean at GE_QUITFRAME=800. The scripted scene had no door
+target and does not prove interaction targeting or a visible magazine refill;
+live R-near-door, E-near-door, E-no-target, R-with-partial-mag verification
+remains owed. Cross-ref D371/D376/D377.
+
+
+## D379 — Crosshair colour is multiplied against a red texture (2026-09-27)
+
+**User report:** Yellow/Cyan/Blue are visibly the wrong colours.
+`gunDrawSight` (`src/game/gunfire.c:6550`) passes the RGB from
+`portCrosshairTint` to `display_image_at_position`, whose
+`G_CC_FADEA` combine mode multiplies TEXEL0.rgb by ENVIRONMENT.rgb.
+The authored `IMAGE_CROSSHAIR1` is not a neutral white mask: captured
+`-level_09` with GE_TEXDUMP, fmt=RGBA32, size=4096, tile=32x32;
+`texdump/r331_f0_s3_32x32.bin` had 787 fully transparent black pixels,
+232 nonzero RED pixels and essentially zero green/blue (examples
+`(235,0,0,203)`, `(245,0,0,255)`). A blue tint multiplied by this image
+remains dark/black/red; the user observation follows exactly. The texture
+alpha retains the antialiased reticle silhouette (237 nonzero pixels).
+
+**Fix:** preserve byte-identical default (White/0) and the N64 builds.
+Only for selected nonwhite tints, `src/game/gunfire.c`'s existing
+`#ifdef PORT` opt-in crosshair hook calls
+`portCrosshairApplyTintCombine()` in `port/src/video.c`, replacing only
+that sprite's generated combine command. Colour now uses
+`ENVIRONMENT.rgb * TEXEL0_ALPHA`, transparency stays
+`TEXEL0_ALPHA * ENVIRONMENT_ALPHA` (the original alpha expression).
+The hook points at the command immediately after
+`display_image_at_position`'s `gDPSetEnvColor`; the latter emits the
+combine command next (`bondwalk2.c:136–155`). This is the same opt-in
+crosshair-colour behavior previously authorized in D373, corrected to
+actually show the named colours; not a new default-game behavior change.
+No generic texture/combiner path is affected.
+
+**Verification:** touched NTSC objects compile and alternate
+`build-pc/ge007.review.exe` links. With user's Cyan (5) ini and a scripted
+Bunker1 aim, GE_PCDUMP at frames 1050–1090 shows ~2130 cyan-dominant
+pixels in the reticle region (x=664–774,y=385–505), vs zero in the same
+region outside aim; screenshot-independent pixel count, no unsupported
+combiner errors. The temporary GE_TEXDUMP 800-cap probes in gfx_pc/
+gfx_opengl were reverted, and the user's ini was not edited for the
+capture. Owed: human Blue/Yellow/Cyan and White default visuals in the
+actual playtest window. Cross-ref D373.
+
+
+## D380 — Remove the N64 keyboard preset; migrate to one honest PC layout (2026-09-27)
+
+**User decision:** no N64 equivalent on PC; remove the N64-vs-GEPD key
+layout selector and consolidate. Rebindable keys like the PD port should
+be investigated next. The menu row used to hide the effective GEPD strings
+behind persisted N64-era defaults (`Input.Bind.Fire = Left Ctrl` even though
+Ctrl was actually crouch); it also made explicit unbinding of empty-default
+Reload/Crouch impossible (D374/D376).
+
+**Implemented (`port/src/input.c`, `port/src/optionsoverlay.c`):** remove
+`Input.Layout` registration and F10 INPUT row. There is one PC layout.
+`Input.Bind.*` now represents effective bindings directly: a fresh ini
+contains Fire empty, Action Q, Cancel E, Reload R, Crouch Left Ctrl,
+LeanLeft empty; `NONE` explicitly unbinds any action (PD convention).
+`Input.BindingsVersion=0→1` performs a one-time migration of legacy ini
+values equal to the old N64 defaults to the real PC values, preserving
+non-default custom bind strings; then writes the updated ini and drops
+the obsolete Layout key. There is no perfect way to distinguish a user's
+explicit N64-default-valued custom bind from a stale auto-written default
+in a pre-versioned ini: the one-time migration treats both as defaults,
+matching D374's previous behavior. Once migrated, bindings with those
+same strings can be intentionally set and retained. The crouch mode row
+still invokes `inputLayoutApply` to drop the latch/rebuild parsed keys;
+the exported function can also serve the later capture UI.
+
+**Verification:** touched input/options objects compile and alternate exe
+links. Backed up the user's ignored `data/ge007.ini` before a 90-frame
+headless boot, observed the one-time migration: Layout removed;
+BindingsVersion=1; Fire empty, Action=Q, Cancel=E, LeanLeft empty,
+Reload=R, Crouch=Left Ctrl; normal quit. Then restored the original
+user ini byte-for-byte (live game may still use it until next boot).
+
+**PD-port analogue / next work:** `../pd_port/port/src/optionsmenu.c:1694–1885`
+has a binding capture dialog (next key/button; ESC cancels, DEL clears)
+and multiple slots per action; `port/src/input.c` there collects
+SDL_KEYDOWN/MOUSEBUTTONDOWN/controller events into a last-key queue and
+serializes `NONE`. GE already has multi-key ini strings but no UI; add
+`ROW_BIND` to the shared F10/front-options row data with primary +
+secondary slots, action labels and values, and a modal capture state.
+`port/src/video.c:videoPumpEvents` owns SDL events on the host thread,
+whereas `optionsOverlayHandleInput` runs on the scheduler thread, so
+handoff must be synchronized (one-shot scancode/button event, ignore the
+opening click/press). Escape cancels, Delete clears to `NONE`, and F10/
+mouse-wheel/overlay navigation must be swallowed during capture. Use
+`inputLayoutApply` to rebuild + persist on commit, expose only actions
+that can actually be remapped (mouse LMB/RMB are currently hardwired).
+No binding-capture UI is implemented yet; first verify the D379 colours
+and D378 doors/reload with the user.
+
+
+## D381 — RULE-2-SIGNOFF: opt-in RGB, size and Beta crosshair (2026-09-27)
+
+**Status: IMPLEMENTED; live visual acceptance and golden sweep owed.** The
+user asked for an RGB slider in the menus, then crosshair size and alternate
+in-game art. After the concrete design was explained (Original/default,
+Custom RGB with a swatch, 50–200% size, Original/Beta using the existing
+`IMAGE_CROSSHAIR2`), the user explicitly replied **“OK proceed with all of
+these.”** This is an opt-in customization, not a claim that the N64 drawing is
+wrong: with the default Original/100%/Original, the same game code draws the
+same source image at the same dimensions with the same N64 combiner. There
+is therefore no alleged default N64 divergence to prove. D379 already
+established the actual red source image/combiner contract (not a port bug in
+the default path). The user-approved opt-in behaviour deliberately differs
+from the fixed N64 appearance; it is not an ABI/layout fix.
+
+**Narrow src/game scope:** `src/game/gunfire.c:gunDrawSight`, inside the
+existing `#ifdef PORT` crosshair hook (D373/D379) only. The exact
+`texSelect`/`display_image_at_position` calls determine which of the two
+32×32 asset-table entries is uploaded and the half-size of the sprite. These
+cannot be changed safely from `port/` alone without intercepting and
+rewriting another game's texture/draw display list after the fact. Only the
+opt-in image pointer and half-size are selected; the aim coordinates, alpha,
+other sprites, and unguarded N64 `#else` code are unchanged. PD's analogous
+port uses configurable sight colour/size in `../pd_port/src/game/sight.c`
+and sliders in `../pd_port/port/src/optionsmenu.c`; its image formats are
+not assumed interchangeable with GE's. The previously unused
+`betacrosshairimage` is loaded in `src/game/image_bank.c` and backed by
+`IMAGE_CROSSHAIR2` in `assets/oddtextures.c`; it is **not** automatically
+selected by 007 mode.
+
+**Implementation:** `port/src/video.c` registers `Video.CrosshairRed/Green/
+Blue` (0–255, defaults 255), `Video.CrosshairSize` (50–200, default 100),
+and `Video.CrosshairStyle` (0 Original, 1 Beta). Existing colour values
+0–7 preserve their meanings; 8 = Custom. Colour 0 keeps the sprite RGB
+and original combine mode; all other colours (including Custom) use the
+D379 alpha-silhouette combiner. The three RGB sliders appear only while
+Custom is selected; changing presets does not discard their saved values.
+`port/src/optionsoverlay.c` adds a functional CROSSHAIR page because the
+GRAPHICS front page has a fixed 14-row cap; F10 and front options share its
+rows, live values, and section reset (including hidden RGB rows). Both UIs
+show a representative colour swatch; Original shows red, not the white
+identity multiplier. The game menu cursor and every other image remain
+unaffected. Ini saved under `$S/ge007.ini` as before; user ini was untouched
+for testing.
+
+**Verification:** MSYS2 MINGW64 `./build-pc.sh ntsc-final` compiled/linked.
+In an isolated temporary data directory, `-level_09` with scripted aim
+(`GE_INPUTSCRIPT='30:START;60:RHOLD'`, `GE_PCDUMP=580-580`) rendered and
+quit cleanly twice. Beta/Custom (10,200,240)/150% had 159 cyan-dominant and
+0 red-dominant pixels in the 100×80 reticle region; Original/100% had 384
+red-dominant and 0 cyan-dominant pixels there. With `GE_TEXDUMP`/`GE_TEXRAW`,
+the Beta texture was actually loaded as 32×32 RGBA32 (4096 bytes): 112
+nonzero-alpha pixels in a thin plus-shaped sight, confirming that the
+D379 colour-mask approach applies. Section row census: CROSSHAIR has at
+most 8 content rows, GRAPHICS 10, both under the front menu's 14-row cap.
+`git diff --check` passes. These scripted checks do **not** replace a human
+size/style/colour swatch inspection or the post-landing 21-level golden gate.
+
+
+## D382 — Functional crosshair page and full GPU-state reset on every slider detent (2026-09-27)
+
+**Status: PARTIAL (built; live FPS/menus and 21-level golden gate owed).** User
+asked to keep Turok-style functional categories/setting names and reported
+hitches while dragging sliders, possibly when launched with the v0.4.0 batch
+file. Evidence from the actual `scratch/playtest_v040.log`: **349**
+`video: live config applied` passes. `optionsoverlay.c:rowSetCommit` called
+`videoRequestLiveConfig()` after *every changed `Video.*` value* except
+Draw/LOD and restart rows, including all RGB sliders, size, style, colour and
+FOV. Each pass in `videoStartFrame` called `videoApplyTexFilter()` and
+`videoApplyImageOptions()` regardless of the key. In
+`port/fast3d/gfx_pc.cpp`, both texture-filter setters and the anisotropy
+setter call `reset_texture_state()` (clears texture and shader caches). These
+three resets and the log line per detent plausibly explain the crosshair/FOV
+drag hitches; a high Draw/LOD setting independently increases real render
+cost, and changing anisotropy/texture-filter themselves necessarily still
+rebuilds texture state. The log does not tie each pass to a specific row, so
+this is a proven redundant-work path, not a measured per-slider frame-time
+attribution.
+
+**Fix (port-only):** `videoRequestLiveConfigForKey()` uses atomic bitmask
+coalescing across the options and render threads. VSync, FPS cap, texture
+filter, FOV, anisotropy and safe-area crop each update *only themselves* on
+render-thread frame start. Crosshair knobs and the other direct-read
+world/HUD settings request no GL pass at all. No default, ini key or
+rendered-image behavior changes; fullscreen still uses its host-thread
+request. With the existing early-return on unchanged snapped values (D370),
+mouse-held duplicate polls do no GL work. User's local
+`scratch/playtest_v040.bat` still runs `build-pc/ge007.latest.exe` with the
+same ini and logs output, but no longer forces `GE_D322`/`GE_D204` audio
+telemetry on each run (these were cheap 5-s probes, not proven to cause
+hitches); setting them in the calling environment restores diagnostics.
+The outdated pre-D377 binary warning and launcher label were corrected.
+No running game was interrupted, and no live ini was changed.
+
+**UI decision:** Keep the Turok five functional headings and add only a
+sixth *functional* CROSSHAIR page beside GAMEPLAY (not a "MODERN" provenance
+bucket, and not a graphics-quality control). The front menu has a fixed
+14-content-row cap; merging RGB/style/size into GRAPHICS or GAMEPLAY would
+silently lose settings. It has its own reset and no change to the existing
+per-profile `Bond.Sight` option in GAMEPLAY. Rename the ambiguous duplicate
+"Crosshair" row to **Show crosshair** (`On`/`Off`, original On); colour 0 to
+**Original (red)** (keeps the authored sprite), Beta style to the visible
+shape **Thin cross**, custom channels to **Red / Green / Blue** with `N/255`
+values only while Custom is selected. **Crosshair size** displays 50–200%,
+100% default. Keys and existing numeric ini values are unchanged; selecting
+Beta does not affect the front-end cursor or automatically select 007 mode.
+The show-crosshair machine-level gate is separate from the original save-
+scoped Sight-on-screen option; both may hide the aim sight.
+
+**Verification:** MSYS2 MINGW64 NTSC rebuild linked after the selective
+update; a first compile caught a MinGW SDL without `SDL_AtomicOr`, replaced
+with `SDL_AtomicCAS` loop and then rebuilt successfully. Isolated data-dir
+headless run `GE_OPTIONSOVERLAY=4 GE_PCDUMP=90-90 GE_QUITFRAME=125` booted
+the sixth-section layout into CROSSHAIR and captured a frame with no
+missing option or crash. GRAPHICS has 10 rows and CROSSHAIR has 8, both
+within the 14-row front menu cap. `GE_OPTIONSOVERLAY=2..7` now supports
+all six sections. **Not yet measured:** live FPS during drag with the new
+binary; the 349-pass log is from the previous build. Human verification of
+both menus' labels and sizing is still owed.
+
+## D383 — PD-style keyboard rebind capture in both options UIs (2026-09-27)
+
+**Status: PARTIAL (built and isolated automated checks; live keyboard-menu
+acceptance and the release golden gate owed).** User explicitly requested
+PD-style keyboard rebinding after the D380 single-PC-layout migration.
+PD analogue: `../pd_port/port/src/optionsmenu.c:1694–1885` offers a per-action
+slot dropdown, next-key capture, ESC cancel, DEL clear, and reset. GE's
+`Input.Bind.*` string parser already supported four keys per action (D214)
+but neither the F10 overlay nor the front options screen exposed them.
+No `src/game` code changes or N64 build changes were needed.
+
+**UI:** shared `ROW_BIND` entries in `port/src/optionsoverlay.c`, with
+**MOVEMENT KEYS** (six actions) and **ACTION KEYS** (eight actions) as two
+functional pages adjacent to INPUT; each fits the front menu's 14-row cap
+and has a two-step **Reset to defaults** row. `port/src/frontoptions.c`
+uses the same row/slot/capture API; F10 has a modal footer, the front
+options screen has a modal prompt. Left/Right chooses slot **1–4** on an
+action; Enter/A/click begins capture; Escape cancels, Delete clears the
+selected slot; moving/clicking other controls is suppressed until the key
+is released. `NONE` is displayed for empty slots. After user feedback the
+ambiguous `1/4` display became **Primary / Secondary / Extra 1 / Extra 2**:
+all four keys remain accessible, including older hand-edited extras. The
+user's Turok hierarchy reference puts Bindings beneath INPUT; the two
+standalone binding categories here are an interim layout, not final menu
+acceptance. Do not add fake Weapons/Automap/Menu rows without actual separate
+GE actions/input sources. The front-end `Profile`
+chooser remains on every page by its pre-existing design; key bindings
+are machine-wide, not attached to a save file. Mouse LMB/RMB fire/aim,
+mouse wheel and gamepad controls remain hardwired and are NOT advertised
+as rebindable; the on-screen instruction explicitly says mouse/pad fixed.
+
+**Implementation:** `port/src/video.c:videoPumpEvents` consumes the first
+SDL_KEYDOWN while capture is active *before* F10/ESC shortcuts; F10/F12 and
+Alt+F4 are reserved, and repeats ignored. An SDL atomic flag and spinlock
+pass one scancode to the scheduler/front UI thread, which alone serializes
+the bind, calls `inputBindingsApply()`, and commits with `configSave()`.
+Capture ignores navigation, wheel and click-to-lock; the actual captured
+key is suppressed through key release. `inputBindingSetSlot()` preserves
+all four existing slots (rather than discarding older hand-edited third/
+fourth keys), prevents duplicate keys within an action, and never truncates
+the 64-byte ini value. An explicit `NONE` token is a positional empty slot
+for sparse lists (e.g. `NONE,NONE,F1`); the sole `NONE` string still unbinds
+the entire action. SDL key names containing a comma or lacking a name use
+`SC:<number>` in the ini, so the delimiter cannot corrupt a key. Section
+reset restores the GEPD one-layout defaults.
+An opt-in, restoring `GE_BINDPROBE` tests the runtime string round-trip;
+`GE_BINDCAPTUREPROBE=F2|ESC|DEL` exercises the actual host-event/modal
+handoff only against an isolated test ini.
+
+**Verification:** MSYS2 MINGW64 NTSC build linked. With an isolated
+`/Temp/ge-d381/data/ge007.ini`, `GE_BINDPROBE=1` logged PASS for sparse
+slots 3/4 (including keypad comma), deleting slot 1 while preserving 3,
+clearing all, then restoring the original strings in memory. `GE_OPTIONSOVERLAY=4` action-keys page
+booted with no missing options. With `GE_BINDCAPTUREPROBE=F2` the host SDL
+event was consumed and the menu committed `Input.Bind.Fire` slot 1 = F2;
+`Fire = F2` appeared under `[Input.Bind]`. Repeating with ESC left F2
+unchanged; DEL committed `Fire = NONE`. The real user's ini and running
+process were not modified. User physical-key capture feel-check, front
+options page traversal/reset, mouse/pad input after capture, other regions,
+and 21-level default-render golden comparison are still owed.
+
+
+## D384 — Front PC Options used editable gameplay keys as its own controls (2026-09-27)
+
+**Status: PARTIAL (NTSC built, isolated probes pass, user retest owed).** User
+reported A/D could not be rebound and C caused menu glitches. Live log
+`scratch/playtest_v040.log` shows captures succeeding but selection cycling
+uncontrollably across slots 1–4 (e.g. `Input.Bind.StrafeRight` A → D → C → X,
+then C across slots). The user's live ini now has `Forward=NONE,D` and
+`StrafeRight=NONE,V,C,X` from that session: DO NOT modify or overwrite it
+while testing. Root cause is precise and port-side: `inputComputePad()`
+turns *newly assigned* A/D/C into live GE `GE_CONT_C/GE_CONT_F` strafe bits
+or stick X/Y; `frontOptionsMenuInterface()` reads those same C buttons and
+stick values as Left/Right slot selection and Up/Down row selection. The
+editor therefore feeds its own rebind results back into its navigation on
+the very next poll. F10 already swallows the virtual pad and did not have
+this particular feedback path. In parallel, four visible slots and `1/4`
+were confusing and produced unnecessary ghost mappings; user wants two.
+
+**Fix, `port/` only:** while `current_menu==MENU_PC_OPTIONS`, the port
+builds keyboard menu input from PHYSICAL arrows and Enter/Escape, not from
+editable gameplay keys. Mouse LMB/RMB and gamepad still reach the menu; the
+scripted-input test harness retains its exclusive source. While capture
+is active or the captured key remains down, keyboard/mouse menu buttons
+are neutral (`optionsBindingInputBlocked()` checks an atomic held-scancode
+across host, scheduler and front threads); the front menu's capture modal
+continues to suppress interface navigation. The same `Input.Bind.*` keys
+still drive gameplay outside PC Options, unchanged. `GE_BINDPROBE` exercises
+the menu conversion with A+D+C all pressed (zero menu input), arrows+
+Enter (only their fixed signals), and a blocked modal (zero input).
+
+`INPUT_BIND_SLOTS` is **2**: only Primary and Secondary are displayed and
+active. Old third/fourth ini tokens are **preserved verbatim and ignored**
+on boot (one warning per affected action); editing that action writes its
+two displayed keys, removing only that action's extras. No automatic ini
+rewrite/migration, no hidden active mappings. Reset to defaults still
+restores the one-PC-layout binds. This also eliminates the 3rd/4th slot
+selection loop; physical arrows and mouse/pad are the only editor controls.
+
+**Verification:** MSYS2 MINGW64 NTSC link succeeded without new diagnostics.
+Isolated `GE_BINDPROBE=1` reports PASS for two slots, sparse and comma-name
+serialization, A/D/C no-nav, arrow/Enter and modal block, restoring
+original bind state. In an isolated ini, `StrafeRight=NONE,V,C,X` produced
+one `legacy extra keys (ignored)` warning and survived a no-op quit
+unchanged; capturing F2 into Primary using the host-event/modal test
+changed *only that action* to `StrafeRight=F2,V` (C/X discarded).
+`GE_BINDCAPTUREPROBE` synthetic SDL_KEYDOWN must set `ev.key.repeat=0` and
+`ev.key.keysym.mod=KMOD_NONE` explicitly; without initialization its
+random repeat value caused the **test event** to be ignored. Real user
+SDL key events were not implicated. Live physical-key feel check and
+Turok Input→Bindings nesting remain open. No 21-level visual gate yet.
+
+
+## D385 — Mouse 1–5 need to be real action bindings (2026-09-27)
+
+**Status: PARTIAL (NTSC build and isolated probe pass; live acceptance owed).**
+User correctly noted that Mouse 1/2/other buttons should be rebindable, not
+merely described as fixed UI decorations. Previously `inputComputePad()`
+unconditionally emitted Z on LMB and R on RMB even after Fire/Aim keyboard
+slots were edited or cleared. The binding editor captured only keyboard
+`SDL_KEYDOWN`; a click while capturing could instead lock the gameplay cursor.
+
+**Port-only fix:** `Input.Bind.*` Primary/Secondary accept `Mouse 1` through
+`Mouse 5` alongside SDL scancodes; held gameplay actions now read those
+actual tokens rather than special-casing LMB/RMB for Fire/Aim. Fire defaults
+to `Mouse 1`; Aim defaults to `Mouse 2,Left Shift`. Captured mouse-down events
+are consumed before click-to-lock. The modal blocks through physical button
+release so a binding click cannot also activate the editor or stage. Mouse
+clicks stay fixed as *menu* accept/back, irrespective of their gameplay
+assignment; wheel up/down still cycle weapons and are not remappable here.
+Gamepad mappings remain untouched.
+
+`Input.BindingsVersion=2` upgrades pre-mouse ini files on the next launch:
+formerly-hardwired Mouse 1/2 are placed in Fire/Aim slots without losing an
+existing single keyboard bind. For an action already using two keyboard
+slots, the two user keys take priority: no hidden mouse bind is kept, a
+warning says how to reassign a slot if the old mouse default is wanted.
+Old third/fourth tokens follow D384's existing ignore-until-edit rule.
+The change does **not** erase game saves or migrate other actions.
+
+**Verification:** MINGW64 NTSC build/link passed. `GE_BINDPROBE=1` checks
+Mouse 5 serialization, duplicate-slot clearing and keyboard/modal isolation,
+restoring original strings in memory. In a private copy of the test data
+(`AppData/Local/Temp/ge-d385`, not the user's ini), a version-1 config with
+`Fire=F2` and `Aim=Left Shift` migrated to `Mouse 1,F2` and
+`Mouse 2,Left Shift`; `GE_BINDCAPTUREPROBE=MOUSE5` reached the host event
+pump, committed Fire Primary and persisted `Mouse 5,F2`. Quit after 120
+frames was clean. **Owed:** physical Mouse 1/2/side-button capture and
+stage-level behavior, and the 21-level visual gate.
+
+
+## D386 — Aim default must use SDL Mouse 3, not Mouse 2 (2026-09-27)
+
+**Status: PARTIAL (NTSC build and isolated migration verified; physical retest
+owed).** User caught that SDL numbers mouse buttons as left=1, middle=2,
+right=3. D385 used `Mouse 2` for Aim, so RMB stopped aiming and MMB took its
+place. This was a port binding-default error, not a gameplay change.
+
+**Fix:** default Aim is `Mouse 3,Left Shift`; pre-D385 migrations now put
+SDL_BUTTON_RIGHT (3) into Aim. Increment `Input.BindingsVersion` to 3 so a
+version-2 ini with the **exact** erroneous default `Mouse 2,Left Shift` is
+corrected on launch. Any other version-2 Aim string is left alone, preserving
+explicit middle-button assignments and other user changes. Mouse-button
+capture/serialization and fixed front-menu clicks still use SDL's 1–5 values.
+
+**Verification:** NTSC MINGW64 build; isolated version-2 ini (Fire custom
+`Mouse 5,F2`, Aim old default `Mouse 2,Left Shift`) migrates just Aim to
+`Mouse 3,Left Shift` and version 3; version-3 restart is stable. User ini was
+not edited for the probe. Live RMB/MMB test and release gate remain open.
+
+
+## D387 — M7 AllUnlocked read-time patches leak into persistent saves (2026-09-27)
+
+**Status: OPEN; M7 cannot be signed off as a preservation-only playtest.**
+User offered `data/` for investigation. Original `data/ge007.ini` and
+`data/ge007.eep` were **read only**, checksums unchanged after all runs.
+Private isolated test folders live under
+`AppData/Local/Temp/ge-m7-20260927/`: current ini + ROM/sidecars,
+with the older `data/ge007 copy.eep` as the reproducible EEPROM seed.
+The original seed has two genuinely completed times in folder 0, no
+0x3FF fake completions, and only its earned cheat bits (`04 00 00`).
+No edits to game logic, port code, or user saves in this investigation.
+
+**Mechanism:** `port/src/libultra.c:geEepromRW` patches a *copy* of all five
+save slots on the block-4 read when `portAllUnlocked` is on. The raw EEPROM
+on disk stays untouched until a later save. `fileValidateSaves` accepts the
+patched copies (CRC recomputed by `geEepromPatchAllCheats`) into the live
+`src/game/file2.c:saves[]` array. An unrelated call to `fileWriteSave`
+serializes **all 96 bytes of the live slot** back to EEPROM, including its
+synthetic unlocked-cheat bits and 0x3FF time fields. D257's original finding
+explicitly warned these unlocks can persist after a save; the M7 plan's
+"read-time patch should guarantee untoggle preservation" premise is false.
+The two genuine times in the test slot were retained, but fake completions
+and cheats now survive an OFF restart. `main.c` also seeds the RAM debug
+unlock flags only when the process starts: switching the setting OFF during
+the same process does not clear those flags. A valid OFF test needs restart.
+
+**Isolated evidence:** with `GE_SAVELOG=1 GE_QUITFRAME=105`, both ON and OFF
+booted from the same older seed; no-gameplay-write EEPROM hashes were equal
+(legacy CRC migration occurred in both). Starting from the migrated raw
+EEPROM, `Game.AllUnlocked=1 GE_WSPROBE_FRONT=600 GE_QUITFRAME=780` called the
+real front-end `watchSettingsSet(Music, 4096, commit=1)` on folder 0.
+`SAVELOG` recorded `fileWriteSave slot=4 block=52`; only that EEPROM slot
+changed. Cheat bits went `04 00 00` → `ff ff 0f`; 58 empty completion
+times became 0x3FF, and the 2 earned times remained. Starting from that
+result, `AllUnlocked=0` followed by a clean restart/quit validated the
+slot's stored CRC and left the 58 fakes intact. Logs and private snapshots
+in `on-save/` and `after-off/`. This reproduces on a **settings save alone**,
+without a mission completion. Current user `data/ge007.eep` already has two
+nonfree slots with 60/60 0x3FF times and all cheat bits set, consistent with
+past persistence; this test neither created nor changed those bytes. Do not
+silently overwrite it with an older backup (that would lose later progress).
+
+**Scope before fixing:** decide whether OFF must restore *earned* progress
+while stripping only artificial unlocks (recommended). A port-only write
+adapter needs to retain unpatched per-slot state and merge legitimate
+changes while ON, including new real completion times and cheat awards;
+simply masking every 0x3FF on writes cannot distinguish a genuinely earned
+capped time or a previously persisted fake. There is no safe automatic
+repair for already-persisted fake bits without prior raw-state provenance.
+Test fresh/real/mixed saves in isolated directories, ON and OFF restarts,
+settings writes and actual mission completion, CRC validity and all folders;
+only then mark M7 done. The 21-level visual gate is independent and open.
+
+## D388 — Nest functional binding/HUD menus and remove redundant M5 toggle (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: PARTIAL (NTSC build, isolated nested navigation/reset/capture probes; physical UI acceptance and visual release gate owed)**: five root sections, Input → Bindings → Movement/Actions; Gameplay → HUD; independent FPS/MSAA remain exposed and unchanged by removing Low-end mode.
+
+## D389 — F10 footer clipping and ambiguous submenu links (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: PARTIAL (NTSC build + measured 320-wide footer variants; visual/user review owed)**: two-line help strip with reserved height, no default-scale title note, PD-style ellipses in place of "Open >".
+
+## D390 — F10 pinned Back selection did not visibly change (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: PARTIAL (NTSC build + isolated page/tree probes; human visual check owed)**: Back now uses row-selected colour only when selected, title uses neutral ink; keep mixed-scope HUD under Gameplay, not Video.
+
+## D391 — F10 click at glyph bottom could select next row (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: PARTIAL (pixel-bound measurement, NTSC build, isolated hit probes; real pointer UX owed)**: root header hint removed; hit bands follow rendered glyph baselines, leave a dead zone and reject clicks outside card.
+
+## D392 — Train intro soldier hunched; hand intersects torso vs 1964 (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: FIXED (`#ifdef PORT` ABI/layout in `chraction.c`)**: firing-table float-offset alias across an 8-byte pointer union; Train aim-angle probe confirms correction; user visually verified the soldier looks fixed against 1964.
+
+## D393 — Controller B/Y both crouch; no in-game use button (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: FIXED + user live-tested A use / X reload / Y weapon cycle**: gameplay pad face map conflated modern buttons and native N64 A/B. D394 supersedes B crouch and shoulder cycling to match the user-supplied Xbox 1.1 chart.
+
+## D394 — Xbox 1.1 Jinx controller parity (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: PARTIAL (port 1.1 gameplay button roles user-tested; exact gadget-category parity and other selectable presets outstanding; RB HD toggle unavailable)**: user supplied the Xbox 1.1–1.4 control table; B is gadgets, stick clicks crouch, LB aim, RB HD toggle (not weapon cycling).
+
+## D395 — Controller trapped in keyboard/mouse-only binding capture (2026-09-27).
+
+Reconstructed stub — the original full entry was lost when `findings.md` was truncated to its section table (recovery, 2026-09-28); this entry is rebuilt from the section-table row and the `findings-index.csv` one-liner. Original root-cause detail is not recoverable.
+
+**Status: PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; NTSC build linked, controller-only retest owed)**: pad could enter the binding modal but could not finish or cancel without keyboard.
+
+
+## D396 (F10 pad controls) — done
+Already completed and you confirmed it ("looks good"). It's linked in NTSC, documented, and awaiting the physical‑pad retest only. Nothing to do there.
+
+## The interlaced / glitchy background — recorded as D397, but I deliberately did **not** ship a blind fix
+
+I traced both the file‑select background and the intro gun‑barrel through the render path, and ruled out the obvious suspects rather than guess at a change:
+
+- **D159 odd‑row pre‑swap** (`texSwapAltRowBytes`, the original "venetian‑blind" cause) — it's a full `#ifdef PORT` no‑op (D159, FIXED). Not the cause.
+- **D183 pitch/stride shear (Family A)** — already disproven for `-level_36` (0/166 loads strided), and it's a *no‑op for this screen anyway*: `titleRenderFolderMenuBackgroundLines` issues 299 separate 440×1 `gDPLoadTextureBlock`s, each with `line == full == 440`, so the de‑stride never engages.
+- **RLE header** — the gun‑barrel image is `rle_expand_8bit` of the `unknown2` blob; D55 already bswaps the BE w/h header. The 440×299 byte count is correct.
+- **Row‑strip texrect math** — verified a 1‑texel‑tall quad samples v 0→1 across one screen row. Correct.
+
+**The key new data point:** the intro gun‑barrel is a *first‑time* render, so the comb is present on first display, not only after a back‑out/re‑entry. That **refutes D182's "stale descriptor on re‑entry" hypothesis** — it's a *persistent* defect on these large 1:1 grayscale front‑end images.
+
+I stopped at diagnosis (no code touched this session — the tree is still in the known‑good D396‑linked state) because the two remaining candidate causes can't be told apart without a live capture, and a blind fix here would be the kind of speculation the project rules are meant to prevent:
+
+1. **Ground‑truth dithered content** — the gun‑barrel is a dithered 8‑bit halftone; at the port's 440×330→window nearest‑neighbour upscale the dots alias into a comb. *If the N64 CRT showed the same, this isn't a bug* and "fixing" it would diverge from ground truth.
+2. **GL sampling / texture‑cache artifact** on the 299 distinct 440×1 I8 uploads (cache eviction or 1‑row mip handling).
+
+## What a real fix needs (one focused session)
+- One `GE_PCDUMP` capture of the **fresh** file‑select screen + the **intro** gun‑barrel (not a round‑trip), plus an N64/emulator screenshot of the same screens to settle cause 1 vs 2.
+- A ROM ground‑truth decode of the `unknown2` gun‑barrel RLE image (the `ge007.u.2A4D50.usedby7F008DE4.bin` isn't in the repo — it's generated from the ROM).
+- If cause 2, a `GE_DTEX` sweep of the 299 row imports (it already logs `STRIDED`/`OVER‑TALL`).
+
+**One question that narrows it fast:** does the file‑select background look interlaced on the *very first* time you reach it (fresh boot / skip‑intro), or only after you've left and come back? The intro gun‑barrel already says "first display," but confirming it for file‑select too will tell us whether to keep it merged with D182 or split it as its own defect.
+
+I logged all of this as **D397** (`docs/dev/findings.md`, index CSV, and the D182 cross‑ref in `GRAPHICS‑BACKLOG.md`) so the investigation doesn't get lost.
+
+
+## D397 — file-select background + intro gun-barrel "interlaced / comb" look (2026-09-27)
+
+**Status:** OPEN, re-scoped. New user observation; no code change this session (diagnosis below; a blind fix is not safe without the ground-truth capture that is blocked here).
+
+**User report:** the SELECT FILE background image (the 007 gun-barrel / Bond-silhouette backdrop behind the file boxes) and the intro gun-barrel both have a "weird interlaced glitchy look" — a horizontal comb / line-scramble. This extends the long-standing D182(2) "comb / interlacing" symptom and adds a **second, independent instance** (the intro gun-barrel) that D182 never covered. Critically, the intro gun-barrel is a **first-time render** (not a back-out / re-entry), so the interlace is present on first display, not only after a round-trip. That refutes D182's "only after re-entry / stale tile descriptor" hypothesis for this symptom: it is a *persistent* defect on these large 1:1 grayscale front-end images.
+
+**What was ruled out this session (static read, no live run):**
+- **D159 odd-row pre-swap** — `texSwapAltRowBytes` (`src/game/image.c:2271`) is a full `#ifdef PORT` no-op (D159, FIXED). It is not the cause.
+- **M-36 Family A line/pitch shear** — D183 DISPROVED it for the `-level_36` wall repro (0/166 texture loads strided). The D183 de-stride (`gfx_tex_pitch_fix`, on by default) is a **no-op for the row-strip** anyway: `titleRenderFolderMenuBackgroundLines` (`src/game/title2.c:24`) issues 299 *separate* 440×1 `gDPLoadTextureBlock`s (each advances `image += 440`), so every individual load has `line == full == 440` and the de-stride never engages.
+- **RLE header byte-swap** — the gun-barrel background is `rle_expand_8bit` of the `unknown2` blob (`src/game/title.c:465`); D55 already bswaps the BE w/h header in place (`port/src/romdata.c:244`). `rle_expand_8bit` only consumes `w*h` (the product is swap-invariant), so the 440×299 byte count is correct.
+- **Row-strip texture-rectangle math** — `gfx_dp_texture_rectangle` for a 1-texel-tall quad (ult=0, dtdy=1024) samples v 0→1 texel across one screen row; verified correct for `titleRenderFolderMenuBackgroundLines`.
+
+**Remaining candidate causes (need a live capture to pick between):**
+1. **Ground-truth content** — the gun-barrel image is a dithered 8-bit halftone; at the port's 440×330→window nearest-neighbour upscale the dither dots alias into a visible comb. If the N64 (CRT low-pass) showed the same, this is *not a bug* and "fixing" it would diverge from ground truth. **Must be confirmed against an N64/emulator screenshot of the same screen before any code change.**
+2. **GL sampling / texture-cache artifact** on the 299 distinct 440×1 I8 uploads (cache key/eviction or 1-row mip handling). The `GE_DTEX` probe already logs `STRIDED` / `OVER-TALL` for exactly this path; a `GE_PCDUMP` screenshot across the file-select + intro gun-barrel frames is the next step.
+3. **RC3 / shift-LOD density** (D167 family) or a wrong-texture bind, per the M-36 re-scope note.
+
+**Owed (concrete next steps, single session):** (a) one `GE_PCDUMP` capture of the fresh file-select screen + the intro gun-barrel (not a round-trip); (b) ROM ground-truth decode of the `unknown2` gun-barrel RLE image (`tools_pc` extract of `assets/ge007.u.2A4D50.usedby7F008DE4.bin`) to settle cause 1 vs 2; (c) if cause 2, an `GE_DTEX` sweep of the 299 row imports to confirm cache/STRIDED behaviour. Cross-refs: D182(2) (same symptom, round-trip trigger), D176(b) (Family A, disproven), D159 (no-op'd), D183 (pitch de-stride, latent no-op here).
+
+
+## D398 — PC Options label: IMG_DOT texture replaces the D348 procedural slider glyph (2026-09-27)
+
+User request: drop the D348 mini-slider glyph in favour of a real sprite from
+the existing `mainfolderimages` table — the option-1 path of the D348
+discussion, zero new art. Chose `IMG_DOT` (the table's sixth entry;
+`assets/oddtextures.h:57-64`, entry `{IMAGE_DOT, 0x10, 0x10, 0, G_IM_FMT_I,
+G_IM_SIZ_8b, ...}` at `assets/oddtextures.c:657`).
+
+Implementation (port-only, `optionsFileSelectLabel()` in `frontoptions.c`):
+the D348 `microcode_constructor_related_to_menus` block is replaced with the
+exact Copy/Erase pattern (`src/game/front.c:2816-2848`):
+`texSelect(&gdl, mainfolderimages + IMG_DOT, 4, 0, 0)` +
+`display_image_at_position(&gdl, &dotpos, &dothalf, 16, 16, 0, 0, 1, r, g, b,
+0xFF, 0, 0)`. Two signature gotchas: `texSelect` (`game/othermodemicrocode.h`)
+*and* `display_image_at_position` (`game/bondwalk2.h:6`) both return `void`
+and advance the DL in place through `Gfx **` — front.c never assigns their
+return values either, so neither is assigned here. IMG_DOT is already in
+ROM's Globalimagetable (D39 table rebase covers the whole `s_mainfolderimages`
+array), so no asset-pipeline work. Layout: dot centred on `LABEL_CY`, right
+edge keeps the old glyph's 2px margin before the label (`DOT_MARGIN`), so it
+tracks the dynamic `x` (JP's wider Erase pushes it along) and text position is
+unchanged; `GLYPH_W` is superseded by `DOT_W` (16) / `DOT_MARGIN` (2) and the
+hot region's left edge extends to the dot's left edge. I8 texels are
+multiplied by vertex RGB, so the hot state passes the label's gold per channel
+(0xEB/0xD8/0x79, the same tinting trick front.c:3829 uses for its red I8
+tint), white otherwise. No texture-state leak: front.c re-binds its own
+Copy/Erase/Select icons immediately after this hook returns. No new strings
+(issue #87).
+
+**Verification:** `./build-pc.sh ntsc-final` clean (first pass failed on the
+`gdl = display_image_at_position(...)` assignment — void return; fixed).
+Visual check owed: the dot's actual appearance is the ROM's `IMAGE_DOT`
+texture (D348's audit noted nothing in the game art reads as "settings"; the
+dot is the user-chosen compromise, not a settings icon).
+
+
+## D399 — File-select bottom row shifted 15px left as a block (user sign-off 2026-09-27)
+
+User: the D398 layout "is okay but a bit cramped" — asked whether the whole
+row, **including the "SELECT FILE" text**, could move left. Answer: yes —
+every x on that bar is a plain float constant, so it's the same mechanical
+D343 class of port-guarded position tweak (no logic, no new assets).
+
+Shift applied (all −15 logical px, NTSC; JP/PAL share the same PORT
+constants):
+- `selectpos.f[0]` 110 → 95 — the `IMAGE_SELECTFILE` 122×18 title, which is
+  NOT a 3D/asset element: it's `texSelect` + `display_image_at_position`
+  at `selectpos` in `constructor_menu05_fileselect` (src/game/front.c, ~2850).
+  Wrapped in `#ifdef PORT` (new; N64 keeps 110).
+- Copy icon 200 → 185, Copy text 222 → 207 (D343 PORT block, values updated).
+- Erase icon 282 → 267, Erase text 304 → 289 (same block).
+- `LABEL_X` 358 → 343 in `port/src/frontoptions.c`; the dot's dynamic
+  `x = folder_option_ERASE_bound.right + LABEL_GAP` tracks the new Erase
+  position automatically (323 + 20 = 343 = LABEL_X, so the clamp is a no-op
+  on NTSC).
+
+Hit bounds (`folder_option_COPY/ERASE_bound`) recompute from the shifted
+positions, so the clickable regions move with the art. Nothing else on the
+screen references these coordinates.
+
+**Verification:** clean build; PCDUMP frame 195 column profile: SELECT FILE
+text now 34..156, Copy icon 169..201, Erase text ends ~323, dot ~341..357
+(no overlap, 18px clearance), label ends before the right edge. **Owed:
+by-eye check via `scratch\playtest_v040.bat`.**
+
+## D400 — File-select "PC Options" label: icon removed, text-only; `textMeasure` arg-swap and 7px vertical misalignment fixed (user sign-off 2026-09-27).
+
+D398's ROM-native dot texture next to "PC Options" was removed on user sign-off
+("most straightforward, no nonsense" design). The label is now text-only, same
+size/look and highlight colour as the Copy/Erase labels: `optionsFileSelectLabel()`
+(`port/src/frontoptions.c`) is one `textMeasure` + one `textRender` with the
+game's own packed gold `0xEBD879FF` constant — no per-channel unpack, so the
+D398 purple-hover bug class (`gDPSetEnvColor` AARRGGBB vs RRGGBBAA channel
+unpack) is gone by construction. Removed includes: `image_bank.h`,
+`othermodemicrocode.h`, `bondwalk2.h`, `assets/oddtextures.h`; `DOT_W` /
+`DOT_MARGIN` gone.
+
+Two measurement bugs found and fixed while landing D400:
+
+1. **`textMeasure` argument swap.** The signature is
+   `textMeasure(s32 *textheight, s32 *textwidth, ...)` — height FIRST
+   (`textrelated.h:21`, impl `textrelated.c:766-843`). The first D400 rewrite
+   passed `(&w, &h)`, drawing the label ~35px above the bar and transposing the
+   hot/click band. Fixed to `(&h, &w)`.
+2. **7px vertical misalignment vs Copy/Erase.** `textMeasure` only adds to
+   `*textheight` on a `\n` character; Copy/Erase's localized strings end in a
+   newline → h=14 → y = 285 - 7 = 278 (front.c:2778 does exactly this). The
+   bare "PC Options" measures h=0 → y=285 → tops 7px low. Fixed by measuring
+   height with `kLabelNL` ("PC Options\n") while rendering plain `kLabel`.
+
+Constants: `LABEL_GAP` 20→28, `LABEL_X` 343→351 (plain-word gap after Erase; no
+glyph to clear). Hitbox: `cursor_h [x-4, x+w+4]`, `cursor_v [y-4, y+h+4]` =
+[274, 296] at h=14. PCDUMP frame 195 (NTSC): "PC Options" logical x 353..426,
+top 279.8 vs Copy/Erase 279.3 (aligned); Erase ends 323 → 31px clearance; 14px
+right margin (canvas 440). **Owed: by-eye check via `scratch\playtest_v040.bat`
+(idle legibility, gold hover not purple, click opens the F10 overlay, vertical
+alignment with Copy/Erase).** Cross-ref D348 (glyph lineage), D398
+(superseded icon approach), D399 (bottom-row 15px shift).

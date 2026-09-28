@@ -2780,8 +2780,9 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         textpos.p[0] = 285 - (textsize.p[1] / 2);
 #ifdef PORT
         /* D343 (user sign-off 2026-09-27): Copy/Erase shift left to make room
-         * for "PC Options" at the right end of the bar (N64: 247/225/357/335). */
-        textpos.p[1] = 222;
+         * for "PC Options" at the right end of the bar (N64: 247/225/357/335).
+         * D399: whole row shifted a further 15px left (user: "a bit cramped"). */
+        textpos.p[1] = 207;
 #else
         textpos.p[1] = 247;
 #endif
@@ -2797,7 +2798,7 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         textMeasure(&textsize.p[1], &textsize.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
 #ifdef PORT
-        textpos.p[1] = 304;   /* D343: see Copy above */
+        textpos.p[1] = 289;   /* D343: see Copy above; D399: -15 row shift */
 #else
         textpos.p[1] = 357;
 #endif
@@ -2814,7 +2815,7 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
 #endif
 
 #ifdef PORT
-        copypos.f[0] = 200.0f;   /* D343 */
+        copypos.f[0] = 185.0f;   /* D343; D399: -15 row shift */
 #else
         copypos.f[0] = 225.0f;
 #endif
@@ -2831,7 +2832,7 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         folder_option_COPY_bound.down = copypos.f[1] + copyhalfsize.f[1];
 
 #ifdef PORT
-        erasepos.f[0] = 282.0f;  /* D343 */
+        erasepos.f[0] = 267.0f;  /* D343; D399: -15 row shift */
 #else
         erasepos.f[0] = 335.0f;
 #endif
@@ -2847,7 +2848,11 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         folder_option_ERASE_bound.up = (f32) (erasepos.f[1] - erasehalfsize.f[1]);
         folder_option_ERASE_bound.down = (f32) (erasepos.f[1] + erasehalfsize.f[1]);
 
+#ifdef PORT
+        selectpos.f[0] = 95.0f;  /* D399: row shift -15 (was 110) */
+#else
         selectpos.f[0] = 110.0f;
+#endif
         selectpos.f[1] = 285.0f;
 
         selecthalfsize.f[0] = (mainfolderimages + IMG_SEL)->width * 0.5f;

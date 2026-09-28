@@ -8,8 +8,8 @@
  * Zurich text on the paper via frontPrintText, GE's translucent highlight
  * boxes, the PREVIOUS tab as "back", and the game's crosshair.
  *
- *   page 0: a numbered section list (like mode select): 1. Display ... 5. Game
- *   page 1: one section's rows (like the cheat list), value column on the right
+ *   page 0: five functional categories; page 1: a category's settings;
+ *   deeper pages: Input -> Bindings -> Movement/Actions and Gameplay -> HUD
  *
  * The sections and rows are the F10 overlay's row table, reached through the
  * row API in optionsoverlay.c, so both UIs edit the same settings.
@@ -25,6 +25,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <ultra64.h>
 #include <bondgame.h>
@@ -35,6 +36,7 @@
 #include <snd.h>
 #include "front.h"
 #include "textrelated.h"
+#include "language.h"
 
 #include "platform.h"
 #include "system.h"
@@ -85,21 +87,21 @@ extern struct rectbbox folder_option_ERASE_bound;   /* front.c:439 */
 #define ROW_HIT_X1 385.0f
 
 /* ---- file-select label: right end of the Select / Copy / Erase bar ---- */
-#define LABEL_X     352   /* Erase's text now ends ~338 (front.c, D343 shift) */
+#define LABEL_X     351   /* D400: floor = NTSC Erase right (~323) + LABEL_GAP; JP's wider Erase pushes past it */
 #define LABEL_CY    285   /* the bar's centre line, as Copy/Erase */
-#define LABEL_GAP   14    /* space after Erase's text */
-#define GLYPH_W     10    /* D348: slider-glyph width, inside LABEL_GAP (2px margins) */
+#define LABEL_GAP   28    /* D400: text-only now (icon removed), a plain word gap after Erase */
 #define HIT_PAD     4
 
 #define MAX_PAGES  8
 #define MAX_PROWS  15            /* D346b: 12 -> 15 for the merged Video section (see ROW_DY) */
 
 static const char kLabel[]   = "PC Options";  /* ASCII only: issue #87 / D295 */
-static const char kLabelNL[] = "PC Options\n";
+static const char kLabelNL[] = "PC Options\n"; /* height measure only, D400 */
 
 /* ---- screen state (game thread) ---- */
-static int s_level = 0;          /* 0 = section list, 1 = a section's rows */
-static int s_page = 0;           /* current section */
+static int s_level = 0;          /* 0 = categories, 1 = category, 2/3 = nested pages */
+static int s_page = 0;           /* current root category */
+static int s_subHeader = -1;     /* rows[] header index for the nested page */
 static int s_hl = -1;            /* highlighted row / section, -1 = none */
 static int s_dragRow = -1;       /* global row index being dragged */
 static int s_repeatDir = 0, s_repeatTimer = 0;
@@ -154,10 +156,14 @@ static void titleCase(const char *in, char *out, int n)
 
 static int rowY(int k)
 {
-    /* D356: level 1's item 0 is the save-file row; the page's content rows
-     * sit one line lower. */
-    if (s_level == 1) k++;
+    /* Every open section, including a nested section, has the profile row. */
+    if (s_level >= 1) k++;
     return ROW_Y0 + k * ROW_DY;
+}
+
+static int activeHeader(void)
+{
+    return s_level >= 2 ? s_subHeader : s_pageHdr[s_page];
 }
 
 static void buildPages(void)
@@ -165,9 +171,8 @@ static void buildPages(void)
     int n = optionsRowCount();
     s_pageN = 0;
     for (int i = 0; i < n && s_pageN < MAX_PAGES; i++) {
-        if (optionsRowIsHeader(i)) {
+        if (optionsRowIsHeader(i) && optionsRowHeaderParent(i) < 0)
             s_pageHdr[s_pageN++] = i;
-        }
     }
     if (s_page >= s_pageN) {
         s_page = 0;
@@ -178,7 +183,7 @@ static void buildPages(void)
         /* D356: the level-1 page also carries the top save-file row, so the
          * content rows get one less line. */
         int cap = MAX_PROWS - 1;
-        for (int i = s_pageHdr[s_page] + 1; i < n && !optionsRowIsHeader(i); i++) {
+        for (int i = activeHeader() + 1; i < n && !optionsRowIsHeader(i); i++) {
             if (!optionsRowIsShown(i)) continue;
             if (s_rowN < cap) {
                 s_rowIdx[s_rowN++] = i;
@@ -191,7 +196,7 @@ static void buildPages(void)
          * rows with no trace. */
         if (overflow)
             sysLogPrintf(LOG_WARNING, "frontoptions: section '%s' has %d row(s) past the page cap (%d); last visible: '%s'",
-                         optionsRowLabel(s_pageHdr[s_page]), overflow, cap,
+                         optionsRowLabel(activeHeader()), overflow, cap,
                          optionsRowLabel(s_rowIdx[cap - 1]));
     }
 }
@@ -253,11 +258,37 @@ void frontOptionsMenuInit(void)
 
     s_level = 0;
     s_page = 0;
+    s_subHeader = -1;
     s_hl = -1;
     s_dragRow = -1;
     s_repeatDir = 0;
     s_vrepeatDir = 0;
     buildPages();
+    /* Isolated headless screenshot of a nested page. This diagnostic only
+     * changes menu navigation; it never edits profile or config values. */
+    const char *testPage = getenv("GE_FRONTOPTIONS_SECTION");
+    if (testPage) {
+        for (int i = 0; i < optionsRowCount(); i++) {
+            if (!optionsRowIsHeader(i) || strcmp(optionsRowLabel(i), testPage)) continue;
+            int root = i, depth = 1;
+            while (optionsRowHeaderParent(root) >= 0) {
+                root = optionsRowHeaderParent(root);
+                depth++;
+            }
+            for (int p = 0; p < s_pageN; p++) {
+                if (s_pageHdr[p] == root) {
+                    s_page = p;
+                    s_level = depth;
+                    s_subHeader = depth > 1 ? i : -1;
+                    buildPages();
+                    sysLogPrintf(LOG_INFO, "frontoptions: diagnostic page %s (depth %d, %d rows)",
+                                 testPage, depth, s_rowN);
+                    break;
+                }
+            }
+            break;
+        }
+    }
     cursorToItem(0);
     sysLogPrintf(LOG_INFO, "frontoptions: opened");
 }
@@ -272,6 +303,25 @@ static void goBack(void)
     if (s_dragRow >= 0) optionsRowCommit(s_dragRow);
     s_dragRow = -1;
     optionsResetClear();   /* D356: navigating away (or closing) disarms a pending reset */
+    if (s_level >= 2) {
+        int child = s_subHeader;
+        int parent = optionsRowHeaderParent(child);
+        if (parent == s_pageHdr[s_page]) {
+            s_level = 1;
+            s_subHeader = -1;
+        } else {
+            s_level--;
+            s_subHeader = parent;
+        }
+        buildPages();
+        int selected = 0;
+        for (int k = 0; k < s_rowN; k++)
+            if (optionsRowChildHeader(s_rowIdx[k]) == child) selected = k + 1;
+        cursorToItem(selected);
+        s_hl = -1;
+        sysLogPrintf(LOG_INFO, "frontoptions: back to %s", optionsRowLabel(activeHeader()));
+        return;
+    }
     if (s_level == 1) {
         s_level = 0;
         cursorToItem(s_page);
@@ -291,6 +341,9 @@ void frontOptionsMenuInterface(void)
     viSetUseZBuf(0);
 
     buildPages();   /* an auto toggle may have hidden or shown % rows */
+    /* D383: modal key capture owns events on the host thread. Suppress
+     * navigation until its one-shot key has been consumed and released. */
+    if (optionsBindingCaptureTick()) return;
 
     /* D345(f): NO raw stick integration on this screen (the D345(c) call to
      * frontUpdateControlStickPosition() was removed): vertical input is the
@@ -325,7 +378,7 @@ void frontOptionsMenuInterface(void)
             buildPages();
             cursorToItem(0);
             s_hl = -1;
-        } else if (s_hl == 0 && s_level == 1) {
+        } else if (s_hl == 0 && s_level >= 1) {
             /* D356: the top save-file row -- A steps to the next file (the
              * D352 chooser; folders only, "none" retired, plan §5.5). */
             playSfx(DOOR_LOCK_SFX);
@@ -334,11 +387,32 @@ void frontOptionsMenuInterface(void)
             /* s_hl is item-numbered (0 = the save-file row); content row k
              * is item k+1, so the row index is s_hl - 1. */
             int i = s_rowIdx[s_hl - 1];
+            if (getenv("GE_FRONTNAVLOG"))
+                sysLogPrintf(LOG_INFO, "frontnav: select %s/%s (item %d)",
+                             optionsRowLabel(activeHeader()), optionsRowLabel(i), s_hl);
             playSfx(DOOR_LOCK_SFX);
-            if (optionsRowIsSlider(i) && cursor_h_pos >= BAR_X0 - 4 &&
+            int child = optionsRowChildHeader(i);
+            if (child >= 0) {
+                optionsResetClear();
+                s_subHeader = child;
+                s_level++;
+                buildPages();
+                sysLogPrintf(LOG_INFO, "frontoptions: opened %s (depth %d)",
+                             optionsRowLabel(child), s_level);
+                cursorToItem(0);
+                s_hl = -1;
+            } else if (optionsRowIsSlider(i) && cursor_h_pos >= BAR_X0 - 4 &&
                 cursor_h_pos <= BAR_X1 + 4) {
                 optionsRowSetFraction(i, ((double)cursor_h_pos - BAR_X0) / (BAR_X1 - BAR_X0));
                 s_dragRow = i;
+            } else if (optionsRowIsBind(i)) {
+                /* D395: pad A/X may navigate the keyboard/mouse binding
+                 * pages but cannot enter a modal that only a key can finish.
+                 * Enter or a mouse click still starts ordinary key capture. */
+                const Uint8 *ks = SDL_GetKeyboardState(NULL);
+                if (ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER] ||
+                    (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT)))
+                    optionsRowBeginBind(i);
             } else if (optionsRowIsReset(i)) {
                 /* D356: reset rows are two-step arm -> confirm (edge
                  * activation: joyGetButtonsPressedThisFrame fires once per
@@ -366,7 +440,7 @@ void frontOptionsMenuInterface(void)
      * with hold-to-repeat. D356: on the save-file row it cycles the file;
      * on a reset row a fresh press activates (arm/confirm) and the held
      * repeat is suppressed (the activation contract, plan §5.4). */
-    if (s_level == 1 && s_hl >= 0) {
+    if (s_level >= 1 && s_hl >= 0) {
         int dir = 0;
         /* D345(f): stick X joins the D-pad/C-buttons, so Left/Right arrows
          * (and the pad's left stick) adjust values like F10's left/right. */
@@ -389,7 +463,7 @@ void frontOptionsMenuInterface(void)
                     int i = s_rowIdx[s_hl - 1];
                     if (optionsRowIsReset(i))
                         optionsRowActivateReset(i);
-                    else
+                    else if (optionsRowChildHeader(i) < 0)
                         optionsRowAdjust(i, dir);
                 }
             }
@@ -401,7 +475,7 @@ void frontOptionsMenuInterface(void)
 
     /* D356: reset arm state -- the screen's selected rows[] index (s_hl 0 is
      * the save row, not a rows[] entry); moving on disarms, goBack clears. */
-    optionsResetMaintain(s_level == 1 && s_hl > 0 ? s_rowIdx[s_hl - 1] : -1);
+    optionsResetMaintain(s_level >= 1 && s_hl > 0 ? s_rowIdx[s_hl - 1] : -1);
 
     /* The dossier: tabs + a blank CLASSIFIED page, as the cheat screen. */
     disable_all_switches(walletinst[0]);
@@ -439,6 +513,11 @@ void frontOptionsMenuInterface(void)
                     if (q < 0) q = 0;
                     if (q >= n) q = n - 1;
                     if (q != s_hl) {
+                        if (getenv("GE_FRONTNAVLOG"))
+                            sysLogPrintf(LOG_INFO, "frontnav: %s -> item %d%s%s",
+                                         s_level ? optionsRowLabel(activeHeader()) : "categories",
+                                         q, s_level && q > 0 ? " " : "",
+                                         s_level && q > 0 ? optionsRowLabel(s_rowIdx[q - 1]) : "");
                         s_hl = q;
                         cursorToItemRaw(q);
                     }
@@ -481,7 +560,7 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
         }
     } else {
         char title[32];
-        titleCase(optionsRowLabel(s_pageHdr[s_page]), title, sizeof(title));
+        titleCase(optionsRowLabel(activeHeader()), title, sizeof(title));
         int titleW = measureW(title);
         strcat(title, "\n");
         DL = ink(DL, ROW_X, TITLE_Y, title, INK);
@@ -492,14 +571,12 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
          * the resolved front target; -1 while no file is usable, which the
          * annotation renders as an unavailable state, never a number the
          * write path cannot use). */
-        if (optionsRowIsSaveScoped(s_pageHdr[s_page])) {
+        if (optionsRowIsSaveScoped(activeHeader())) {
             int f = watchSettingsActiveFolder();
             char note[16];
             if (f < 0) snprintf(note, sizeof(note), "(none)");
             else       snprintf(note, sizeof(note), "(Profile %d)", f + 1);
             DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, note, INK_DIM);
-        } else if (strcmp(optionsRowLabel(s_pageHdr[s_page]), "INPUT") == 0) {
-            DL = ink(DL, ROW_X + titleW + 8, TITLE_Y, "(50 = default)", INK_DIM);
         }
 
         /* D356: the top profile row (item 0, not in the row table; the label
@@ -536,11 +613,11 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             }
             DL = ink(DL, ROW_X, y, label, INK);
 
-            /* Only GAMEPLAY mixes ini and profile options. AUDIO is wholly
-             * profile-scoped and already has (Profile N) in its title; an
-             * inline tag there would collide with the volume slider. */
+            /* GAMEPLAY/HUD mix ini and profile options. AUDIO is wholly
+             * profile-scoped and already has (Profile N) in its title. */
             if (optionsRowIsSaveScoped(i) &&
-                strcmp(optionsRowLabel(s_pageHdr[s_page]), "GAMEPLAY") == 0) {
+                (strcmp(optionsRowLabel(activeHeader()), "GAMEPLAY") == 0 ||
+                 strcmp(optionsRowLabel(activeHeader()), "HUD") == 0)) {
                 DL = ink(DL, ROW_X + measureW(label) + 4, y, "(per profile)\n", INK_DIM);
             }
 
@@ -553,11 +630,28 @@ Gfx *frontOptionsMenuDraw(Gfx *DL)
             }
 
             optionsRowValueText(i, buf, sizeof(buf) - 1);
+            if (strcmp(optionsRowLabel(i), "Crosshair colour") == 0 && buf[0]) {
+                extern void portCrosshairPreview(s32 *, s32 *, s32 *);
+                s32 red, green, blue;
+                portCrosshairPreview(&red, &green, &blue);
+                s32 x = VAL_R - measureW(buf) - 17;
+                DL = microcode_constructor_related_to_menus(DL, x, y + 2,
+                         x + 10, y + 12,
+                         ((u32)red << 24) | ((u32)green << 16) |
+                         ((u32)blue << 8) | 0xff);
+            }
             if (buf[0]) {
                 u32 col = (strcmp(buf, "On") == 0) ? INK_ON : INK;   /* D346: kOnOff is now title-case */
                 strcat(buf, "\n");
                 DL = inkR(DL, VAL_R, y, buf, col);
             }
+        }
+        if (strcmp(optionsRowLabel(activeHeader()), "MOVEMENT") == 0 ||
+            strcmp(optionsRowLabel(activeHeader()), "ACTIONS") == 0) {
+            DL = ink(DL, ROW_X, rowY(s_rowN + 2),
+                     optionsBindingCaptureActive()
+                         ? "Press key/mouse  B/ESC cancel  DEL clear\n"
+                         : "Keys/mouse only  Enter: bind  B: back\n", INK_DIM);
         }
     }
 
@@ -579,7 +673,7 @@ int frontOptionsBlocksOverlay(void)
 
 Gfx *optionsFileSelectLabel(Gfx *gdl)
 {
-    s32 h = 0, w = 0, unusedw = 0;
+    s32 h = 0, w = 0;
     s32 x, y;
     int hot;
 
@@ -592,23 +686,40 @@ Gfx *optionsFileSelectLabel(Gfx *gdl)
         g_MenuTimer = 0;
     }
 
-    /* textMeasure only counts height for completed lines, so measure the
-     * height with a trailing newline (front.c's folder text does the same). */
-    textMeasure(&unusedw, &w, (char *)kLabel, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
-    textMeasure(&h, &unusedw, (char *)kLabelNL, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+    /* D400 (user sign-off, "most straightforward design"): text-only label,
+     * the D398 dot icon is gone. Exact Copy/Erase pattern from front.c:
+     * measure the single-line label (no trailing newline -- the kLabelNL
+     * trick measured a taller box and sat the text ~7px higher than the
+     * bar's other words, the "different size/look" complaint), centre it
+     * on the bar line, draw with the same font. Hot colour is the game's
+     * own packed gold 0xEBD879FF, the very constant front.c passes to
+     * textRender for its gold folder text -- no per-channel unpacking, so
+     * no purple (the D398 dot bug came from unpacking that word for
+     * gDPSetEnvColor in the wrong byte order). */
+    /* NB: textMeasure's signature is (textheight, textwidth) -- height FIRST
+     * (an earlier cut passed these swapped and drew the label 35px above the
+     * bar, hit band transposed). Height is measured WITH a trailing newline:
+     * Copy/Erase's localised strings end in a newline, so textMeasure gives
+     * them a full 14px line height and y = 285 - 7 = 278 (PCDUMP tops
+     * 279); measuring the bare label gives h=0 -> y=285, sitting 7px LOWER
+     * than the bar's other words. Measuring kLabelNL matches their tops
+     * exactly. (This was the D398 "kLabelNL trick"; the D400 rewrite
+     * dropped it and that is what broke the vertical alignment.) */
+    textMeasure(&h, &w, (char *)kLabelNL, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
     /* Follow the Erase label's measured right edge (set by the constructor
-     * just before this hook), so a wider localised "Erase" (JP glyphs) pushes
-     * the label right instead of overlapping it. NTSC/PAL: 352. */
+     * just before this hook), so a wider localised "Erase" (JP glyphs)
+     * pushes the label right instead of overlapping it. */
     x = (s32)folder_option_ERASE_bound.right + LABEL_GAP;
     if (x < LABEL_X) {
         x = LABEL_X;
     }
-    y = LABEL_CY - h / 2;
+    /* Same centring front.c uses for Copy/Erase (front.c:2779/2791). */
+    y = LABEL_CY - (h / 2);
 
     hot = !optionsOverlayIsOpen()
        && menu_update == MENU_INVALID
        && folder_selected_for_deletion < 0
-       && cursor_h_pos >= (f32)(x - GLYPH_W - HIT_PAD) && cursor_h_pos <= (f32)(x + w + HIT_PAD)
+       && cursor_h_pos >= (f32)(x - HIT_PAD) && cursor_h_pos <= (f32)(x + w + HIT_PAD)
        && cursor_v_pos >= (f32)(y - HIT_PAD) && cursor_v_pos <= (f32)(y + h + HIT_PAD);
 
     if (hot && joyGetButtonsPressedThisFrame(PLAYER_1, A_BUTTON | Z_TRIG | START_BUTTON)) {
@@ -616,25 +727,8 @@ Gfx *optionsFileSelectLabel(Gfx *gdl)
         frontChangeMenu(MENU_PC_OPTIONS, FALSE);
     }
 
-    /* D348: mini slider glyph left of the label -- three tracks with offset
-     * knobs, drawn with the same menu-box primitive as the options screen's
-     * slider bars. It sits INSIDE the LABEL_GAP after Erase (10px wide, 2px
-     * margins each side), so it tracks the dynamic x (JP's wider Erase pushes
-     * it along) and the text position / right-edge clearance are unchanged.
-     * No new strings (issue #87). */
-    {
-        s32 gx0 = x - GLYPH_W;
-        u32 knob = hot ? 0xEBD879FF : 0xFFFFFFFF;   /* matches the label ink */
-        gdl = microcode_constructor_related_to_menus(gdl, gx0, LABEL_CY - 5, x - 2, LABEL_CY - 3, INK_DIM);
-        gdl = microcode_constructor_related_to_menus(gdl, gx0, LABEL_CY - 1, x - 2, LABEL_CY + 1, INK_DIM);
-        gdl = microcode_constructor_related_to_menus(gdl, gx0, LABEL_CY + 3, x - 2, LABEL_CY + 5, INK_DIM);
-        gdl = microcode_constructor_related_to_menus(gdl, gx0 + 1, LABEL_CY - 6, gx0 + 4, LABEL_CY - 2, knob);
-        gdl = microcode_constructor_related_to_menus(gdl, gx0 + 6, LABEL_CY - 2, gx0 + 9, LABEL_CY + 2, knob);
-        gdl = microcode_constructor_related_to_menus(gdl, gx0 + 3, LABEL_CY + 2, gx0 + 6, LABEL_CY + 6, knob);
-    }
-
-    /* Same font and white as Copy/Erase; gold (the folder text colour) while
-     * the cursor is over it. Text state is still the Copy/Erase text's. */
+    /* Same font, size and centre line as Copy/Erase; white idle, the
+     * game's gold while the cursor is over it. */
     return textRender(gdl, &x, &y, (char *)kLabel, ptrFontZurichBoldChars,
                       ptrFontZurichBold, hot ? 0xEBD879FF : 0xFFFFFFFF,
                       viGetX(), viGetY(), 0, 0);

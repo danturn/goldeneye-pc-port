@@ -225,7 +225,7 @@ D344,FIXED,Host PC bugchecks (BSOD 0x119 VIDEO_SCHEDULER_INTERNAL_ERROR) during 
 D345,FIXED,"Front-end crosshair snaps away from the pointer on screen/page changes (file select → mode select setCursorPOSforMode(0), front.c:2516; every MENU_PC_OPTIONS p…","Port-only, user-verified (parts a–g):"
 D346,PARTIAL,PC-settings wording pass:,Port-only display change landed (optionsoverlay.c rows[]/valueText + one colour match in frontoptions.c); both UIs (F10 overlay + options screen) share the table.
 D347,FIXED,F10 overlay controller:,"FIXED (port-only, optionsoverlay.c):"
-D348,OPEN,"File-select ""PC Options"" label:",Port-only (frontoptions.c):
+D348,?,"File-select ""PC Options"" label:",SUPERSEDED by D398 (glyph replaced with the IMG_DOT texture; no new art).
 D349,PARTIAL,GE watch settings are not normally saved to the Bond file:,ANALYZED (static decomp audit):
 D350,PARTIAL,Watch-backed PC options:,"PARTIAL (implemented; user reports tests good, review pending):"
 D351,FIXED,Existing D346 value/unit rows had positional initializers shifted into hidePtr:,"FIXED (port-only): designated row initializers restore unit, deadzone divisor and hide-if-auto fields; build clean, headless smoke clean."
@@ -251,4 +251,29 @@ D371,FIXED,"GEPD key-layout preset + reload/crouch bindings, v0.4.0 modern optio
 D372,FIXED,"Low-end perf preset (v0.4.0 modern options wave M5, 2026-09-27).",FIXED (headless-verified; awaiting user live accept):
 D373,FIXED,"In-game crosshair on/off + colour (v0.4.0 modern options wave M2, 2026-09-27).",FIXED (user live-tested; rule-2 sign-off recorded 2026-09-27):
 D374,FIXED,"GEPD becomes the default key layout; preset layering fix (v0.4.0 M3 playtest feedback, 2026-09-27).",FIXED (headless + user live-tested):
-D375,FIXED,Crouch wired to the wrong pad bit:,"FIXED (in tree, build clean; user re-test owed):"
+D375,PARTIAL,Crouch wired to the wrong pad bit:,"PARTIAL; single-controller keyboard fixed, but gamepad B/Y still emitted B (D376)."
+D376,PARTIAL,Crouch follow-up + modern-options spot check (2026-09-27).,"PARTIAL: gamepad B/Y mapping corrected, but aim gate was inappropriate for GEPD-style free crouch; superseded by D377."
+D377,FIXED,GEPD independent crouch (2026-09-27).,FIXED (scripted stance verified; user says live crouch was good; pad/hold-vs-toggle specifics owed):
+D378,FIXED,GEPD use/reload separation (2026-09-27).,FIXED (headless edges tested; user says E/R seemed good; targeted door/partial-mag cases owed):
+D379,FIXED,Crosshair colour: authored texture is red (2026-09-27).,FIXED (cyan frame capture; live yellow/blue recheck owed):
+D380,FIXED,One PC keyboard layout; PD-style rebind design (2026-09-27).,FIXED (follow-up D383):
+D381,PARTIAL,"RULE-2-SIGNOFF: opt-in RGB, size and Beta crosshair (2026-09-27).",PARTIAL (scripted captures + informal user report crosshair looks good; specific size/colour/style and visual gate owed):
+D382,PARTIAL,Crosshair menu placement and slider hitches (2026-09-27).,PARTIAL (NTSC build + isolated boot; user thinks slider performance fixed; no timing measurement):
+D383,PARTIAL,PD-style keyboard rebinding in both options UIs (2026-09-27).,"PARTIAL (user found A/D/C front-menu regression, D384 repair pending live retest):"
+D384,PARTIAL,Front PC Options key-bind navigation feedback + two-slot UI (2026-09-27).,"PARTIAL (NTSC build, isolated probes, user said fresh-settings retest looks good; visual gate owed):"
+D385,PARTIAL,Real mouse 1–5 action rebinding in the two-slot editor (2026-09-27).,"PARTIAL (NTSC build + isolated probes; user spotted wrong Aim default, D386):"
+D386,PARTIAL,Correct Aim default from SDL middle (Mouse 2) to right (Mouse 3) (2026-09-27).,PARTIAL (NTSC build and isolated ini migration test; live acceptance owed):
+D387,OPEN,M7 AllUnlocked's read-time fake unlocks leak into saved EEPROM (2026-09-27).,OPEN (isolated user-data-copy save/untoggle repro; no fix):
+D388,PARTIAL,Nest functional binding/HUD menus and remove redundant M5 toggle (2026-09-27).,"PARTIAL (NTSC build, isolated nested navigation/reset/capture probes; physical UI acceptance and visual release gate owed):"
+D389,PARTIAL,F10 footer clipping and ambiguous submenu links (2026-09-27).,PARTIAL (NTSC build + measured 320-wide footer variants; visual/user review owed):
+D390,PARTIAL,F10 pinned Back selection did not visibly change (2026-09-27).,PARTIAL (NTSC build + isolated page/tree probes; human visual check owed):
+D391,PARTIAL,F10 click at glyph bottom could select next row (2026-09-27).,"PARTIAL (pixel-bound measurement, NTSC build, isolated hit probes; real pointer UX owed):"
+D392,FIXED,Train intro soldier hunched; hand intersects torso vs 1964 —,FIXED (#ifdef PORT ABI/layout in chraction.c); Train aim-angle probe confirms correction; user visually verified the soldier looks fixed against 1964.
+D393,FIXED,Controller B/Y both crouch; no in-game use button —,FIXED + user live-tested A use / X reload / Y weapon cycle.
+D394,PARTIAL,Xbox 1.1 Jinx controller parity —,PARTIAL (port 1.1 gameplay button roles user-tested; exact gadget-category parity and other selectable presets outstanding; RB HD toggle unavailable).
+D395,PARTIAL,Controller trapped in keyboard/mouse-only binding capture —,"PARTIAL (both options UIs block pad-initiated capture; pad B can cancel an active modal; NTSC build linked, controller-only retest owed)."
+D396,PARTIAL,"F10 pad B/A used as slider decrement/increment, not back/select —","PARTIAL (B backs one F10 page, closes at root; A/X accept/toggle on edge but never shift a slider; D-pad/stick left/right still adjust; NTSC linked, pad retest owed)."
+D397,OPEN,SELECT FILE background + intro gun-barrel show an interlaced/comb look —,OPEN (re-scoped: D159 odd-row swap no-op'd (not cause); D183 pitch shear disproven; needs a live GE_PCDUMP capture + ROM ground-truth decode of the gun-barrel RLE image to settle ground-truth dither…
+D398,FIXED,PC Options label: D348's procedural slider glyph replaced with an existing mainfolderimages texture (2026-09-27).,"SUPERSEDED by D400 (icon removed, text-only label; purple-hover bug moot; the D400 textMeasure arg-swap bug was found and fixed there)."
+D399,PARTIAL,File-select bottom row (SELECT FILE text + Copy/Erase + PC Options dot/label) shifted 15px left as a block (user sign-off 2026-09-27).,"LANDED (port-only, D343 class):"
+D400,PARTIAL,"File-select ""PC Options"" label:","LANDED (port-only, frontoptions.c):"
