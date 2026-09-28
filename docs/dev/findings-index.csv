@@ -279,5 +279,5 @@ D399,PARTIAL,File-select bottom row (SELECT FILE text + Copy/Erase + PC Options 
 D400,PARTIAL,"File-select ""PC Options"" label:","LANDED (port-only, frontoptions.c):"
 D401,PARTIAL,Rumble Pak → real gamepad haptics (re-promotes D224/M-87):,"LANDED (port-only, input.c/input.h/libultra.c + optionsoverlay.c per docs/dev/RUMBLE-PLAN.md; zero src/ edits)."
 D402,RESOLVED,First clean Linux (glibc / SteamOS) build of release/v0.4.0 broke in two port-layer include-resolution spots MinGW tolerated (bondconstants.h first-include cyc…,RESOLVED (Linux/Ubuntu-24.04 build → glibc-2.41-compatible binary for the Steam Deck):
-D403,OPEN,Deck v0.4.0-pre test:,"OPEN (test artifact, log-only per user; not a code regression):"
+D403,RESOLVED,Deck v0.4.0-pre test:,"RESOLVED (2026-09-27, user-confirmed on the Deck:"
 D404,OPEN,"""Aim style: Centred (PC)"" (Input.AimMode=1, D333/D337) has no effect when aiming with a gamepad; the row's own doc comment over-promises (""applies to every aim…",OPEN (log-only per user):
