@@ -282,4 +282,4 @@ D402,RESOLVED,First clean Linux (glibc / SteamOS) build of release/v0.4.0 broke 
 D403,RESOLVED,Deck v0.4.0-pre test:,"RESOLVED (2026-09-27, user-confirmed on the Deck:"
 D404,RESOLVED,"""Aim style: Centred (PC)"" (Input.AimMode=1, D333/D337) has no effect when aiming with a gamepad; the row's own doc comment over-promises (""applies to every aim…","RESOLVED (2026-09-28, port-layer only):"
 D405,CLOSED,"fast3d/OpenGL: MSAA above the driver max black-screens; two glBindFramebuffer calls pass an index where a GL name is required (PR #106, italoarruda, 2026-09-25…","CLOSED (2026-09-28). Merged from PR #106 (code file only; security-reviewed clean - port-layer GL state fixes, no external input, no allocations)."
-D406,OPEN,front-end PC Options screen:,"OPEN (implemented 2026-09-28, port-layer only):"
+D406,RESOLVED,front-end PC Options screen:,"RESOLVED (2026-09-28, port-layer only, Steam Deck-validated):"
