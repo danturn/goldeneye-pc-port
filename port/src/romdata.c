@@ -35,8 +35,7 @@ extern int snprintf(char *str, size_t maxsize, const char *format, ...);
 #else
   /* POSIX: mmap the ROM at the fixed cart address (mirrors the VirtualAlloc
    * path). <sys/mman.h> is a host header the decomp include path does not
-   * shadow. */
-  #include <errno.h>
+   * shadow. <errno.h> is included further down, after ultra64.h. */
   #include <sys/mman.h>
 #endif
 
@@ -51,6 +50,15 @@ extern int snprintf(char *str, size_t maxsize, const char *format, ...);
  * matters (see pcmodels.c): ultra64.h must finish before bondtypes.h. */
 #include <ultra64.h>
 #include "bondtypes.h"
+
+#if !defined(PLATFORM_WINDOWS)
+/* Must come after ultra64.h: libc defines `errno` as a macro (glibc:
+ * `(*__errno_location ())`), which would rewrite the N64 `u8 errno;`
+ * fields in PR/os.h (OSContStatus, OSContPad, ...) into a function
+ * declaration and break the build ("field '__errno_location' declared as
+ * a function"). Only the mmap-failure diagnostic below reads errno. */
+  #include <errno.h>
+#endif
 
 #define CART_BASE   0x10000000u
 
