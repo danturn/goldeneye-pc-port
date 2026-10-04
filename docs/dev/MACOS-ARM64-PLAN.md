@@ -581,7 +581,7 @@ Record as a `Dxx`.
 | M1 | **done** | shifted-window address model (MACOS-ADDR-WINDOW); self-test ALL PASS on the #88 base |
 | M2 | **done** | game-code re-basing sweep complete; **21/21 solo levels boot, render and run crash-free**, including with full controller input |
 | M3 | **done (core)** | #88's AppKit main-thread guard; `tools_pc/level_sweep_mac.sh` (crash + rendered-pixel check); the two Core-profile GL nits are cosmetic and parked in `docs/dev/GRAPHICS-BACKLOG.md` |
-| M4 | **done (core)** | `tools_pc/bundle-mac.sh` → signed, double-clickable `GoldenEye.app` (+ zip/sha256); `docs/building.md` macOS section + `tools_pc/README.md`. Outstanding: CI for macOS, and a live run of the `.app` from Finder |
+| M4 | **done (core)** | `tools_pc/bundle-mac.sh` → signed, double-clickable `GoldenEye.app` (+ zip/sha256); `docs/building.md` macOS section + `tools_pc/README.md`. CI: GitHub-hosted build + `--selftest` (`.github/workflows/macos.yml`); ROM sweeps via the self-hosted job (#131). Outstanding: a live run of the `.app` from Finder |
 
 **Verified state (2026-09-18).** `build-pc/ge007.aarch64` (Homebrew GCC 16.2)
 opens a window, renders, plays music **and sound effects**, and runs every solo

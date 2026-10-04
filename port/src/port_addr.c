@@ -42,7 +42,7 @@ static int portAddrCheck(const char *what, int ok)
     return ok;
 }
 
-static void portAddrSelfTest(void)
+static int portAddrSelfTest(void)
 {
     const uintptr_t B = (uintptr_t)PORT_ADDR_BASE;
     int ok = 1;
@@ -74,6 +74,14 @@ static void portAddrSelfTest(void)
     }
     sysLogPrintf(ok ? LOG_INFO : LOG_ERROR, "portAddr: selftest %s",
                  ok ? "ALL PASS" : "FAILURES");
+    return ok;
+}
+
+static int g_portAddrSelfTestOk = 0;
+
+int portAddrSelfTestPassed(void)
+{
+    return g_portAddrSelfTestOk;
 }
 
 #ifdef PORT_ADDR_STRICT
@@ -199,7 +207,7 @@ void portAddrInit(void)
                  (unsigned long long)PORT_ADDR_BASE,
                  (unsigned long long)g_portImageBase, g_portUseImageRel);
 
-    portAddrSelfTest();
+    g_portAddrSelfTestOk = portAddrSelfTest();
 
 #ifdef PORT_ADDR_STRICT
     portAddrStrictSelfTest();

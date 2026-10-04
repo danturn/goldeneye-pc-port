@@ -86,6 +86,10 @@ void portAddrStrictCheck(uint32_t a);
  * any of the port's fixed mappings and before large allocations. */
 void portAddrInit(void);
 
+/* Result of the ROM-free self-test portAddrInit() ran (1 = all checks passed).
+ * Used by `--selftest` so CI can gate on it without a ROM. */
+int portAddrSelfTestPassed(void);
+
 #ifdef __cplusplus
 }
 #endif

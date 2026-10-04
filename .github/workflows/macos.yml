@@ -1,0 +1,85 @@
+name: macOS
+
+on:
+  push:
+    branches: [ macos ]
+  pull_request:
+    branches: [ macos ]
+  workflow_dispatch:
+
+# Minimal token: this job only reads the repo. It runs on GitHub-hosted
+# runners only, never receives secrets, and never sees a ROM, so it is safe
+# for fork PRs (untrusted PR code must not reach a box that holds a ROM).
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+# What this proves: the native Apple Silicon (arm64) port BUILDS and LINKS
+# with Homebrew GCC, and the ROM-free address-model self-test passes
+# (`ge007.aarch64 --selftest`: window round-trips, absolute-symbol base,
+# image-relative encoding, portAddrIsInWindow). It does NOT run the game.
+#
+# Matrix:
+#   strict=OFF  the default build.
+#   strict=ON   -DPORT_ADDR_STRICT=ON; additionally proves the validator is
+#               live by feeding it a deliberately unmapped address
+#               (GE_ADDRSTRICT_SELFTEST=1) and requiring its report.
+#
+# Level runs need a ROM, so they live elsewhere: the self-hosted sweep
+# (`platform=macos`, tools_pc/level_sweep_mac.sh) from #131, on a runner with
+# its own ROM that never runs PR code.
+
+jobs:
+  build:
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        strict: [ OFF, ON ]
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: brew install cmake gcc sdl2 ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-macos-${{ matrix.strict }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-macos-${{ matrix.strict }}-${{ hashFiles('CMakeLists.txt') }}-
+            ccache-macos-${{ matrix.strict }}-
+
+      - name: Regenerate ROM-asset symbol file (US)
+        run: python3 scripts/gen_romassets.py u
+
+      - name: Configure (ntsc-final)
+        run: cmake -S . -B build-pc -DROMID=ntsc-final -DPORT_ADDR_STRICT=${{ matrix.strict }}
+
+      - name: Build
+        run: cmake --build build-pc -j"$(sysctl -n hw.ncpu)"
+
+      - name: ccache stats
+        run: ccache -s
+
+      - name: Version
+        run: ./build-pc/ge007.aarch64 --version
+
+      - name: Address-model self-test
+        run: ./build-pc/ge007.aarch64 --selftest
+
+      - name: PORT_ADDR_STRICT detector is live
+        if: matrix.strict == 'ON'
+        run: |
+          set -o pipefail
+          GE_ADDRSTRICT_SELFTEST=1 ./build-pc/ge007.aarch64 --selftest 2>&1 | tee selftest.log
+          grep -F 'PORT_ADDR_STRICT: 0x30000000 is not a mapped N64 address' selftest.log

@@ -68,6 +68,8 @@ static void portPrintHelp(const char *argv0)
     printf("\nusage: %s [options] [-level_XX]\n\n"
            "  --help            this message\n"
            "  --version         build id only\n"
+           "  --selftest        run the ROM-free address-model self-test and\n"
+           "                    exit (0 = pass, 1 = fail); needs no ROM\n"
            "  -fresh            wipe playtest data + config before starting\n"
            "                    (removes ge007.eep save and ge007.ini; the\n"
            "                    ini is re-written with defaults on exit)\n"
@@ -108,6 +110,10 @@ int main(int argc, char **argv)
      * crashInit so the reservation is in place for every later stage, and any
      * failure here is reported before SDL/GL are involved. */
     portAddrInit();
+
+    if (sysArgCheck("--selftest")) {
+        return portAddrSelfTestPassed() ? 0 : 1;
+    }
 
     /* Crash handler first, so any failure below is debuggable. */
     crashInit();

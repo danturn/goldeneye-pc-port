@@ -213,6 +213,23 @@ GE_ADDRSTRICT_SELFTEST=1 ./build-strict/ge007.aarch64 -level_09
 
 See findings MACOS-SFX-BOUND through MACOS-ADDR-STRICT for the bug family this exists to catch.
 
+### macOS CI and the ROM-free self-test
+
+`.github/workflows/macos.yml` runs on GitHub-hosted Apple Silicon for pushes and
+PRs into the `macos` branch. It builds with Homebrew GCC (once with
+`PORT_ADDR_STRICT` off, once on) and runs the address-model self-test, which
+needs no ROM:
+
+```sh
+./build-pc/ge007.aarch64 --selftest   # exit 0 = pass, 1 = fail
+```
+
+The self-test covers the window round-trips, the generated absolute-symbol base,
+the image-relative encoding and `portAddrIsInWindow()`. With a `PORT_ADDR_STRICT`
+build, `GE_ADDRSTRICT_SELFTEST=1` additionally proves the validator fires. Level
+runs need a ROM and are covered by the self-hosted sweep
+(PR #131, `tools_pc/level_sweep_mac.sh`), not by this job.
+
 ### Packaging a macOS app
 
 ```sh
