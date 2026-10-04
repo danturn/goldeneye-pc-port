@@ -5290,7 +5290,7 @@ void bgRoomCalcBB(s32 room) // canonical name
     limits.maxZ = -0x7fff;
 
 #ifdef PORT
-    /* D417: the induction variable is a full host pointer, so truncating the
+    /* MACOS-CAST-CENSUS: the induction variable is a full host pointer, so truncating the
      * bound to (s32) makes the comparison false on the very first iteration
      * once the window is based at PORT_ADDR_BASE -- the loop body never runs,
      * `limits` keeps its sentinel init, and every room ends up with an

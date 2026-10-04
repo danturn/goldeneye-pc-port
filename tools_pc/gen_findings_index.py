@@ -27,7 +27,14 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "docs" / "dev" / "findings.md"
 OUT = ROOT / "docs" / "dev" / "findings-index.csv"
 
-LABEL_RE = re.compile(r"^D\d+(?:\.\d+)?(?:[-–]D\d+)?(?:\s*[·,]\s*D\d+(?:\.\d+)?)*\+?$")
+# A finding label is either a D-number (`D12`, `D88.4`, `D24-D30`, `D75 · D77`)
+# or a provisional descriptive tag used on an unmerged branch (`MACOS-*`).
+# Real D-numbers are assigned when such a branch merges; the tag keeps the
+# index complete in the meantime.
+LABEL_TOKEN = r"(?:D\d+(?:\.\d+)?|[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)+)"
+LABEL_RE = re.compile(
+    rf"^{LABEL_TOKEN}(?:[-\u2013]{LABEL_TOKEN})?(?:\s*[·,]\s*{LABEL_TOKEN})*\+?$"
+)
 
 STATUS_BUCKETS = [
     ("FIXED", re.compile(r"\bfixed\b", re.I)),

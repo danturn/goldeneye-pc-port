@@ -585,26 +585,26 @@ through a converter or a runtime bswap fixup reads scrambled.
   are `.global foo` / `.set foo, address` on ELF/PE must become `.globl _foo`
   / `.set _foo, address`; Darwin also rejects the ELF `.section .data`
   spelling used by these symbol-only files. Generate transformed build-tree
-  copies rather than changing the cross-platform source files (D409).
+  copies rather than changing the cross-platform source files (MACOS-WEAK-ALIAS).
 - **Darwin GCC cannot lower ELF-style `#pragma weak alias = target`.** It can
   ICE in `assemble_alias`; compile generated copies with those pragmas removed
   and provide Mach-O indirect symbols (`.set _alias, _target`) separately
-  (D409).
+  (MACOS-WEAK-ALIAS).
 - **Mach-O's default `__PAGEZERO` reserves the entire low 4 GiB.** A build
   can compile and link successfully yet fail every fixed N64 mapping at
   runtime (`0x10000000`, `0x70000000`, `0x80000000`). Link with
   `-Wl,-pagezero_size,0x10000` so null-page pointers remain protected while
-  the cartridge and DRAM ranges are available (D409).
+  the cartridge and DRAM ranges are available (MACOS-WEAK-ALIAS).
 - **Darwin has no `MAP_FIXED_NOREPLACE`; a fixed-address hint can relocate.**
   Once `__PAGEZERO` is deliberately bounded below the cart range, use
   `MAP_FIXED` for the `0x10000000` cartridge mapping. Retaining the advisory
   hint silently falls back to a heap ROM and later crashes on direct absolute
-  ROM-symbol reads (D409).
+  ROM-symbol reads (MACOS-WEAK-ALIAS).
 - **AppKit event polling is main-thread-only.** This port has both a host-main
   `videoPumpEvents()` loop and fast3d's render-thread event pump. The latter
   must be disabled on macOS or `SDL_PollEvent` raises
   `NSInternalInconsistencyException`; the main-thread loop already handles
-  the complete event set (D409).
+  the complete event set (MACOS-WEAK-ALIAS).
 - `#include <PR/os.h>` in a port `.c`/`.h` that also sees `<errno.h>`
   breaks: `OSContStatus`/`OSContPad` have a `u8 errno;` field vs errno.h's
   macro. libultra.c wraps the include in `#pragma push_macro("errno")` /
@@ -1383,7 +1383,7 @@ pointers.
 **Native arm64 macOS cannot map below 4 GiB** (`__PAGEZERO`; a shrunken
 pagezero is SIGKILLed at exec; PIE is mandatory; `MAP_32BIT` fails). So the
 whole space lives at `PORT_ADDR_BASE = 0x1000_0000_0000` (16 TiB) instead:
-`port/include/port_addr.h`, `port/src/port_addr.c` (D413). Because the base is
+`port/include/port_addr.h`, `port/src/port_addr.c` (MACOS-ADDR-WINDOW). Because the base is
 4 GiB-aligned, the **pointer→u32 direction is still free** (`(u32)host_ptr` is
 the N64 address), so only *reconstruction* sites — a 32-bit value becoming a
 pointer — need work.
@@ -1430,25 +1430,25 @@ pointer — need work.
   `portN64ToHost` decodes it; `osVirtualToPhysical` returns it, fast3d's
   `seg_addr` decodes it. On Windows the image base is `0x140000000`, so this
   equals the raw `(u32)&sym` truncation the D131 fix relied on.
-- Instances: D409 (`#pragma weak` has no Mach-O equivalent — use a global
-  symbol equate), D410 (the decomp's `include/` stubs shadow libc++'s wrapper
-  headers), D411 (`__x86_64__` used as the "64-bit PC" gate → `PLATFORM_64BIT`),
-  D412 (macOS platform branches: `shm_open`, Darwin `ucontext`, `_NSGetExecutablePath`),
-  D413 (the window + chokepoints + mappings), D414, D415.
+- Instances: MACOS-WEAK-ALIAS (`#pragma weak` has no Mach-O equivalent — use a global
+  symbol equate), MACOS-LIBCXX-SHIMS (the decomp's `include/` stubs shadow libc++'s wrapper
+  headers), MACOS-64BIT-GATE (`__x86_64__` used as the "64-bit PC" gate → `PLATFORM_64BIT`),
+  MACOS-PLATFORM-BRANCHES (macOS platform branches: `shm_open`, Darwin `ucontext`, `_NSGetExecutablePath`),
+  MACOS-ADDR-WINDOW (the window + chokepoints + mappings), MACOS-SFX-BOUND, MACOS-PROPDEFS-TRUNC.
 - **Never bound an N64 address with an absolute number.** A guard like
   `if (p < 0x10000 || p >= 0x400000000ULL) return NULL;` is written against the
   *unshifted* layout: it is correct on Windows/Linux (DRAM at `0x7000_0000`,
   below 16 GiB) and silently rejects **every** real pointer on arm64 (DRAM at
-  `~0x1000_707b_5740`). D414 was exactly this in `sndPlaySfx()` — all in-level
+  `~0x1000_707b_5740`). MACOS-SFX-BOUND was exactly this in `sndPlaySfx()` — all in-level
   SFX were silent, while music (a separate player) still worked. Use
   `portAddrIsInWindow()` (`port_addr.h`) instead.
 - **`(u32)ptr` assigned back to a pointer is a truncation, not a no-op.**
-  `u32 *obj = (u32)g_CurrentSetup.propDefs;` (D415) round-trips on N64 but
+  `u32 *obj = (u32)g_CurrentSetup.propDefs;` (MACOS-PROPDEFS-TRUNC) round-trips on N64 but
   leaves an unbased N64 address on the 64-bit port, faulting on first deref.
   The port-correct form is a pointer-to-pointer cast (`(u32 *)…`), keeping the
-  pointer's own arithmetic. Grep for `ptr_var = (u32)expr`; D415 was the only
+  pointer's own arithmetic. Grep for `ptr_var = (u32)expr`; MACOS-PROPDEFS-TRUNC was the only
   instance.
-- **Sweep by function PAIR, not by grep hit.** Four of the six bugs in the D417
+- **Sweep by function PAIR, not by grep hit.** Four of the six bugs in the MACOS-CAST-CENSUS
   census pass were cases where one member of a near-duplicate function pair had
   been converted and its twin had not (`model.c` `sub_GAME_7F06DEC0` vs
   `sub_GAME_7F06E540`; `bondview_r.c`'s solo spawn vs `bondview2.c`'s MP
@@ -1463,12 +1463,12 @@ pointer — need work.
   pointers implicitly truncated *into* int parameters/locals — and in `front.c`
   + `options.c` all 206 such warnings were already-correct round trips. It does
   **not** flag the dangerous direction when the cast is explicit: `(T *)(uintptr_t)x`
-  (how D416 was written) is silent, and D414 (a numeric bound on an address) has
+  (how MACOS-BLOODSTAIN was written) is silent, and MACOS-SFX-BOUND (a numeric bound on an address) has
   no cast at all. Use the census to audit the invariant "every value reaching a
   `PORT_N64PTR` is either from `portHostToN64()` or provably in-window", but do
   not mistake a clean census for a clean codebase — the consumer side needs a
-  type-driven audit, or `PORT_ADDR_STRICT` (D420) at runtime.
-- **A stage-unload bug needs input to surface.** Both sweeps that missed D415
+  type-driven audit, or `PORT_ADDR_STRICT` (MACOS-ADDR-STRICT) at runtime.
+- **A stage-unload bug needs input to surface.** Both sweeps that missed MACOS-PROPDEFS-TRUNC
   ran with no controller input, so the level never ended and
   `lvlUnloadStageTextData()` never ran. Drive `GE_INPUTSCRIPT` (START/A ends a
   level) when the affected path is teardown rather than steady-state.

@@ -20,7 +20,7 @@ struct levelentry
 // cannonical name
 #define PORTMAX 200
 
-/* D413/M2: the sum is an N64/window offset, so re-base it into the DRAM
+/* MACOS-ADDR-WINDOW/M2: the sum is an N64/window offset, so re-base it into the DRAM
  * window before it becomes a pointer. Identity at PORT_ADDR_BASE == 0. */
 #if defined(PORT)
 #include "port_addr.h"

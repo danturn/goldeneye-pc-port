@@ -11,7 +11,7 @@
 #ifdef PORT
 #include "envflag.h"   /* cached getenv for hot-path probes */
 #endif
-#include "port_addr.h" /* D413/M2: DRAM window base */
+#include "port_addr.h" /* MACOS-ADDR-WINDOW/M2: DRAM window base */
 extern resource_lookup_data_entry resource_lookup_data_array[]; /* ob.c */
 
 static void langFixupLoadedBank(char *name, void *p)
@@ -23,7 +23,7 @@ static void langFixupLoadedBank(char *name, void *p)
 #endif
 
 /* g_LangBanks[] holds N64 DRAM addresses as s32 (they must fit s32, see
- * memp.h / D413). Re-base only where a slot becomes a pointer; identity at
+ * memp.h / MACOS-ADDR-WINDOW). Re-base only where a slot becomes a pointer; identity at
  * PORT_ADDR_BASE == 0, so Windows/Linux are unchanged. */
 #if defined(PORT)
 #include "port_addr.h"
@@ -434,16 +434,11 @@ u8 * langGet(s32 slotID)
      * current flow has loaded.  A bare `-level_XX` boot that reaches the
      * cast/credits text path (Cuba, bondviewRenderCredits, D76) hits a bank
      * slot that was never filled -> stale/garbage non-NULL value -> fault on
-     * the table read below.  Reject anything that is not a plausible mapped
-     * DRAM address. D413/M2: the DRAM window is shifted by PORT_ADDR_BASE on
-     * macOS, so the bounds move with it (identity at PORT_ADDR_BASE == 0). */
-    {
-        uintptr_t t  = (uintptr_t)textbank_ptr;
-        uintptr_t lo = (uintptr_t)PORT_ADDR_BASE + 0x10000u;
-        uintptr_t hi = (uintptr_t)PORT_ADDR_BASE + 0x400000000ULL;
-        if (t < lo || t >= hi) {
-            return NULL;
-        }
+     * the table read below.  Reject anything that is not a mapped N64 address.
+     * MACOS-ADDR-WINDOW: test against the real window (it is shifted by
+     * PORT_ADDR_BASE on macOS), not a hardcoded bound. */
+    if (!portAddrIsInWindow(textbank_ptr)) {
+        return NULL;
     }
 #endif
 #ifdef PORT
@@ -463,7 +458,7 @@ u8 * langGet(s32 slotID)
     u32 textslot_offset = textbank_ptr[slotID & 0x03FF]; /* load the textbank ptr table then get the slot's offset */
 
 #if defined(PORT)
-    /* D413/M2: keep the bank base at full pointer width. */
+    /* MACOS-ADDR-WINDOW/M2: keep the bank base at full pointer width. */
     uintptr_t output_slot = (uintptr_t)textbank_ptr + textslot_offset; /* base + slot offset */
 #else
     u32 output_slot = textslot_offset; /* add the text slot offset to the base ptr to get the ptr to text file's slot */

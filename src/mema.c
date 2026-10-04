@@ -1,6 +1,6 @@
 #include <ultra64.h>
 #if defined(PORT)
-#include "port_addr.h" /* D413/M2: memaAlloc returns a DRAM address */
+#include "port_addr.h" /* MACOS-ADDR-WINDOW/M2: memaAlloc returns a DRAM address */
 #endif
 #include "mema.h"
 #include "deb.h"
@@ -318,7 +318,7 @@ void *memaAlloc(u32 amount) {
     }
 
 #if defined(PORT)
-    /* D413/M2: best->addr is an N64 DRAM address; hand back a live pointer.
+    /* MACOS-ADDR-WINDOW/M2: best->addr is an N64 DRAM address; hand back a live pointer.
      * Identity at PORT_ADDR_BASE == 0. */
     return portN64ToHost((u32)addr);
 #else

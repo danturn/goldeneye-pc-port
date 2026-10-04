@@ -14,7 +14,7 @@
 #include "math_asinfacosf.h"
 #include "math_floor.h"
 
-/* D413/M2: ModelAnimation.bitDescriptors/bitStream are u32 fields holding N64
+/* MACOS-ADDR-WINDOW/M2: ModelAnimation.bitDescriptors/bitStream are u32 fields holding N64
  * addresses (D32: the blob base is added by expand_ani_table_entries). Re-base
  * where they become pointers; identity at PORT_ADDR_BASE == 0. */
 #if defined(PORT)
@@ -1043,7 +1043,7 @@ u16 modelAnimReadRootMotionValue(ModelAnimation *anim, s32 fieldIndex, s32 extra
     u8 bitsThisRead;
 
     result = 0;
-    desc = PORT_N64PTR(struct ModelAnimBitField, anim->bitDescriptors) + fieldIndex; // D32: u32 -> ptr (D413/M2 re-base)
+    desc = PORT_N64PTR(struct ModelAnimBitField, anim->bitDescriptors) + fieldIndex; // D32: u32 -> ptr (MACOS-ADDR-WINDOW/M2 re-base)
     bitsRemaining = desc->bitCount;
 
     if (bitsRemaining > 0)
@@ -1051,7 +1051,7 @@ u16 modelAnimReadRootMotionValue(ModelAnimation *anim, s32 fieldIndex, s32 extra
         totalBitOffset = extraBitOffset + desc->bitOffset;
         byteIndex = totalBitOffset >> 3;
         totalBitOffset &= 7;
-        byteptr = PORT_N64PTR(u8, anim->bitStream) + byteIndex; // D32: u32 -> ptr (D413/M2 re-base)
+        byteptr = PORT_N64PTR(u8, anim->bitStream) + byteIndex; // D32: u32 -> ptr (MACOS-ADDR-WINDOW/M2 re-base)
         bitsThisRead = 8 - totalBitOffset;
 
         if (bitsRemaining >= bitsThisRead)
@@ -6225,7 +6225,7 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
     s32 source;
     s32 frameSize;
 #if defined(PORT)
-    /* D413/M2: keep the buffer address at full pointer width (D59 buffer). */
+    /* MACOS-ADDR-WINDOW/M2: keep the buffer address at full pointer width (D59 buffer). */
     uintptr_t dest;
 #else
     u32 dest;
