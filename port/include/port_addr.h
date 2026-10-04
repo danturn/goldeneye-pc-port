@@ -134,11 +134,18 @@ static inline uint32_t portHostToN64(const void *p)
 /* Is a host pointer inside the N64 address window (DRAM / cart / stacks)?
  * Use this instead of hardcoded numeric bounds: the window is shifted by
  * PORT_ADDR_BASE on arm64, so an absolute bound that is correct on x86_64
- * silently rejects every real pointer there. */
+ * silently rejects every real pointer there.
+ *
+ * The low PORT_ADDR_LOW_GUARD bytes of the window are rejected: nothing is
+ * mapped there, and with PORT_ADDR_BASE == 0 that range contains NULL, which
+ * is exactly what the callers' plausibility checks exist to catch (e.g.
+ * langGet() on a cleared bank). */
+#define PORT_ADDR_LOW_GUARD 0x10000u
 static inline int portAddrIsInWindow(const void *p)
 {
     uintptr_t v = (uintptr_t)p;
-    return v - (uintptr_t)PORT_ADDR_BASE < (uintptr_t)PORT_ADDR_WINDOW;
+    uintptr_t off = v - (uintptr_t)PORT_ADDR_BASE;
+    return off >= PORT_ADDR_LOW_GUARD && off < (uintptr_t)PORT_ADDR_WINDOW;
 }
 
 /* Cast-site helper for game code (the D3x ABI/layout class): reads a 32-bit

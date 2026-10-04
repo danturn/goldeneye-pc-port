@@ -58,6 +58,14 @@ static void portAddrSelfTest(void)
                         portN64ToHost(0x10456789u) == (void *)(B + 0x10456789u));
     ok &= portAddrCheck("cfb_16 at base+DRAM_V1",
                         (uintptr_t)cfb_16 == B + 0x70000000u);
+    ok &= portAddrCheck("in-window: NULL rejected",
+                        !portAddrIsInWindow(NULL));
+    ok &= portAddrCheck("in-window: low guard",
+                        !portAddrIsInWindow((void *)(B + PORT_ADDR_LOW_GUARD - 1u)));
+    ok &= portAddrCheck("in-window: DRAM V1",
+                        portAddrIsInWindow((void *)(B + 0x70001234u)));
+    ok &= portAddrCheck("in-window: above window",
+                        !portAddrIsInWindow((void *)(B + (uintptr_t)PORT_ADDR_WINDOW)));
     if (g_portUseImageRel) {
         ok &= portAddrCheck("host->n64 image",
                             portHostToN64((void *)(g_portImageBase + 0x1234u)) == 0x40001234u);

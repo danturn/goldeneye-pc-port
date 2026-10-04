@@ -297,4 +297,3 @@ MACOS-CAST-CENSUS,FIXED,"macOS/arm64: six more pointer truncations, found by a s
 MACOS-TEXALIGN,FIXED,"macOS/arm64: texReadUncompressed() aligned its destination through u32 ((u32 *)(((u32)dst + 0xf) & ~0xf) x3), truncating a host pointer and then writing throug…","FIXED defensively (image.c), latent not live."
 MACOS-RENDER-CRASH,OPEN,"Intermittent renderer crash, level-agnostic, observed once on Dam:","OPEN — observed once, not investigated."
 MACOS-ADDR-STRICT,FIXED,PORT_ADDR_STRICT: a debug gate that catches the whole MACOS-SFX-BOUND through MACOS-RENDER-CRASH family at the conversion rather than at the fault.,FIXED (new CMake option + port_addr.h/port_addr.c).
-MACOS-MSAA-CLAMP,FIXED,MSAA=8 produced a completely BLACK screen —,FIXED (port/fast3d/gfx_opengl.cpp) —

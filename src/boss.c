@@ -833,7 +833,13 @@ void bossMainloop(void)
                             }
 
                             rspReplyMsg = (s32)(&localGfxDoneMsg);
+#ifdef PORT
+                            /* MACOS-ADDR-WINDOW: rspReplyMsg is an s32 holding a
+                             * truncated window pointer; re-base it. */
                             rspGfxTaskStart(firstGdl, gdl, 0, PORT_N64PTR(s32, rspReplyMsg));
+#else
+                            rspGfxTaskStart(firstGdl, gdl, 0, (s32*)rspReplyMsg);
+#endif
 
                             pendingGfx++;
                             memaSingleDefragPass();
